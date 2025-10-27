@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
@@ -74,7 +74,7 @@ interface OnboardingStep {
   title: string;
 }
 
-export default function HostDashboard() {
+function HostDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -2528,4 +2528,12 @@ export default function HostDashboard() {
       </div>
     );
   }
+}
+
+export default function HostDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HostDashboardContent />
+    </Suspense>
+  );
 }

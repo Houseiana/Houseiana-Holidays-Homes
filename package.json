@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate --skip-validation || true && next build",
-    "postinstall": "prisma generate --skip-validation || true",
+    "build": "prisma generate || true && next build",
+    "postinstall": "prisma generate || true",
     "start": "next start",
     "lint": "eslint"
   },

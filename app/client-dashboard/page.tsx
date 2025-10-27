@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useAuthStore } from '@/lib/stores/auth-store'
@@ -40,7 +40,7 @@ interface SavedProperty {
   photos: Array<{ url: string }>
 }
 
-export default function ClientDashboard() {
+function ClientDashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
@@ -606,5 +606,13 @@ export default function ClientDashboard() {
         }}
       />
     </div>
+  )
+}
+
+export default function ClientDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ClientDashboardContent />
+    </Suspense>
   )
 }
