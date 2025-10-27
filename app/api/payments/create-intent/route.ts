@@ -3,9 +3,15 @@ import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/auth'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover'
-})
+const getStripe = () => {
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  if (!secretKey || secretKey.includes('placeholder')) {
+    throw new Error('Stripe is not configured. Please add a valid STRIPE_SECRET_KEY.')
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2025-09-30.clover'
+  })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe PaymentIntent
+    const stripe = getStripe()
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(booking.totalAmount * 100), // Convert to cents
       currency: booking.currency.toLowerCase(),
