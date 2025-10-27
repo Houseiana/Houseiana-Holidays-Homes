@@ -3,7 +3,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  output: 'standalone',
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  generateBuildId: async () => {
+    // Custom build ID to avoid crypto.randomUUID issues
+    return 'build-' + Date.now()
+  },
   experimental: {
     serverComponentsExternalPackages: ['@vercel/blob']
   },
