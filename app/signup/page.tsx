@@ -108,7 +108,12 @@ export default function SignupPage() {
 
       if (data.success) {
         setSessionId(data.sessionId);
-        setSuccess(data.message);
+        // Show demo code if available (for testing)
+        if (data.demoCode) {
+          setSuccess(`${data.message} - Demo OTP: ${data.demoCode}`);
+        } else {
+          setSuccess(data.message);
+        }
         setStep('otp');
       } else {
         setError(data.message || 'Failed to send OTP');

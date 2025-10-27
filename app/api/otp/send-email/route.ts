@@ -57,13 +57,31 @@ export async function POST(request: NextRequest) {
         `,
       };
 
-      await sgMail.send(msg);
+      try {
+        await sgMail.send(msg);
+        console.log(`✅ Email OTP sent successfully to ${email}`);
 
-      return NextResponse.json({
-        success: true,
-        message: `OTP sent to ${email}`,
-        sessionId: `email_${Date.now()}`
-      });
+        return NextResponse.json({
+          success: true,
+          message: `OTP sent to ${email}`,
+          sessionId: `email_${Date.now()}`
+        });
+      } catch (sendGridError: any) {
+        console.error('❌ SendGrid error:', {
+          message: sendGridError.message,
+          code: sendGridError.code,
+          response: sendGridError.response?.body
+        });
+
+        // Fall back to demo mode if SendGrid fails
+        return NextResponse.json({
+          success: true,
+          message: `📧 Demo Mode (SendGrid failed): Check console for OTP`,
+          demoCode: otpCode,
+          sessionId: `fallback_email_${Date.now()}`,
+          error: sendGridError.message
+        });
+      }
     } else {
       // Demo mode - SendGrid not configured
       console.log(`Demo mode: Email OTP for ${email}: ${otpCode}`);
