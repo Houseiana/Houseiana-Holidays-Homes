@@ -1,6 +1,9 @@
 'use client';
 
 import { Suspense, useEffect } from 'react';
+
+// Force dynamic rendering to avoid build-time errors
+export const dynamic = 'force-dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
