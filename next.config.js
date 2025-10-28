@@ -9,10 +9,10 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    serverComponentsExternalPackages: ['@vercel/blob', 'pg', 'bcryptjs']
+    // Only external packages actually used by frontend
+    // Note: pg, bcryptjs removed - database access is via Railway API only
+    serverComponentsExternalPackages: ['@vercel/blob', 'nodemailer', 'twilio', '@sendgrid/mail']
   },
-  // Output standalone for Railway deployment
-  output: 'standalone',
   // Environment variables that should be available on the client
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,

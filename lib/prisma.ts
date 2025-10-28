@@ -1,28 +1,27 @@
-import { PrismaClient } from '@prisma/client'
+// ⚠️ DEPRECATED: DO NOT USE THIS FILE
+//
+// This file is kept for backward compatibility during migration only.
+// The frontend MUST NOT access the database directly.
+//
+// ALL data operations should use Railway Backend API via:
+//   import { railwayApi } from '@/lib/railway-api'
+//
+// Example:
+//   const users = await railwayApi.getUsers()        ❌ OLD: await prisma.user.findMany()
+//   const user = await railwayApi.getUser(id)        ❌ OLD: await prisma.user.findUnique()
+//   await railwayApi.createUser(data)                ❌ OLD: await prisma.user.create()
+//
+// If you see code importing this file, please refactor to use Railway API instead.
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+// Export null to prevent accidental usage
+export const prisma = null;
+export default null;
+
+// Log warning if this file is imported
+if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
+  console.warn(
+    '⚠️  WARNING: lib/prisma.ts is deprecated!\n' +
+    '   The frontend should NOT access the database directly.\n' +
+    '   Please use Railway API: import { railwayApi } from "@/lib/railway-api"'
+  );
 }
-
-// Create Prisma client only if not in build phase
-let prismaInstance: any = null
-
-try {
-  if (process.env.NODE_ENV !== 'production' || process.env.DATABASE_URL) {
-    prismaInstance = globalForPrisma.prisma ?? new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['query'] : [],
-    })
-
-    if (process.env.NODE_ENV !== 'production') {
-      globalForPrisma.prisma = prismaInstance
-    }
-  }
-} catch (error) {
-  console.warn('Prisma client not available during build time. This is normal for static generation.')
-  // Create a mock Prisma client for build time
-  prismaInstance = null
-}
-
-export const prisma = prismaInstance
-
-export default prisma
