@@ -5,12 +5,17 @@ import { NextRequest } from 'next/server'
 // Validate that JWT_SECRET is provided and secure
 const JWT_SECRET = process.env.JWT_SECRET;
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required');
-}
+// Only validate JWT_SECRET at runtime, not during build
+function validateJwtSecret(): string {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
 
-if (JWT_SECRET.length < 32) {
-  throw new Error('JWT_SECRET must be at least 32 characters long for security');
+  if (JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters long for security');
+  }
+
+  return JWT_SECRET;
 }
 
 export interface JWTPayload {
@@ -24,12 +29,14 @@ export interface JWTPayload {
 }
 
 export function generateToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+  const secret = validateJwtSecret();
+  return jwt.sign(payload, secret, { expiresIn: '7d' })
 }
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload
+    const secret = validateJwtSecret();
+    return jwt.verify(token, secret) as JWTPayload
   } catch (error) {
     return null
   }
