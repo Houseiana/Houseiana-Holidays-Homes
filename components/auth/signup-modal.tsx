@@ -27,6 +27,7 @@ type SignupData = {
   birthDay: string;
   birthYear: string;
   email: string;
+  password: string;
   profilePhoto?: string;
 };
 
@@ -61,6 +62,7 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
     birthDay: string;
     birthYear: string;
     email: string;
+    password: string;
   }) => {
     setSignupData((prev) => ({ ...prev, ...data }));
     setCurrentStep(4);
@@ -89,31 +91,51 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
     const finalData = { ...signupData, profilePhoto: photoUrl };
 
     try {
-      console.log('Signup completed with data:', finalData);
+      console.log('📝 Signup completed with data:', {
+        method: 'phone',
+        hasPhone: !!finalData.phoneNumber,
+        hasEmail: !!finalData.email,
+        hasPassword: !!finalData.password,
+        hasKYC: !!finalData.firstName && !!finalData.lastName
+      });
 
-      // Call NextAuth signup API
-      const response = await fetch('/api/auth/register', {
+      // FIX: Call correct API endpoint with proper data format
+      const response = await fetch('/api/auth/otp-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: `${finalData.firstName} ${finalData.lastName}`,
+          method: 'phone',
+          phoneNumber: `${finalData.countryCode}${finalData.phoneNumber}`, // Clean phone number
           email: finalData.email,
-          password: 'temp_password', // You may want to add password step
-          phone: `${finalData.countryCode}${finalData.phoneNumber}`,
-          countryCode: finalData.countryCode,
-          profilePhoto: photoUrl,
-          birthDate: `${finalData.birthYear}-${finalData.birthMonth}-${finalData.birthDay}`,
-          isPhoneVerified: true
+          password: finalData.password, // Real password from user input
+          isVerified: true, // OTP was verified in Step 2
+          firstName: finalData.firstName,
+          lastName: finalData.lastName,
+          // Optional KYC data (not required by backend, but can be added later)
+          kycCompleted: false,
+          profilePhoto: photoUrl
         })
       });
 
-      if (response.ok) {
-        const authData = await response.json();
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log('✅ Signup successful:', result);
+
+        // Store auth token
+        if (result.token) {
+          localStorage.setItem('auth_token', result.token);
+        }
+
+        // Store user data
+        if (result.user) {
+          localStorage.setItem('auth_user', JSON.stringify(result.user));
+        }
 
         // Auto-login after successful registration
         const signInResult = await signIn('credentials', {
           email: finalData.email,
-          password: 'temp_password',
+          password: finalData.password,
           redirect: false
         });
 
@@ -122,15 +144,17 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
           // Redirect to unified dashboard
           window.location.href = '/dashboard';
         } else {
-          throw new Error('Auto-login failed');
+          // Even if NextAuth login fails, user is registered successfully
+          console.warn('⚠️ NextAuth login failed, but user is registered');
+          handleClose();
+          window.location.href = '/dashboard';
         }
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
+        throw new Error(result.message || 'Registration failed');
       }
-    } catch (error) {
-      console.error('Signup error:', error);
-      alert('An error occurred during signup. Please try again.');
+    } catch (error: any) {
+      console.error('❌ Signup error:', error);
+      alert(error.message || 'An error occurred during signup. Please try again.');
     }
   };
 

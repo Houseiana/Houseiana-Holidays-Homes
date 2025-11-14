@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { generateToken } from '@/lib/auth';
+import { railwayApi } from '@/lib/railway-api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,116 +46,141 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = method === 'phone'
-      ? await db.user.findByPhone(phoneNumber)
-      : await db.user.findByEmail(email);
+    if (!password || password.length < 8) {
+      return NextResponse.json(
+        { success: false, message: 'Password must be at least 8 characters' },
+        { status: 400 }
+      );
+    }
 
-    if (existingUser) {
-      // User exists - this is a login, not signup
-      const token = generateToken({
-        userId: existingUser.id,
-        email: existingUser.email || '',
-        firstName: existingUser.first_name,
-        lastName: existingUser.last_name,
-        isHost: existingUser.is_host
+    if (!firstName || !lastName) {
+      return NextResponse.json(
+        { success: false, message: 'First name and last name are required' },
+        { status: 400 }
+      );
+    }
+
+    try {
+      // Register new user via Railway API
+      const registrationData: any = {
+        password,
+        firstName,
+        lastName,
+        email: email || '', // Backend requires email field
+        phoneNumber: phoneNumber || '' // Include both fields
+      };
+
+      // Add KYC data if provided
+      if (idNumber) {
+        registrationData.idNumber = idNumber;
+      }
+      if (idCopy) {
+        registrationData.idCopy = idCopy;
+      }
+
+      console.log('🚀 Calling Railway API register with:', {
+        method,
+        hasEmail: !!registrationData.email,
+        hasPhone: !!registrationData.phoneNumber,
+        hasKYC: !!idNumber
       });
 
+      // Call Railway backend API
+      const response = await railwayApi.register(registrationData);
+
+      console.log('✅ Railway API response:', {
+        success: response.success,
+        hasToken: !!response.data?.token,
+        hasUser: !!response.data?.user
+      });
+
+      if (!response.success || !response.data) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: response.message || 'Failed to create account'
+          },
+          { status: 400 }
+        );
+      }
+
+      // Extract user and token from Railway response
+      const { user: railwayUser, token } = response.data;
+
+      // Validate response has required data
+      if (!railwayUser || !token) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Invalid response from server'
+          },
+          { status: 500 }
+        );
+      }
+
+      // Format user object for frontend
       const user = {
-        id: existingUser.id,
-        email: existingUser.email,
-        phone: existingUser.phone_number,
-        firstName: existingUser.first_name,
-        lastName: existingUser.last_name,
-        name: `${existingUser.first_name} ${existingUser.last_name}`,
-        isGuest: true,
-        isHost: existingUser.is_host,
-        hasCompletedKYC: existingUser.id_number ? true : false
+        id: railwayUser.id,
+        email: railwayUser.email,
+        phone: railwayUser.phoneNumber,
+        firstName: railwayUser.firstName,
+        lastName: railwayUser.lastName,
+        name: `${railwayUser.firstName} ${railwayUser.lastName}`,
+        isGuest: railwayUser.isGuest !== undefined ? railwayUser.isGuest : true,
+        isHost: railwayUser.isHost !== undefined ? railwayUser.isHost : true,
+        hasCompletedKYC: railwayUser.kycCompleted || false
       };
+
+      console.log('✅ User created successfully:', {
+        id: user.id,
+        hasKYC: user.hasCompletedKYC
+      });
 
       return NextResponse.json({
         success: true,
         token,
         user,
-        needsKYC: !existingUser.id_number,
-        isNewUser: false
+        needsKYC: !user.hasCompletedKYC,
+        isNewUser: true
       });
-    }
 
-    // Validate and hash password if provided
-    let hashedPassword = '';
-    if (password) {
-      // Validate password strength
-      const { validatePassword } = await import('@/lib/password-validation');
-      const passwordValidation = validatePassword(password);
+    } catch (apiError: any) {
+      console.error('❌ Railway API error:', apiError.message || apiError);
 
-      if (!passwordValidation.isValid) {
-        return NextResponse.json({
-          success: false,
-          message: 'Password does not meet security requirements',
-          details: passwordValidation.errors
-        }, { status: 400 });
+      // Check if user already exists
+      if (apiError.message && (
+        apiError.message.includes('already exists') ||
+        apiError.message.includes('duplicate') ||
+        apiError.message.includes('unique constraint')
+      )) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: method === 'email'
+              ? 'An account with this email already exists'
+              : 'An account with this phone number already exists'
+          },
+          { status: 409 }
+        );
       }
 
-      const bcrypt = await import('bcryptjs');
-      hashedPassword = await bcrypt.hash(password, 12); // Increased from 10 to 12 for better security
+      // Return generic error
+      return NextResponse.json(
+        {
+          success: false,
+          message: apiError.message || 'Failed to create account. Please try again.'
+        },
+        { status: 500 }
+      );
     }
 
-    // Create new user with dual role (Guest + Host)
-    const newUser = await db.user.create({
-      email: method === 'email' ? email : undefined,
-      phoneNumber: method === 'phone' ? phoneNumber : undefined,
-      firstName: firstName || '',
-      lastName: lastName || '',
-      passwordHash: hashedPassword,
-      isHost: true, // Dual role: can be both guest and host
-      phoneVerifiedAt: method === 'phone' ? new Date() : null,
-      emailVerifiedAt: method === 'email' ? new Date() : null,
-      // KYC fields
-      idNumber: idNumber || undefined,
-      idCopyUrl: idCopy || undefined,
-      idVerifiedAt: (idNumber && firstName && lastName) ? new Date() : null,
-      isActive: true
-    });
-
-    console.log('✅ User created successfully:', {
-      id: newUser.id,
-      hasKYC: !!newUser.id_number
-    });
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: newUser.id,
-      email: newUser.email || '',
-      firstName: newUser.first_name,
-      lastName: newUser.last_name,
-      isHost: newUser.is_host
-    });
-
-    const user = {
-      id: newUser.id,
-      email: newUser.email,
-      phone: newUser.phone_number,
-      firstName: newUser.first_name,
-      lastName: newUser.last_name,
-      name: `${newUser.first_name} ${newUser.last_name}`,
-      isGuest: true,
-      isHost: newUser.is_host,
-      hasCompletedKYC: !!(newUser.id_number && newUser.id_verified_at)
-    };
-
-    return NextResponse.json({
-      success: true,
-      token,
-      user,
-      needsKYC: !newUser.id_number, // Only need KYC if not completed
-      isNewUser: true
-    });
-
-  } catch (error) {
-    console.error('OTP Signup error:', error);
+  } catch (error: any) {
+    console.error('❌ OTP Signup error:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to create account' },
+      {
+        success: false,
+        message: error.message || 'Failed to create account'
+      },
       { status: 500 }
     );
   }

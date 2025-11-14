@@ -1,22 +1,16 @@
-// ⚠️ IMPORTANT: This Prisma schema is for REFERENCE ONLY
-// The frontend DOES NOT use Prisma Client or access the database directly
-// ALL data operations must go through Railway Backend API (lib/railway-api.ts)
-//
-// This schema is kept for:
-// 1. Documentation of the database structure managed by the C# backend
-// 2. Type reference for understanding data models
-// 3. Potential future migration tooling
-//
-// DO NOT run: prisma generate, prisma migrate, or any prisma commands in frontend
-// Database is managed by Railway C# Backend ONLY
+// Houseiana Unified Fullstack - Prisma Schema
+// This schema defines the database structure for the unified Next.js application
+// Database: PostgreSQL (Vercel Postgres, Neon, or any PostgreSQL provider)
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {

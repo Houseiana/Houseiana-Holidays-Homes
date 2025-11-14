@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, MapPin } from 'lucide-react';
 
 interface Step1PhoneNumberProps {
@@ -53,74 +53,101 @@ const countryCodes = [
 ];
 
 export default function Step1PhoneNumber({ onContinue, onBack }: Step1PhoneNumberProps) {
-  const [countryCode, setCountryCode] = useState('+974'); // Default to Qatar
+  // FIX 1: Store country INDEX instead of code to handle duplicate codes (+1 for US/Canada)
+  const [countryIndex, setCountryIndex] = useState(0); // Default to Qatar (index 0)
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
-  // Auto-detect user location based on browser geolocation
+  // Dropdown ref for click-outside handler
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // FIX 2: Performance optimization - compute selected country once per render
+  const selectedCountry = useMemo(() => countryCodes[countryIndex], [countryIndex]);
+
+  // FIX 3: Validate phone number (8-15 digits is standard for international numbers)
+  const digitsOnly = phoneNumber.replace(/\D/g, '');
+  const isValidPhone = digitsOnly.length >= 8 && digitsOnly.length <= 15;
+
+  // FIX 4: Click-outside to close dropdown (UX improvement)
   useEffect(() => {
-    const detectLocation = async () => {
-      try {
-        setIsDetectingLocation(true);
-
-        // Try to get user's approximate location
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            timeout: 5000,
-            enableHighAccuracy: false
-          });
-        });
-
-        // Basic location to country code mapping (simplified)
-        const { latitude, longitude } = position.coords;
-
-        // Qatar region detection
-        if (latitude >= 24.4 && latitude <= 26.2 && longitude >= 50.7 && longitude <= 51.7) {
-          setCountryCode('+974');
-        }
-        // UAE region detection
-        else if (latitude >= 22.6 && latitude <= 26.1 && longitude >= 51.0 && longitude <= 56.4) {
-          setCountryCode('+971');
-        }
-        // Saudi Arabia region detection
-        else if (latitude >= 16.0 && latitude <= 32.2 && longitude >= 34.5 && longitude <= 55.7) {
-          setCountryCode('+966');
-        }
-        // Kuwait region detection
-        else if (latitude >= 28.5 && latitude <= 30.1 && longitude >= 46.5 && longitude <= 48.5) {
-          setCountryCode('+965');
-        }
-        // Bahrain region detection
-        else if (latitude >= 25.5 && latitude <= 26.3 && longitude >= 50.3 && longitude <= 50.8) {
-          setCountryCode('+973');
-        }
-        // Oman region detection
-        else if (latitude >= 16.0 && latitude <= 26.4 && longitude >= 51.8 && longitude <= 59.8) {
-          setCountryCode('+968');
-        }
-        // Default to Qatar if in Middle East region but not specifically detected
-        else if (latitude >= 12.0 && latitude <= 42.0 && longitude >= 25.0 && longitude <= 63.0) {
-          setCountryCode('+974');
-        }
-      } catch (error) {
-        // Keep default Qatar if geolocation fails
-        console.log('Location detection not available, using default country code');
-      } finally {
-        setIsDetectingLocation(false);
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowCountryDropdown(false);
       }
-    };
-
-    // Only attempt location detection if geolocation is available
-    if (navigator.geolocation) {
-      detectLocation();
     }
-  }, []);
 
+    if (showCountryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCountryDropdown]);
+
+  // FIX 5: Make geolocation opt-in instead of auto-triggering (privacy improvement)
+  const detectLocation = async () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
+    try {
+      setIsDetectingLocation(true);
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 5000,
+          enableHighAccuracy: false
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // Qatar region detection
+      if (latitude >= 24.4 && latitude <= 26.2 && longitude >= 50.7 && longitude <= 51.7) {
+        setCountryIndex(0); // Qatar
+      }
+      // UAE region detection
+      else if (latitude >= 22.6 && latitude <= 26.1 && longitude >= 51.0 && longitude <= 56.4) {
+        setCountryIndex(1); // UAE
+      }
+      // Saudi Arabia region detection
+      else if (latitude >= 16.0 && latitude <= 32.2 && longitude >= 34.5 && longitude <= 55.7) {
+        setCountryIndex(2); // Saudi Arabia
+      }
+      // Kuwait region detection
+      else if (latitude >= 28.5 && latitude <= 30.1 && longitude >= 46.5 && longitude <= 48.5) {
+        setCountryIndex(3); // Kuwait
+      }
+      // Bahrain region detection
+      else if (latitude >= 25.5 && latitude <= 26.3 && longitude >= 50.3 && longitude <= 50.8) {
+        setCountryIndex(4); // Bahrain
+      }
+      // Oman region detection
+      else if (latitude >= 16.0 && latitude <= 26.4 && longitude >= 51.8 && longitude <= 59.8) {
+        setCountryIndex(5); // Oman
+      }
+      // Default to Qatar if in Middle East region but not specifically detected
+      else if (latitude >= 12.0 && latitude <= 42.0 && longitude >= 25.0 && longitude <= 63.0) {
+        setCountryIndex(0); // Qatar
+      }
+    } catch (error) {
+      console.log('Location detection failed or permission denied');
+      alert('Unable to detect your location. Please select your country manually.');
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  };
+
+  // FIX 6: Improved handleContinue with proper validation
   const handleContinue = () => {
-    if (phoneNumber.trim()) {
-      onContinue(countryCode, phoneNumber);
+    if (!isValidPhone) {
+      alert('Please enter a valid phone number (8-15 digits)');
+      return;
     }
+
+    // Pass clean digits only (no formatting characters)
+    onContinue(selectedCountry.code, digitsOnly);
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,9 +180,21 @@ export default function Step1PhoneNumber({ onContinue, onBack }: Step1PhoneNumbe
         {/* Form */}
         <div className="space-y-4 sm:space-y-5">
           {/* Country Code Selector */}
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-              Country code {isDetectingLocation && (
+              Country code
+              {/* FIX: Opt-in location detection button */}
+              {!isDetectingLocation && (
+                <button
+                  type="button"
+                  onClick={detectLocation}
+                  className="text-xs text-blue-600 underline ml-2 hover:text-blue-800"
+                >
+                  <MapPin className="w-3 h-3 inline mr-1" />
+                  Use my location
+                </button>
+              )}
+              {isDetectingLocation && (
                 <span className="inline-flex items-center text-blue-600 ml-2">
                   <MapPin className="w-3 h-3 mr-1 animate-pulse" />
                   <span className="text-xs">Detecting location...</span>
@@ -172,12 +211,12 @@ export default function Step1PhoneNumber({ onContinue, onBack }: Step1PhoneNumbe
               }`}
             >
               <span className="text-gray-900 text-sm sm:text-base truncate flex items-center">
-                <span className="mr-3 text-lg">{countryCodes.find(c => c.code === countryCode)?.flag}</span>
+                <span className="mr-3 text-lg">{selectedCountry.flag}</span>
                 <div>
-                  <div className="font-medium">{countryCodes.find(c => c.code === countryCode)?.country}</div>
-                  <div className="text-xs text-gray-500">{countryCodes.find(c => c.code === countryCode)?.region}</div>
+                  <div className="font-medium">{selectedCountry.country}</div>
+                  <div className="text-xs text-gray-500">{selectedCountry.region}</div>
                 </div>
-                <span className="ml-2 font-mono text-blue-600">{countryCode}</span>
+                <span className="ml-2 font-mono text-blue-600">{selectedCountry.code}</span>
               </span>
               <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 flex-shrink-0" />
             </button>
@@ -185,9 +224,11 @@ export default function Step1PhoneNumber({ onContinue, onBack }: Step1PhoneNumbe
             {/* Country Dropdown */}
             {showCountryDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 sm:max-h-96 overflow-y-auto z-10">
-                {/* Group countries by region for better location detection */}
                 {['Middle East', 'Middle East & Africa', 'North America', 'Europe', 'Asia', 'Africa', 'Oceania'].map((region) => {
-                  const regionCountries = countryCodes.filter(country => country.region === region);
+                  const regionCountries = countryCodes
+                    .map((country, index) => ({ ...country, originalIndex: index }))
+                    .filter(country => country.region === region);
+
                   if (regionCountries.length === 0) return null;
 
                   return (
@@ -195,12 +236,12 @@ export default function Step1PhoneNumber({ onContinue, onBack }: Step1PhoneNumbe
                       <div className="px-3 sm:px-4 py-2 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
                         {region}
                       </div>
-                      {regionCountries.map((country, index) => (
+                      {regionCountries.map((country) => (
                         <button
-                          key={`${country.code}-${country.country}-${index}`}
+                          key={`${country.originalIndex}-${country.country}`}
                           type="button"
                           onClick={() => {
-                            setCountryCode(country.code);
+                            setCountryIndex(country.originalIndex); // FIX: Store index instead of code
                             setShowCountryDropdown(false);
                           }}
                           className="w-full px-3 sm:px-4 py-3 text-left hover:bg-blue-50 active:bg-blue-100 flex justify-between items-center transition-colors border-b border-gray-100 last:border-b-0"
@@ -226,11 +267,23 @@ export default function Step1PhoneNumber({ onContinue, onBack }: Step1PhoneNumbe
             </label>
             <input
               type="tel"
+              inputMode="tel" // FIX: Better mobile keyboard hint
               value={phoneNumber}
               onChange={handlePhoneChange}
               placeholder="(650) 213-7552"
               className="w-full px-3 sm:px-4 py-3 sm:py-4 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-200 text-gray-900 text-sm sm:text-base transition-all"
             />
+            {/* FIX: Show validation feedback */}
+            {phoneNumber && !isValidPhone && (
+              <p className="text-xs text-red-600 mt-1">
+                Please enter a valid phone number (8-15 digits)
+              </p>
+            )}
+            {phoneNumber && isValidPhone && (
+              <p className="text-xs text-green-600 mt-1">
+                Valid phone number: {selectedCountry.code}{digitsOnly}
+              </p>
+            )}
           </div>
 
           {/* Privacy Policy Notice */}
@@ -241,12 +294,12 @@ export default function Step1PhoneNumber({ onContinue, onBack }: Step1PhoneNumbe
             </a>
           </p>
 
-          {/* Continue Button */}
+          {/* Continue Button - FIX: Proper validation */}
           <button
             onClick={handleContinue}
-            disabled={!phoneNumber.trim()}
+            disabled={!isValidPhone}
             className={`w-full py-3 rounded-lg font-semibold text-white transition-colors ${
-              phoneNumber.trim()
+              isValidPhone
                 ? 'bg-[#FF385C] hover:bg-[#E31C5F]'
                 : 'bg-gray-200 cursor-not-allowed'
             }`}
