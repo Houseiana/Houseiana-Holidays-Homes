@@ -90,7 +90,7 @@ export default function TripsPage() {
   };
 
   const handleDeleteBooking = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to permanently delete this booking? This action cannot be undone.')) return;
+    if (!confirm('Are you sure you want to delete this booking?')) return;
 
     try {
       const response = await fetch(`/api/v2/bookings/${bookingId}`, {
@@ -279,7 +279,7 @@ export default function TripsPage() {
                       onClick={() => handleDeleteBooking(booking.id)}
                       className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
                     >
-                      Delete Permanently
+                      Delete Booking
                     </button>
                   )}
                   <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">

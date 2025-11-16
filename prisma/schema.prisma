@@ -14,40 +14,45 @@ datasource db {
 }
 
 model User {
-  id                       String     @id @default(cuid())
+  id                       String      @id @default(cuid())
   firstName                String
   lastName                 String
-  email                    String?    @unique
-  password                 String
+  email                    String?     @unique
+  password                 String?
   phone                    String?
   countryCode              String?
-  userType                 UserType   @default(GUEST)
+  userType                 UserType    @default(GUEST)
+  isAdmin                  Boolean     @default(false)
   profilePhoto             String?
   birthDate                String?
-  isPhoneVerified          Boolean    @default(false)
-  isHost                   Boolean    @default(false)
-  memberSince              DateTime   @default(now())
-  emailVerified            Boolean    @default(false)
-  phoneVerified            Boolean    @default(false)
-  travelPoints             Int        @default(0)
-  loyaltyTier              String     @default("Bronze")
+  isPhoneVerified          Boolean     @default(false)
+  isHost                   Boolean     @default(false)
+  memberSince              DateTime    @default(now())
+  emailVerified            Boolean     @default(false)
+  phoneVerified            Boolean     @default(false)
+  travelPoints             Int         @default(0)
+  loyaltyTier              String      @default("Bronze")
   idNumber                 String?
   idCopy                   String?
-  kycCompleted             Boolean    @default(false)
+  kycCompleted             Boolean     @default(false)
   avatar                   String?
   passwordResetToken       String?
   passwordResetExpires     DateTime?
   emailVerificationToken   String?
   emailVerificationExpires DateTime?
-  failedLoginAttempts      Int        @default(0)
+  failedLoginAttempts      Int         @default(0)
   accountLockedUntil       DateTime?
   lastLoginAt              DateTime?
-  createdAt                DateTime   @default(now())
-  updatedAt                DateTime   @updatedAt
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
   accounts                 Account[]
   otpCodes                 OtpCode[]
   referrals                Referral[]
   sessions                 Session[]
+  properties               Property[]
+  bookings                 Booking[]
+  reviews                  Review[]
+  favorites                Favorite[]
 
   @@map("users")
 }
@@ -116,6 +121,7 @@ model Account {
 enum UserType {
   HOST
   GUEST
+  ADMIN
 }
 
 enum OtpType {
@@ -123,4 +129,403 @@ enum OtpType {
   EMAIL_VERIFICATION
   LOGIN
   PASSWORD_RESET
+}
+
+// Property & Booking Models
+model Property {
+  id              String           @id @default(cuid())
+  hostId          String
+  title           String
+  description     String           @db.Text
+  propertyType    PropertyType
+  roomType        RoomType
+
+  // Location
+  country         String
+  city            String
+  state           String?
+  address         String
+  zipCode         String?
+  latitude        Float?
+  longitude       Float?
+
+  // Capacity
+  guests          Int
+  bedrooms        Int
+  beds            Int
+  bathrooms       Float
+
+  // Pricing
+  pricePerNight   Float
+  cleaningFee     Float?           @default(0)
+  serviceFee      Float?           @default(0)
+  weeklyDiscount  Float?           @default(0)
+  monthlyDiscount Float?           @default(0)
+
+  // Amenities (JSON array of strings)
+  amenities       Json             @default("[]")
+
+  // Photos (JSON array of photo URLs)
+  photos          Json             @default("[]")
+  coverPhoto      String?
+
+  // House Rules
+  checkInTime     String?          @default("15:00")
+  checkOutTime    String?          @default("11:00")
+  minNights       Int              @default(1)
+  maxNights       Int?
+  instantBook     Boolean          @default(false)
+  allowPets       Boolean          @default(false)
+  allowSmoking    Boolean          @default(false)
+  allowEvents     Boolean          @default(false)
+
+  // Status
+  status          PropertyStatus   @default(DRAFT)
+  isActive        Boolean          @default(true)
+
+  // Admin Review
+  reviewedBy      String?          // Admin user ID who reviewed
+  reviewedAt      DateTime?
+  reviewNotes     String?          @db.Text
+  rejectionReason String?          @db.Text
+
+  // Stats
+  viewCount       Int              @default(0)
+  bookingCount    Int              @default(0)
+  averageRating   Float?           @default(0)
+
+  // Timestamps
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  publishedAt     DateTime?
+  submittedForReviewAt DateTime?
+
+  // Relations
+  host            User             @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  reviews         Review[]
+  favorites       Favorite[]
+
+  @@index([hostId])
+  @@index([city])
+  @@index([propertyType])
+  @@index([status])
+  @@map("properties")
+}
+
+model Booking {
+  id              String         @id @default(cuid())
+  propertyId      String
+  guestId         String
+
+  // Dates
+  checkIn         DateTime
+  checkOut        DateTime
+
+  // Pricing
+  nightlyRate     Float
+  numberOfNights  Int
+  subtotal        Float
+  cleaningFee     Float          @default(0)
+  serviceFee      Float          @default(0)
+  totalPrice      Float
+
+  // Guest Info
+  guests          Int
+
+  // Status
+  status          BookingStatus  @default(PENDING)
+
+  // Payment
+  paymentStatus   PaymentStatus  @default(PENDING)
+  paymentMethod   String?
+  transactionId   String?
+
+  // Timestamps
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  confirmedAt     DateTime?
+  cancelledAt     DateTime?
+  deletedAt       DateTime?      // Soft delete timestamp
+
+  // Relations
+  property        Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  guest           User           @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([guestId])
+  @@index([status])
+  @@map("bookings")
+}
+
+model Review {
+  id              String    @id @default(cuid())
+  propertyId      String
+  userId          String
+  bookingId       String?
+
+  // Ratings (1-5 scale)
+  overallRating   Float
+  cleanlinessRating Float?
+  accuracyRating  Float?
+  checkInRating   Float?
+  communicationRating Float?
+  locationRating  Float?
+  valueRating     Float?
+
+  // Content
+  comment         String?   @db.Text
+
+  // Host Response
+  hostResponse    String?   @db.Text
+  hostRespondedAt DateTime?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+// Enums for Property
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  VILLA
+  CONDO
+  TOWNHOUSE
+  GUESTHOUSE
+  HOTEL
+  CABIN
+  BUNGALOW
+  STUDIO
+  LOFT
+  OTHER
+}
+
+enum RoomType {
+  ENTIRE_PLACE
+  PRIVATE_ROOM
+  SHARED_ROOM
+}
+
+enum PropertyStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  UNLISTED
+  SUSPENDED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+// ============================================
+// CHAT SYSTEM MODELS
+// ============================================
+
+model Conversation {
+  id                String             @id @default(cuid())
+  type              ConversationType
+
+  // Participants
+  participant1Id    String             // Can be user or admin ID
+  participant1Type  ParticipantType
+  participant2Id    String             // Can be user or admin ID
+  participant2Type  ParticipantType
+
+  // Related entities
+  propertyId        String?            // If conversation is about a property
+  bookingId         String?            // If conversation is about a booking
+
+  // Conversation metadata
+  title             String?            // Optional title (e.g., "Booking #123 Support")
+  lastMessageAt     DateTime?
+  lastMessagePreview String?           @db.Text
+
+  // Status
+  isActive          Boolean            @default(true)
+  isMuted           Boolean            @default(false)
+
+  // Unread counts
+  unreadCount1      Int                @default(0)  // Unread for participant 1
+  unreadCount2      Int                @default(0)  // Unread for participant 2
+
+  // Timestamps
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  // Relations
+  messages          Message[]
+
+  @@index([participant1Id])
+  @@index([participant2Id])
+  @@index([propertyId])
+  @@index([bookingId])
+  @@index([type])
+  @@map("conversations")
+}
+
+model Message {
+  id              String        @id @default(cuid())
+  conversationId  String
+
+  // Sender info
+  senderId        String
+  senderType      ParticipantType
+
+  // Content
+  content         String        @db.Text
+  contentType     MessageType   @default(TEXT)
+
+  // Attachments (JSON array of {url, name, size, type})
+  attachments     Json?         @default("[]")
+
+  // Status
+  isRead          Boolean       @default(false)
+  isEdited        Boolean       @default(false)
+  isDeleted       Boolean       @default(false)
+
+  // System messages
+  isSystemMessage Boolean       @default(false)
+  systemType      String?       // 'booking_confirmed', 'property_approved', etc.
+
+  // Read receipts
+  readAt          DateTime?
+  deliveredAt     DateTime?
+
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model SupportTicket {
+  id              String             @id @default(cuid())
+  userId          String             // User who created the ticket
+  userType        ParticipantType
+
+  // Ticket info
+  subject         String
+  description     String             @db.Text
+  category        SupportCategory
+  priority        SupportPriority    @default(MEDIUM)
+
+  // Assignment
+  assignedToAdminId String?
+
+  // Status
+  status          TicketStatus       @default(OPEN)
+
+  // Related entities
+  conversationId  String?            @unique
+  propertyId      String?
+  bookingId       String?
+
+  // Resolution
+  resolvedAt      DateTime?
+  resolution      String?            @db.Text
+
+  // Timestamps
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([assignedToAdminId])
+  @@index([status])
+  @@index([category])
+  @@map("support_tickets")
+}
+
+// Chat Enums
+enum ConversationType {
+  GUEST_HOST       // Guest talking to Property Host
+  GUEST_SUPPORT    // Guest talking to Admin/Support
+  HOST_SUPPORT     // Host talking to Admin/Support
+  ADMIN_ADMIN      // Admin to Admin (internal)
+}
+
+enum ParticipantType {
+  USER             // Regular user (guest or host)
+  ADMIN            // Admin/Support staff
+  SYSTEM           // System-generated messages
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  AUDIO
+  VIDEO
+  LOCATION
+  SYSTEM
+}
+
+enum SupportCategory {
+  BOOKING_ISSUE
+  PAYMENT_ISSUE
+  PROPERTY_ISSUE
+  ACCOUNT_ISSUE
+  TECHNICAL_ISSUE
+  REFUND_REQUEST
+  CANCELLATION
+  GENERAL_INQUIRY
+  COMPLAINT
+  OTHER
+}
+
+enum SupportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  WAITING_ON_ADMIN
+  RESOLVED
+  CLOSED
 }

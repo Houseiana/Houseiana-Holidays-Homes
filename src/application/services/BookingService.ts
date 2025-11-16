@@ -300,8 +300,9 @@ export class BookingService {
   }
 
   /**
-   * Delete a booking permanently
+   * Delete a booking (soft delete)
    * Only allowed for cancelled or rejected bookings
+   * Note: This performs a soft delete by setting deletedAt timestamp
    */
   async deleteBooking(bookingId: string): Promise<void> {
     const booking = await this.bookingRepository.findById(bookingId);
@@ -316,7 +317,7 @@ export class BookingService {
       throw new Error('Only cancelled or rejected bookings can be deleted. Please cancel the booking first.');
     }
 
-    // Permanently delete from database
+    // Soft delete: marks booking as deleted without removing from database
     await this.bookingRepository.delete(bookingId);
   }
 }
