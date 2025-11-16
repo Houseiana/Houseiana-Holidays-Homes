@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
-import LoginModal from '@/components/auth/login-modal';
 import {
   ArrowLeft,
   Upload,
@@ -293,75 +292,113 @@ export default function AddListingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!user?.userId) {
+    // Check authentication
+    const token = localStorage.getItem('auth_token');
+    const userData = localStorage.getItem('auth_user');
+
+    if (!token || !userData) {
       setShowLoginModal(true);
       return;
     }
 
-    console.log('Submitting property:', formData);
+    const parsedUser = JSON.parse(userData);
+    console.log('🏠 Submitting property listing...');
 
     try {
-      // Transform form data to match API expectations
+      // Validate required fields
+      if (!formData.title || !formData.description) {
+        alert('Please provide a title and description for your property');
+        setCurrentStep(3);
+        return;
+      }
+
+      if (!formData.propertyType) {
+        alert('Please select a property type');
+        setCurrentStep(1);
+        return;
+      }
+
+      if (!formData.address.city || !formData.address.country) {
+        alert('Please provide complete location information');
+        setCurrentStep(2);
+        return;
+      }
+
+      // Transform form data to match new Prisma schema
       const propertyData = {
-        hostId: user.userId,
         title: formData.title,
         description: formData.description,
-        propertyType: formData.propertyType,
-        address: {
-          street: `${formData.address.streetNumber} ${formData.address.street}`,
-          city: formData.address.city,
-          state: formData.address.state,
-          country: formData.address.country,
-          zipCode: formData.address.zipCode,
-          coordinates: {
-            lat: 0, // You can add geocoding later
-            lng: 0
-          }
-        },
-        pricing: {
-          basePrice: formData.basePrice,
-          currency: 'USD',
-          cleaningFee: formData.cleaningFee,
-          serviceFee: formData.serviceFee,
-          minimumNights: 1,
-          maximumNights: 365
-        },
-        amenities: formData.amenities,
-        rules: {
-          maxGuests: formData.maxGuests,
-          checkIn: '15:00',
-          checkOut: '11:00',
-          allowPets: false,
-          allowSmoking: false,
-          allowParties: false,
-          quietHours: {
-            start: '22:00',
-            end: '08:00'
-          }
-        },
+        propertyType: formData.propertyType.toUpperCase(), // HOUSE, APARTMENT, etc.
+        roomType: 'ENTIRE_PLACE', // Default to entire place
+
+        // Location
+        country: formData.address.country,
+        city: formData.address.city,
+        state: formData.address.state || formData.address.district,
+        address: `${formData.address.building ? formData.address.building + ', ' : ''}${formData.address.streetNumber} ${formData.address.street}, Zone ${formData.address.zone}, ${formData.address.district}`.trim(),
+        zipCode: formData.address.zipCode || null,
+        latitude: null, // Can add geocoding later
+        longitude: null,
+
+        // Capacity
+        guests: formData.maxGuests,
         bedrooms: formData.bedrooms,
-        bathrooms: formData.bathrooms
+        beds: formData.bedrooms, // Assume 1 bed per bedroom
+        bathrooms: formData.bathrooms,
+
+        // Pricing
+        pricePerNight: formData.basePrice,
+        cleaningFee: formData.cleaningFee || 0,
+        serviceFee: formData.serviceFee || 0,
+        weeklyDiscount: 0,
+        monthlyDiscount: 0,
+
+        // Amenities (array of strings)
+        amenities: formData.amenities,
+
+        // Photos will be handled separately
+        photos: [],
+        coverPhoto: null,
+
+        // House Rules
+        checkInTime: formData.checkIn || '15:00',
+        checkOutTime: formData.checkOut || '11:00',
+        minNights: 1,
+        maxNights: null,
+        instantBook: false,
+        allowPets: formData.allowPets,
+        allowSmoking: formData.allowSmoking,
+        allowEvents: formData.allowParties,
+
+        // Status
+        status: 'DRAFT' // Save as draft initially
       };
 
+      console.log('📤 Sending property data:', propertyData);
+
+      // Get auth token for request
       const response = await fetch('/api/properties', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include',
         body: JSON.stringify(propertyData),
       });
 
       const result = await response.json();
+      console.log('📥 API Response:', result);
 
       if (response.ok && result.success) {
-        alert('Property added successfully!');
-        router.push('/host-dashboard?tab=my-properties');
+        alert(`✅ Property "${formData.title}" created successfully!\n\nYou can now add photos and publish it from your dashboard.`);
+        router.push('/host-dashboard');
       } else {
         throw new Error(result.error || 'Failed to add property');
       }
-    } catch (error) {
-      console.error('Error submitting property:', error);
-      alert('Failed to add property. Please try again.');
+    } catch (error: any) {
+      console.error('❌ Error submitting property:', error);
+      alert(`Failed to add property:\n${error.message}\n\nPlease check the console for details and try again.`);
     }
   };
 
@@ -1071,13 +1108,6 @@ export default function AddListingPage() {
           </div>
         </div>
       </div>
-
-      {/* Login Modal */}
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onSuccess={handleLoginSuccess}
-      />
     </div>
   );
 }

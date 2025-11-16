@@ -5,13 +5,19 @@ export const dynamic = 'force-dynamic';
 
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { signOut } from 'next-auth/react'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import KYCModal from '@/components/KYCModal'
 import {
   LayoutDashboard, Clock, Heart, Search, MessageCircle, CreditCard, User,
   HelpCircle, ArrowRightLeft, Star, Calendar, MapPin, LogOut
 } from 'lucide-react'
+import TripsPage from '@/app/(dashboard)/trips/page'
+import WishlistPage from '@/app/(dashboard)/wishlist/page'
+import ExplorePage from '@/app/(dashboard)/explore/page'
+import ProfilePage from '@/app/(dashboard)/profile/page'
+import MessagesPage from '@/app/(dashboard)/messages/page'
+import PaymentsPage from '@/app/(dashboard)/payments/page'
+import SupportPage from '@/app/(dashboard)/help-center/page'
 
 interface Booking {
   id: string
@@ -153,16 +159,21 @@ function ClientDashboardContent() {
     router.push(`/messages/${hostId}`)
   }
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     try {
       console.log('🚪 Starting sign out process...')
-      await signOut({ redirect: false })
-      console.log('✅ NextAuth signOut successful')
+
+      // Clear localStorage
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_user')
+
+      // Clear cookies
+      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;'
 
       // Clear auth store
       const { logout } = useAuthStore.getState()
       logout()
-      console.log('✅ Auth store cleared')
+      console.log('✅ Auth cleared successfully')
 
       // Redirect to home page
       router.push('/')
@@ -179,7 +190,8 @@ function ClientDashboardContent() {
     { id: 'explore', label: 'Explore', icon: Search },
     { id: 'messages', label: 'Messages', icon: MessageCircle },
     { id: 'payments', label: 'Payments', icon: CreditCard },
-    { id: 'profile', label: 'Profile', icon: User }
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'support', label: 'Support', icon: HelpCircle }
   ]
 
   return (
@@ -216,13 +228,6 @@ function ClientDashboardContent() {
                   </button>
                 )
               })}
-              <a
-                href="/help"
-                className="flex items-center px-4 py-3 text-gray-600 hover:text-orange-600 hover:bg-gray-50 rounded-lg"
-              >
-                <HelpCircle className="w-5 h-5 mr-3" />
-                Support
-              </a>
             </nav>
           </div>
 
@@ -547,51 +552,31 @@ function ClientDashboardContent() {
 
                 {/* Other Tab Contents */}
                 {activeTab === 'my-trips' && (
-                  <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">📅 My Trips</h1>
-                    <p className="text-gray-600 text-lg">Manage your past and upcoming bookings.</p>
-                    <div className="mt-6 text-gray-500">My trips content will be implemented here...</div>
-                  </div>
+                  <TripsPage />
                 )}
 
                 {activeTab === 'wishlist' && (
-                  <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">❤️ Wishlist</h1>
-                    <p className="text-gray-600 text-lg">Your favorite properties saved for later.</p>
-                    <div className="mt-6 text-gray-500">Wishlist content will be implemented here...</div>
-                  </div>
+                  <WishlistPage />
                 )}
 
                 {activeTab === 'explore' && (
-                  <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">🔍 Explore</h1>
-                    <p className="text-gray-600 text-lg">Discover amazing places to stay around the world.</p>
-                    <div className="mt-6 text-gray-500">Explore content will be implemented here...</div>
-                  </div>
+                  <ExplorePage />
                 )}
 
                 {activeTab === 'messages' && (
-                  <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">💬 Messages</h1>
-                    <p className="text-gray-600 text-lg">Communicate with hosts and manage your conversations.</p>
-                    <div className="mt-6 text-gray-500">Messages content will be implemented here...</div>
-                  </div>
+                  <MessagesPage />
                 )}
 
                 {activeTab === 'payments' && (
-                  <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">💳 Payments</h1>
-                    <p className="text-gray-600 text-lg">Manage your payment methods and transaction history.</p>
-                    <div className="mt-6 text-gray-500">Payments content will be implemented here...</div>
-                  </div>
+                  <PaymentsPage />
                 )}
 
                 {activeTab === 'profile' && (
-                  <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">👤 Profile</h1>
-                    <p className="text-gray-600 text-lg">Manage your account settings and personal information.</p>
-                    <div className="mt-6 text-gray-500">Profile content will be implemented here...</div>
-                  </div>
+                  <ProfilePage />
+                )}
+
+                {activeTab === 'support' && (
+                  <SupportPage />
                 )}
               </>
             )}

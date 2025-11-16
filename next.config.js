@@ -8,6 +8,18 @@ const nextConfig = {
     // Ignore lint errors during build
     ignoreDuringBuilds: true,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.unsplash.com',
+      },
+    ],
+  },
   experimental: {
     // Only external packages actually used by frontend
     // Note: pg, bcryptjs removed - database access is via Railway API only

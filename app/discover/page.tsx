@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Filter, Grid, List, Map, Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import AirbnbFilter, { FilterState } from '@/components/search/airbnb-filter'
+import { PropertyCard } from '@/components/property/property-card'
 
 interface Listing {
   id: string
@@ -273,63 +274,19 @@ export default function DiscoverPage() {
     setCurrentPage(1)
   }
 
-  const PropertyCard = ({ listing, layout }: { listing: Listing; layout: 'grid' | 'list' }) => (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
-      layout === 'list' ? 'flex' : ''
-    }`}>
-      <div className={`relative ${layout === 'list' ? 'w-64 h-48' : 'h-56'}`}>
-        <img
-          src={listing.image}
-          alt={listing.title}
-          className="w-full h-full object-cover"
-        />
-        {listing.discountPercent && (
-          <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded text-sm font-medium">
-            -{listing.discountPercent}%
-          </div>
-        )}
-        <button className="absolute top-3 right-3 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors">
-          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-        </button>
-      </div>
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
 
-      <div className="p-4 flex-1">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-gray-900 text-lg">{listing.title}</h3>
-          <div className="flex items-center gap-1">
-            <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <span className="font-medium text-gray-900">{listing.rating}</span>
-            <span className="text-gray-500">({listing.reviewCount})</span>
-          </div>
-        </div>
-
-        <p className="text-gray-600 mb-3">{listing.location}</p>
-
-        <div className="flex items-center gap-4 mb-3 text-sm text-gray-600">
-          <span>{listing.beds} beds</span>
-          <span>{listing.baths} baths</span>
-          <span>Sleeps {listing.sleeps}</span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {listing.oldPrice && (
-              <span className="text-gray-400 line-through">${listing.oldPrice}</span>
-            )}
-            <span className="text-2xl font-bold text-gray-900">${listing.price}</span>
-            <span className="text-gray-600">/ night</span>
-          </div>
-          <button className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-            View Details
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+  const handleToggleFavorite = (propertyId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev)
+      if (newFavorites.has(propertyId)) {
+        newFavorites.delete(propertyId)
+      } else {
+        newFavorites.add(propertyId)
+      }
+      return newFavorites
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -345,7 +302,7 @@ export default function DiscoverPage() {
                   placeholder="Where do you want to go?"
                   value={filters.destination}
                   onChange={(e) => updateFilter('destination', e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
             </div>
@@ -649,7 +606,7 @@ export default function DiscoverPage() {
                 <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
                   <button
                     onClick={clearAllFilters}
-                    className="w-full px-4 py-2 text-orange-600 border border-orange-600 rounded-lg hover:bg-orange-50 transition-colors"
+                    className="w-full px-4 py-2 text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
                   >
                     Clear All Filters
                   </button>
@@ -673,7 +630,7 @@ export default function DiscoverPage() {
                 <select
                   value={filters.sortBy}
                   onChange={(e) => updateFilter('sortBy', e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="recommended">Recommended</option>
                   <option value="price_low">Price: Low to High</option>
@@ -686,19 +643,19 @@ export default function DiscoverPage() {
                 <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 ${viewMode === 'grid' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
                     <Grid className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 ${viewMode === 'list' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
                     <List className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setViewMode('map')}
-                    className={`p-2 ${viewMode === 'map' ? 'bg-orange-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    className={`p-2 ${viewMode === 'map' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
                     <Map className="w-5 h-5" />
                   </button>
@@ -711,7 +668,7 @@ export default function DiscoverPage() {
               <div className="flex items-center flex-wrap gap-2 mb-6">
                 <span className="text-sm font-medium text-gray-700">Applied filters:</span>
                 {filters.destination && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm">
                     {filters.destination}
                     <button onClick={() => updateFilter('destination', '')}>
                       <X className="w-4 h-4" />
@@ -719,7 +676,7 @@ export default function DiscoverPage() {
                   </span>
                 )}
                 {(filters.priceMin > 0 || filters.priceMax < 1000) && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm">
                     ${filters.priceMin} - ${filters.priceMax}
                     <button onClick={() => setFilters(prev => ({ ...prev, priceMin: 0, priceMax: 1000 }))}>
                       <X className="w-4 h-4" />
@@ -728,7 +685,7 @@ export default function DiscoverPage() {
                 )}
                 <button
                   onClick={clearAllFilters}
-                  className="text-sm text-orange-600 hover:text-orange-800 font-medium"
+                  className="text-sm text-primary-600 hover:text-primary-800 font-medium"
                 >
                   Clear all
                 </button>
@@ -738,7 +695,7 @@ export default function DiscoverPage() {
             {/* Results Grid/List */}
             {loading ? (
               <div className="text-center py-20">
-                <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-orange-600">
+                <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-white bg-primary-600">
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -761,7 +718,7 @@ export default function DiscoverPage() {
                 <p className="text-gray-600 mb-4">Try adjusting your search criteria or filters</p>
                 <button
                   onClick={clearAllFilters}
-                  className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                 >
                   Clear filters
                 </button>
@@ -769,7 +726,14 @@ export default function DiscoverPage() {
             ) : (
               <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-6'}>
                 {paginatedListings.map((listing) => (
-                  <PropertyCard key={listing.id} listing={listing} layout={viewMode} />
+                  <PropertyCard
+                    key={listing.id}
+                    property={listing}
+                    isFavorite={favorites.has(listing.id)}
+                    onToggleFavorite={handleToggleFavorite}
+                    layout={viewMode}
+                    showViewButton={false}
+                  />
                 ))}
               </div>
             )}

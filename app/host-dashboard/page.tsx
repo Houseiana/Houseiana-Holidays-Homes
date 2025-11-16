@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic';
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { signOut } from 'next-auth/react';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { Property } from '@/types/property';
 import {
@@ -265,16 +264,23 @@ function HostDashboardContent() {
     router.push('/host-dashboard/add-listing');
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     try {
       console.log('🚪 Starting sign out process...');
-      await signOut({ redirect: false });
-      console.log('✅ NextAuth signOut successful');
 
+      // Clear localStorage
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+
+      // Clear cookies
+      document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+
+      // Clear auth store
       const { logout } = useAuthStore.getState();
       logout();
-      console.log('✅ Auth store cleared');
+      console.log('✅ Auth cleared successfully');
 
+      // Redirect to home page
       router.push('/');
       console.log('✅ Redirecting to home page');
     } catch (error) {

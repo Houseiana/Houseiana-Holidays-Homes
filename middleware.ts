@@ -1,70 +1,31 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const { pathname } = req.nextUrl;
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/discover(.*)',
+  '/property(.*)',
+  '/properties(.*)',
+  '/become-host',
+  '/api/webhooks(.*)',
+  '/api/properties(.*)',
+])
 
-    // Allow access to public pages without authentication
-    const publicPaths = ['/', '/discover', '/property', '/test-otp', '/signup', '/become-host'];
-    const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
-
-    if (isPublicPath) {
-      return NextResponse.next();
-    }
-
-    // Protected routes that require authentication
-    const protectedPaths = ['/dashboard', '/host-dashboard', '/client-dashboard'];
-    const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
-
-    // Redirect to homepage if no token (where auth modals are available)
-    if (!token) {
-      const url = new URL('/', req.url);
-      url.searchParams.set('auth', 'signin');
-      url.searchParams.set('callbackUrl', req.url);
-      return NextResponse.redirect(url);
-    }
-
-    // Admin-only routes (if you have admin)
-    if (pathname.startsWith('/admin')) {
-      if (token.role !== 'admin') {
-        const url = new URL('/unauthorized', req.url);
-        return NextResponse.redirect(url);
-      }
-    }
-
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        // Allow access to public pages
-        const publicPaths = ['/', '/discover', '/property', '/test-otp', '/signup', '/become-host'];
-        const isPublicPath = publicPaths.some(path =>
-          req.nextUrl.pathname.startsWith(path)
-        );
-
-        if (isPublicPath) {
-          return true;
-        }
-
-        // Require authentication for protected routes
-        return !!token;
-      },
-    },
+export default clerkMiddleware(async (auth, request) => {
+  // Don't use auth.protect() - let route handlers check auth themselves
+  // This avoids Clerk's protect-rewrite behavior that causes 404s
+  if (!isPublicRoute(request)) {
+    // Just populate auth context, don't protect
+    await auth()
   }
-);
+})
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
   ],
-};
+}
