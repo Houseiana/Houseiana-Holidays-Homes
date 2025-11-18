@@ -15,6 +15,7 @@ import { MobileAppCta } from '@/components/layout/mobile-app-cta';
 import { Testimonials } from '@/components/layout/testimonials';
 import { NewsletterSignup } from '@/components/layout/newsletter-signup';
 import { BecomeAHost } from '@/components/layout/become-a-host';
+import { HeroSearchSkeleton } from '@/components/ui/skeleton';
 
 function HomePageContent() {
   const searchParams = useSearchParams();
@@ -54,7 +55,22 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col">
+          <div className="h-16 bg-white border-b border-gray-200 animate-pulse" />
+          <div className="flex-1 bg-gradient-to-br from-primary-50 to-white py-20">
+            <div className="container mx-auto px-4">
+              <div className="text-center mb-12">
+                <div className="h-12 bg-gray-200 rounded w-3/4 mx-auto mb-4 animate-pulse" />
+                <div className="h-6 bg-gray-200 rounded w-1/2 mx-auto animate-pulse" />
+              </div>
+              <HeroSearchSkeleton />
+            </div>
+          </div>
+        </div>
+      }
+    >
       <HomePageContent />
     </Suspense>
   );
