@@ -3,24 +3,5 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "NEXTAUTH_URL": "@nextauth_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "JWT_SECRET": "@jwt_secret",
-    "TWILIO_ACCOUNT_SID": "@twilio_account_sid",
-    "TWILIO_AUTH_TOKEN": "@twilio_auth_token",
-    "TWILIO_VERIFY_SERVICE_SID": "@twilio_verify_service_sid",
-    "TWILIO_WHATSAPP_FROM": "@twilio_whatsapp_from",
-    "SMTP_HOST": "@smtp_host",
-    "SMTP_PORT": "@smtp_port",
-    "SMTP_USER": "@smtp_user",
-    "SMTP_PASS": "@smtp_pass"
-  },
-  "build": {
-    "env": {
-      "DATABASE_URL": "@database_url"
-    }
-  }
+  "regions": ["iad1"]
 }
