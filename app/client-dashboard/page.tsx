@@ -195,84 +195,180 @@ function ClientDashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans antialiased">
       <div className="flex h-screen">
-        {/* Sidebar Navigation */}
-        <nav className="w-64 bg-white shadow-lg border-r border-gray-200">
-          <div className="p-6">
-            <a href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">H</span>
+        {/* Improved Sidebar Navigation */}
+        <aside className="w-72 h-screen bg-white border-r border-gray-200 flex flex-col sticky top-0">
+
+          {/* Brand Header */}
+          <div className="p-6 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+                <span className="font-bold text-xl font-serif">H</span>
               </div>
-              <h1 className="text-xl font-bold text-gray-900">Houseiana</h1>
-            </a>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-gray-900 leading-none">Houseiana</h1>
+                <span className="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">Client Dashboard</span>
+              </div>
+            </div>
           </div>
 
-          {/* Navigation Menu */}
-          <div className="px-6 pb-4">
-            <nav className="space-y-2">
-              {sidebarItems.map((item) => {
-                const Icon = item.icon
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`flex items-center px-4 py-3 w-full text-left rounded-lg font-medium transition-colors ${
-                      activeTab === item.id
-                        ? 'text-orange-600 bg-orange-50'
-                        : 'text-gray-600 hover:text-orange-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.label}
-                  </button>
-                )
-              })}
-            </nav>
-          </div>
+          {/* Navigation Content */}
+          <div className="flex-1 px-4 overflow-y-auto space-y-6 py-4">
 
-          {/* User Profile Section */}
-          <div className="absolute bottom-0 w-64 p-6 border-t border-gray-200">
-            <div className="flex items-center space-x-3 mb-3">
-              {userProfile.profilePhoto ? (
-                <img
-                  src={userProfile.profilePhoto}
-                  alt={userProfile.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-orange-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium">{userProfile.initials}</span>
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {userProfile.name}
-                </p>
-                <p className="text-xs text-orange-600 truncate">
-                  🎯 Guest
-                </p>
+            {/* Group: Main Menu */}
+            <div>
+              <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Menu</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    activeTab === 'dashboard'
+                      ? "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <LayoutDashboard size={18} className={`transition-colors ${activeTab === 'dashboard' ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600"}`} />
+                  <span>Dashboard</span>
+                  {activeTab === 'dashboard' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('explore')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    activeTab === 'explore'
+                      ? "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <Search size={18} className={`transition-colors ${activeTab === 'explore' ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600"}`} />
+                  <span>Explore</span>
+                  {activeTab === 'explore' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('my-trips')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    activeTab === 'my-trips'
+                      ? "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <Clock size={18} className={`transition-colors ${activeTab === 'my-trips' ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600"}`} />
+                  <span>My Trips</span>
+                  {activeTab === 'my-trips' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('wishlist')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    activeTab === 'wishlist'
+                      ? "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <Heart size={18} className={`transition-colors ${activeTab === 'wishlist' ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600"}`} />
+                  <span>Wishlist</span>
+                  {activeTab === 'wishlist' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </button>
               </div>
             </div>
 
-            {/* Dashboard Switch & Sign Out */}
-            <div className="space-y-2">
-              <button
-                onClick={() => router.push('/host-dashboard')}
-                className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <ArrowRightLeft className="w-4 h-4" />
-                <span>Switch to Host</span>
+            {/* Group: Account */}
+            <div>
+              <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Account</p>
+              <div className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('payments')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    activeTab === 'payments'
+                      ? "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <CreditCard size={18} className={`transition-colors ${activeTab === 'payments' ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600"}`} />
+                  <span>Payments</span>
+                  {activeTab === 'payments' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('profile')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    activeTab === 'profile'
+                      ? "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <User size={18} className={`transition-colors ${activeTab === 'profile' ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600"}`} />
+                  <span>Profile</span>
+                  {activeTab === 'profile' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('support')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    activeTab === 'support'
+                      ? "bg-orange-50 text-orange-700 shadow-sm ring-1 ring-orange-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <HelpCircle size={18} className={`transition-colors ${activeTab === 'support' ? "text-orange-600" : "text-gray-400 group-hover:text-gray-600"}`} />
+                  <span>Support</span>
+                  {activeTab === 'support' && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-4 border-t border-gray-100 space-y-3 bg-gray-50/50">
+
+            {/* Switch to Host CTA Card */}
+            <div
+              onClick={() => router.push('/host-dashboard')}
+              className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm group cursor-pointer hover:border-orange-300 transition-colors"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-gray-800">Have a property?</span>
+                <ArrowRightLeft size={14} className="text-gray-400 group-hover:text-orange-600 transition-colors" />
+              </div>
+              <p className="text-[10px] text-gray-500 leading-relaxed">Earn money by sharing your home.</p>
+              <button className="mt-2 w-full text-xs font-semibold bg-gray-900 text-white py-1.5 rounded-lg hover:bg-orange-600 transition-colors">
+                Switch to Host
               </button>
+            </div>
+
+            {/* User Profile Snippet */}
+            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-colors cursor-pointer group">
+              <div className="relative">
+                {userProfile.profilePhoto ? (
+                  <img
+                    src={userProfile.profilePhoto}
+                    alt={userProfile.name}
+                    className="w-9 h-9 rounded-full object-cover border border-orange-200"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-700 font-bold text-sm">
+                    {userProfile.initials}
+                  </div>
+                )}
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-900 truncate">{userProfile.name}</p>
+                <p className="text-xs text-gray-500 truncate">🎯 Guest</p>
+              </div>
 
               <button
                 onClick={handleSignOut}
-                className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Sign Out"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
+                <LogOut size={16} />
               </button>
             </div>
+
           </div>
-        </nav>
+        </aside>
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto">
