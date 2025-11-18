@@ -45,15 +45,29 @@ export default function PropertyMap({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Load Leaflet CSS dynamically on client-side only
+    const loadLeafletCSS = () => {
+      if (typeof document !== 'undefined' && !document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+      }
+    };
+
+    loadLeafletCSS();
     setMounted(true);
 
     // Fix for default marker icons in Next.js (only run on client)
     if (typeof window !== 'undefined') {
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
     }
   }, []);
