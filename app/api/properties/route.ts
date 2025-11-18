@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { geocodeAddress } from '@/lib/geocoding';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -150,6 +151,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Geocode address to get coordinates if not provided
+    let finalLatitude = latitude;
+    let finalLongitude = longitude;
+
+    if (!latitude || !longitude) {
+      console.log('🌍 Geocoding address to get coordinates...');
+      const geocodeResult = await geocodeAddress(address, city, country);
+
+      if (geocodeResult) {
+        finalLatitude = geocodeResult.latitude;
+        finalLongitude = geocodeResult.longitude;
+        console.log('✅ Coordinates obtained from geocoding:', {
+          latitude: finalLatitude,
+          longitude: finalLongitude,
+        });
+      } else {
+        console.log('⚠️ Geocoding failed, property will be created without coordinates');
+      }
+    }
+
     // Create property in database
     const property = await prisma.property.create({
       data: {
@@ -163,8 +184,8 @@ export async function POST(request: NextRequest) {
         state: state || null,
         address,
         zipCode: zipCode || null,
-        latitude: latitude || null,
-        longitude: longitude || null,
+        latitude: finalLatitude || null,
+        longitude: finalLongitude || null,
         guests: guests || 1,
         bedrooms: bedrooms || 0,
         beds: beds || 0,

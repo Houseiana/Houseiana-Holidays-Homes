@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Filter, Grid, List, Map, Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import AirbnbFilter, { FilterState } from '@/components/search/airbnb-filter'
@@ -55,8 +55,9 @@ export default function DiscoverPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [showAirbnbFilter, setShowAirbnbFilter] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+  const [allListings, setAllListings] = useState<Listing[]>([])
   const itemsPerPage = 20
 
   const [filters, setFilters] = useState<Filters>({
@@ -89,8 +90,58 @@ export default function DiscoverPage() {
     amenities: []
   })
 
-  // Mock listings data (Qatar - Doha area coordinates)
-  const allListings: Listing[] = [
+  // Fetch properties from API
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        setLoading(true)
+        console.log('🔍 Fetching properties from API...')
+
+        // Get search params from URL
+        const params = new URLSearchParams(window.location.search)
+        const location = params.get('location') || ''
+        const checkin = params.get('checkin') || ''
+        const checkout = params.get('checkout') || ''
+        const guests = params.get('guests') || ''
+
+        // Build API URL with query parameters
+        const queryParams = new URLSearchParams()
+        if (location) queryParams.append('location', location)
+        if (checkin) queryParams.append('checkin', checkin)
+        if (checkout) queryParams.append('checkout', checkout)
+        if (guests) queryParams.append('guests', guests)
+
+        const response = await fetch(`/api/properties/search?${queryParams.toString()}`)
+        const data = await response.json()
+
+        if (data.success && data.properties) {
+          console.log(`✅ Loaded ${data.properties.length} properties`)
+          setAllListings(data.properties)
+
+          // Update filters with URL params
+          if (location) {
+            setFilters(prev => ({ ...prev, destination: location }))
+          }
+          if (guests) {
+            setFilters(prev => ({ ...prev, adults: parseInt(guests) || 2 }))
+          }
+        } else {
+          console.error('❌ Failed to load properties:', data.error)
+          setAllListings([])
+        }
+      } catch (error) {
+        console.error('❌ Error fetching properties:', error)
+        setAllListings([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProperties()
+  }, []) // Run once on mount
+
+  // Mock listings data (fallback - no longer used)
+  const mockListings: Listing[] = [
     {
       id: '1',
       title: 'Modern Downtown Apartment',
@@ -209,6 +260,7 @@ export default function DiscoverPage() {
 
   // Filter and sort listings
   const filteredListings = useMemo(() => {
+    if (!allListings || allListings.length === 0) return []
     let filtered = [...allListings]
 
     // Apply destination filter
@@ -255,7 +307,7 @@ export default function DiscoverPage() {
     }
 
     return filtered
-  }, [filters])
+  }, [allListings, filters])
 
   // Pagination
   const paginatedListings = useMemo(() => {
