@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet Map CSS */
+@import 'leaflet/dist/leaflet.css';
+
 /* Test styles */
 body {
   background-color: white !important;
