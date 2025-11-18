@@ -53,6 +53,9 @@ model User {
   bookings                 Booking[]
   reviews                  Review[]
   favorites                Favorite[]
+  complaints               Complaint[]
+  chatConversations        ChatConversation[]
+  accountActions           AccountAction[]
 
   @@map("users")
 }
@@ -205,6 +208,7 @@ model Property {
   bookings        Booking[]
   reviews         Review[]
   favorites       Favorite[]
+  approvals       PropertyApproval[]
 
   @@index([hostId])
   @@index([city])
@@ -351,5 +355,299 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   PARTIALLY_REFUNDED
+}
+
+// ============================================================================
+// ADMIN & ACCOUNT MANAGER MODELS
+// ============================================================================
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hashed with bcrypt
+  email     String   @unique
+  fullName  String
+  role      AdminRole @default(SUPPORT)
+  isActive  Boolean  @default(true)
+
+  // Audit fields
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+
+  // Relations
+  activityLogs      AdminActivityLog[]
+  assignedComplaints Complaint[] @relation("AssignedTo")
+  resolvedComplaints Complaint[] @relation("ResolvedBy")
+  chatMessages      ChatMessage[]
+  propertyApprovals PropertyApproval[]
+  accountActions    AccountAction[]
+
+  @@map("admins")
+  @@index([username])
+  @@index([email])
+  @@index([isActive])
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  MODERATOR
+}
+
+model AdminActivityLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String
+  entityType  String?  // User, Property, Complaint, etc.
+  entityId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  admin       Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("admin_activity_logs")
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DEACTIVATED
+}
+
+enum KYCStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_UPDATE
+}
+
+model AccountAction {
+  id          String   @id @default(cuid())
+  userId      String
+  adminId     String
+  action      AccountActionType
+  reason      String
+  notes       String?
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admin       Admin    @relation(fields: [adminId], references: [id])
+
+  @@map("account_actions")
+  @@index([userId])
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+enum AccountActionType {
+  SUSPEND
+  UNSUSPEND
+  BAN
+  UNBAN
+  VERIFY
+  WARN
+  KYC_APPROVE
+  KYC_REJECT
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_CHANGES
+}
+
+model PropertyApproval {
+  id          String   @id @default(cuid())
+  propertyId  String
+  adminId     String
+  status      ApprovalStatus
+  comments    String?
+  changes     Json?    // Track what was changed
+
+  createdAt   DateTime @default(now())
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  admin       Admin    @relation(fields: [adminId], references: [id])
+
+  @@map("property_approvals")
+  @@index([propertyId])
+  @@index([adminId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// COMPLAINTS & SUPPORT
+// ============================================================================
+
+model Complaint {
+  id          String   @id @default(cuid())
+  userId      String
+  subject     String
+  category    ComplaintCategory
+  priority    Priority @default(NORMAL)
+  description String
+  attachments String[]
+
+  // Status & Assignment
+  status      ComplaintStatus @default(OPEN)
+  assignedToId String?
+  resolvedById String?
+  resolution  String?
+
+  // Metadata
+  metadata    Json?
+
+  // Audit fields
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  resolvedAt  DateTime?
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedTo  Admin?   @relation("AssignedTo", fields: [assignedToId], references: [id])
+  resolvedBy  Admin?   @relation("ResolvedBy", fields: [resolvedById], references: [id])
+  messages    ComplaintMessage[]
+
+  @@map("complaints")
+  @@index([userId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([createdAt])
+}
+
+enum ComplaintCategory {
+  BOOKING_ISSUE
+  PAYMENT_PROBLEM
+  PROPERTY_ISSUE
+  HOST_BEHAVIOR
+  GUEST_BEHAVIOR
+  ACCOUNT_ISSUE
+  TECHNICAL_ISSUE
+  REFUND_REQUEST
+  OTHER
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  WAITING_ADMIN
+  RESOLVED
+  CLOSED
+  ESCALATED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model ComplaintMessage {
+  id          String   @id @default(cuid())
+  complaintId String
+  senderId    String   // Can be user ID or admin ID
+  senderType  SenderType
+  message     String
+  attachments String[]
+  isInternal  Boolean  @default(false) // Internal admin notes
+
+  createdAt   DateTime @default(now())
+
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@map("complaint_messages")
+  @@index([complaintId])
+  @@index([createdAt])
+}
+
+enum SenderType {
+  USER
+  ADMIN
+}
+
+// ============================================================================
+// CHAT SYSTEM (Real-time support chat)
+// ============================================================================
+
+model ChatConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  status      ChatStatus @default(ACTIVE)
+
+  // Metadata
+  lastMessageAt DateTime?
+  metadata    Json?
+
+  // Audit fields
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  closedAt    DateTime?
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+
+  @@map("chat_conversations")
+  @@index([userId])
+  @@index([status])
+  @@index([lastMessageAt])
+}
+
+enum ChatStatus {
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String   // User ID or Admin ID
+  senderType     SenderType
+  message        String
+  attachments    String[]
+  isRead         Boolean  @default(false)
+
+  createdAt      DateTime @default(now())
+
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  admin          Admin?   @relation(fields: [senderId], references: [id])
+
+  @@map("chat_messages")
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([isRead])
+}
+
+model SystemMetric {
+  id          String   @id @default(cuid())
+  metricType  String
+  value       Float
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  @@map("system_metrics")
+  @@index([metricType])
+  @@index([createdAt])
 }
 
