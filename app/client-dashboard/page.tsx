@@ -15,7 +15,6 @@ import TripsPage from '@/app/(dashboard)/trips/page'
 import WishlistPage from '@/app/(dashboard)/wishlist/page'
 import ExplorePage from '@/app/(dashboard)/explore/page'
 import ProfilePage from '@/app/(dashboard)/profile/page'
-import MessagesPage from '@/app/(dashboard)/messages/page'
 import PaymentsPage from '@/app/(dashboard)/payments/page'
 import SupportPage from '@/app/(dashboard)/help-center/page'
 
@@ -188,7 +187,6 @@ function ClientDashboardContent() {
     { id: 'my-trips', label: 'My Trips', icon: Clock },
     { id: 'wishlist', label: 'Wishlist', icon: Heart },
     { id: 'explore', label: 'Explore', icon: Search },
-    { id: 'messages', label: 'Messages', icon: MessageCircle },
     { id: 'payments', label: 'Payments', icon: CreditCard },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'support', label: 'Support', icon: HelpCircle }
@@ -561,10 +559,6 @@ function ClientDashboardContent() {
 
                 {activeTab === 'explore' && (
                   <ExplorePage />
-                )}
-
-                {activeTab === 'messages' && (
-                  <MessagesPage />
                 )}
 
                 {activeTab === 'payments' && (
