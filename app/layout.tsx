@@ -12,6 +12,19 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Houseiana - Find Your Perfect Stay",
   description: "Discover and book unique properties around the world with Houseiana",
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
+  themeColor: '#E74C3C',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Houseiana',
+  },
 };
 
 export default function RootLayout({

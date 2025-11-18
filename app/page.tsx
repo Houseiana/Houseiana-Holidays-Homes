@@ -16,6 +16,7 @@ import { Testimonials } from '@/components/layout/testimonials';
 import { NewsletterSignup } from '@/components/layout/newsletter-signup';
 import { BecomeAHost } from '@/components/layout/become-a-host';
 import { HeroSearchSkeleton } from '@/components/ui/skeleton';
+import { MobileNav } from '@/components/layout/mobile-nav';
 
 function HomePageContent() {
   const searchParams = useSearchParams();
@@ -49,6 +50,7 @@ function HomePageContent() {
       </main>
 
       <Footer />
+      <MobileNav />
     </div>
   );
 }

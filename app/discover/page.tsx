@@ -6,6 +6,7 @@ import { Filter, Grid, List, Map, Search, X, ChevronLeft, ChevronRight } from 'l
 import AirbnbFilter, { FilterState } from '@/components/search/airbnb-filter'
 import { PropertyCard } from '@/components/property/property-card'
 import { PropertyGridSkeleton, MapSkeleton } from '@/components/ui/skeleton'
+import { MobileNav } from '@/components/layout/mobile-nav'
 
 // Dynamically import PropertyMap to avoid SSR issues with Leaflet
 const PropertyMap = dynamic(() => import('@/components/map/PropertyMap'), {
@@ -368,36 +369,42 @@ export default function DiscoverPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Search Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 max-w-lg">
+      {/* Search Header - Mobile Optimized */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40 safe-area-inset-top">
+        <div className="container mx-auto px-4 py-3 md:py-4">
+          {/* Mobile: Stacked Layout */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+            {/* Search Input */}
+            <div className="flex-1 md:max-w-lg">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder="Where do you want to go?"
+                  placeholder="Where to?"
                   value={filters.destination}
                   onChange={(e) => updateFilter('destination', e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base"
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+
+            {/* Filter Buttons - Responsive */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
               <button
                 onClick={() => setShowAirbnbFilter(true)}
-                className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 whitespace-nowrap flex-shrink-0"
               >
                 <Filter className="w-5 h-5" />
-                Advanced Filters
+                <span className="hidden sm:inline">Advanced Filters</span>
+                <span className="sm:hidden">Filters</span>
               </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="lg:hidden flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 whitespace-nowrap flex-shrink-0"
               >
                 <Filter className="w-5 h-5" />
-                Quick Filters
+                <span className="hidden sm:inline">Quick Filters</span>
+                <span className="sm:hidden">More</span>
               </button>
             </div>
           </div>
@@ -877,6 +884,7 @@ export default function DiscoverPage() {
           setShowAirbnbFilter(false);
         }}
       />
+      <MobileNav />
     </div>
   )
 }
