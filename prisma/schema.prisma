@@ -15,6 +15,7 @@ datasource db {
 
 model User {
   id                       String      @id @default(cuid())
+  clerkId                  String?     @unique  // Clerk authentication ID
   firstName                String
   lastName                 String
   email                    String?     @unique
@@ -57,6 +58,7 @@ model User {
   chatConversations        ChatConversation[]
   accountActions           AccountAction[]
 
+  @@index([clerkId])
   @@map("users")
 }
 
