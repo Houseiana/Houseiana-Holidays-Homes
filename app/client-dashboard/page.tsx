@@ -9,7 +9,7 @@ import { useAuthStore } from '@/lib/stores/auth-store'
 import KYCModal from '@/components/KYCModal'
 import {
   LayoutDashboard, Clock, Heart, Search, MessageCircle, CreditCard, User,
-  HelpCircle, ArrowRightLeft, Star, Calendar, MapPin, LogOut
+  HelpCircle, ArrowRightLeft, Star, Calendar, MapPin, LogOut, ChevronRight, TrendingUp
 } from 'lucide-react'
 import TripsPage from '@/app/(dashboard)/trips/page'
 import WishlistPage from '@/app/(dashboard)/wishlist/page'
@@ -499,33 +499,41 @@ function ClientDashboardContent() {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                           {savedProperties.map((property) => (
-                            <div key={property.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-                              <div className="relative h-48">
+                            <div key={property.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-lg transition-all group">
+                              <div className="relative h-48 bg-gray-200 overflow-hidden">
                                 <img
                                   src={property.photos[0]?.url || 'https://via.placeholder.com/400x300?text=Property+Image'}
-                                  alt="Property Image"
-                                  className="w-full h-full object-cover"
+                                  alt={property.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
-                                <button className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md text-gray-400 hover:text-red-500 transition-colors">
-                                  <Heart className="w-5 h-5" />
+                                <button className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-md text-rose-500 hover:bg-white hover:scale-110 transition-all">
+                                  <Heart className="w-4 h-4" fill="currentColor" />
                                 </button>
                               </div>
-                              <div className="p-5">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-1">{property.title}</h3>
-                                <p className="text-sm text-gray-600 mb-3">{property.address.city}, {property.address.country}</p>
-                                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                                  <span>${property.pricing.basePrice}/night</span>
-                                  <div className="flex items-center">
-                                    <Star className="w-4 h-4 text-yellow-400 mr-1 fill-current" />
-                                    <span>{property.ratings.overall.toFixed(1)} ({property.ratings.totalReviews})</span>
+                              <div className="p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h3 className="font-bold text-gray-900 text-base line-clamp-1 flex-1">{property.title}</h3>
+                                  <div className="flex items-center gap-1 text-xs font-bold bg-gray-100 px-2 py-1 rounded ml-2">
+                                    <Star className="w-3 h-3 text-orange-500" fill="currentColor" />
+                                    {property.ratings.overall.toFixed(1)}
                                   </div>
                                 </div>
-                                <button
-                                  onClick={() => viewPropertyDetails(property.id)}
-                                  className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
-                                >
-                                  View Details
-                                </button>
+                                <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {property.address.city}, {property.address.country}
+                                </p>
+                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                                  <div>
+                                    <span className="font-bold text-gray-900 text-lg">${property.pricing.basePrice}</span>
+                                    <span className="text-xs text-gray-500">/night</span>
+                                  </div>
+                                  <button
+                                    onClick={() => viewPropertyDetails(property.id)}
+                                    className="text-xs font-bold bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                                  >
+                                    Check Availability
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -534,83 +542,67 @@ function ClientDashboardContent() {
                     </section>
 
                     {/* Quick Actions Section */}
-                    <section className="mb-8 mt-12">
+                    <section className="mb-10 mt-12">
                       <h2 className="text-2xl font-bold text-gray-900 mb-6">🚀 Quick Actions</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">✈️ Plan Your Next Trip</h3>
-                              <p className="text-gray-600 text-sm mb-4">Discover amazing places around the world</p>
-                              <button
-                                onClick={startNewSearch}
-                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
-                              >
-                                🔍 Explore Now
-                              </button>
-                            </div>
-                            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                              <Search className="w-6 h-6 text-orange-600" />
-                            </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button
+                          onClick={startNewSearch}
+                          className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-orange-200 hover:shadow-md transition-all text-left group"
+                        >
+                          <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
+                            <Search className="w-5 h-5" />
                           </div>
-                        </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">Plan Your Next Trip</h4>
+                            <p className="text-xs text-gray-500">Discover amazing places</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400" />
+                        </button>
 
-                        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">📊 Travel Insights</h3>
-                              <p className="text-gray-600 text-sm mb-4">View your travel patterns and stats</p>
-                              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                                📈 View Insights
-                              </button>
-                            </div>
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                              <Calendar className="w-6 h-6 text-green-600" />
-                            </div>
+                        <button
+                          className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-emerald-200 hover:shadow-md transition-all text-left group"
+                        >
+                          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform">
+                            <TrendingUp className="w-5 h-5" />
                           </div>
-                        </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">Travel Insights</h4>
+                            <p className="text-xs text-gray-500">View patterns and stats</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400" />
+                        </button>
 
-                        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">🆘 Get Help</h3>
-                              <p className="text-gray-600 text-sm mb-4">24/7 customer support available</p>
-                              <a
-                                href="/contact-support"
-                                className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                              >
-                                💬 Contact Support
-                              </a>
-                            </div>
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                              <HelpCircle className="w-6 h-6 text-purple-600" />
-                            </div>
+                        <a
+                          href="/help"
+                          className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-purple-200 hover:shadow-md transition-all text-left group"
+                        >
+                          <div className="p-3 rounded-xl bg-purple-50 text-purple-600 group-hover:scale-110 transition-transform">
+                            <HelpCircle className="w-5 h-5" />
                           </div>
-                        </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-900 text-sm mb-1">Get Help</h4>
+                            <p className="text-xs text-gray-500">24/7 customer support</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-400" />
+                        </a>
                       </div>
                     </section>
 
                     {/* Recent Activity Section */}
                     <section className="mb-8">
-                      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
-                          <h2 className="text-xl font-bold text-gray-900">🕒 Recent Activity</h2>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-6">🕒 Recent Activity</h2>
+                      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Search className="w-6 h-6 text-gray-400" />
                         </div>
-                        <div className="p-6">
-                          <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <span className="text-3xl">✈️</span>
-                            </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Recent Activity</h3>
-                            <p className="text-gray-600 mb-4">Start planning your next adventure to see activity here</p>
-                            <button
-                              onClick={startNewSearch}
-                              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                            >
-                              🔍 Browse Properties
-                            </button>
-                          </div>
-                        </div>
+                        <h3 className="text-gray-900 font-bold text-sm mb-1">No Recent Activity</h3>
+                        <p className="text-xs text-gray-500 mb-4">Start planning your next adventure to see activity here.</p>
+                        <button
+                          onClick={startNewSearch}
+                          className="w-full py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Browse Properties
+                        </button>
                       </div>
                     </section>
                   </>
