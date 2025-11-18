@@ -1,9 +1,20 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { Filter, Grid, List, Map, Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import AirbnbFilter, { FilterState } from '@/components/search/airbnb-filter'
 import { PropertyCard } from '@/components/property/property-card'
+
+// Dynamically import PropertyMap to avoid SSR issues with Leaflet
+const PropertyMap = dynamic(() => import('@/components/map/PropertyMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[600px] bg-gray-100 rounded-xl flex items-center justify-center">
+      <div className="text-gray-500">Loading map...</div>
+    </div>
+  ),
+})
 
 interface Listing {
   id: string
@@ -18,6 +29,8 @@ interface Listing {
   oldPrice?: number
   discountPercent?: number
   image: string
+  latitude?: number
+  longitude?: number
 }
 
 interface Filters {
@@ -76,7 +89,7 @@ export default function DiscoverPage() {
     amenities: []
   })
 
-  // Mock listings data
+  // Mock listings data (Qatar - Doha area coordinates)
   const allListings: Listing[] = [
     {
       id: '1',
@@ -90,91 +103,107 @@ export default function DiscoverPage() {
       price: 120,
       oldPrice: 150,
       discountPercent: 20,
-      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop',
+      latitude: 25.2854,
+      longitude: 51.5310
     },
     {
       id: '2',
       title: 'Cozy Beach House',
-      location: 'Oceanview, Coastal Area',
+      location: 'The Pearl Qatar',
       beds: 3,
       baths: 2,
       sleeps: 6,
       rating: 4.9,
       reviewCount: 89,
       price: 200,
-      image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop',
+      latitude: 25.3707,
+      longitude: 51.5410
     },
     {
       id: '3',
       title: 'Mountain Cabin Retreat',
-      location: 'Mountain View, Rural',
+      location: 'Al Dafna, West Bay',
       beds: 1,
       baths: 1,
       sleeps: 2,
       rating: 4.7,
       reviewCount: 45,
       price: 80,
-      image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop',
+      latitude: 25.3176,
+      longitude: 51.5174
     },
     {
       id: '4',
       title: 'Luxury Villa with Pool',
-      location: 'Upscale Neighborhood',
+      location: 'Lusail City',
       beds: 4,
       baths: 3,
       sleeps: 8,
       rating: 4.9,
       reviewCount: 203,
       price: 350,
-      image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&h=300&fit=crop',
+      latitude: 25.4229,
+      longitude: 51.4957
     },
     {
       id: '5',
       title: 'Charming Studio Loft',
-      location: 'Arts District',
+      location: 'Msheireb Downtown Doha',
       beds: 1,
       baths: 1,
       sleeps: 2,
       rating: 4.6,
       reviewCount: 67,
       price: 90,
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&fit=crop',
+      latitude: 25.2829,
+      longitude: 51.5315
     },
     {
       id: '6',
       title: 'Family Townhouse',
-      location: 'Suburban Area',
+      location: 'Al Sadd',
       beds: 3,
       baths: 2,
       sleeps: 6,
       rating: 4.8,
       reviewCount: 134,
       price: 160,
-      image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&h=300&fit=crop',
+      latitude: 25.2647,
+      longitude: 51.5141
     },
     {
       id: '7',
       title: 'Rustic Country Cottage',
-      location: 'Countryside Village',
+      location: 'Al Wakrah',
       beds: 2,
       baths: 1,
       sleeps: 4,
       rating: 4.5,
       reviewCount: 78,
       price: 110,
-      image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=400&h=300&fit=crop',
+      latitude: 25.1716,
+      longitude: 51.6054
     },
     {
       id: '8',
       title: 'Penthouse with City Views',
-      location: 'Financial District',
+      location: 'Katara Cultural Village',
       beds: 3,
       baths: 3,
       sleeps: 6,
       rating: 4.9,
       reviewCount: 156,
       price: 450,
-      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop'
+      image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop',
+      latitude: 25.3548,
+      longitude: 51.5282
     }
   ]
 
@@ -704,10 +733,16 @@ export default function DiscoverPage() {
                 </div>
               </div>
             ) : viewMode === 'map' ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-                <Map className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Map View</h3>
-                <p className="text-gray-600">Interactive map showing {filteredListings.length} vacation rentals</p>
+              <div className="h-[600px] w-full">
+                <PropertyMap
+                  properties={filteredListings}
+                  center={[25.2854, 51.5310]}
+                  zoom={12}
+                  onPropertyClick={(propertyId) => {
+                    // Handle property click - could open property details or scroll to property card
+                    console.log('Property clicked:', propertyId);
+                  }}
+                />
               </div>
             ) : filteredListings.length === 0 ? (
               <div className="text-center py-20">
