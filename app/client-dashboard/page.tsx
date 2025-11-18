@@ -322,23 +322,51 @@ function ClientDashboardContent() {
                       </div>
                     </div>
 
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                      <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-                        <h3 className="text-2xl font-bold text-orange-600">{upcomingBookings.length || 0}</h3>
-                        <p className="text-gray-500">📅 Upcoming Bookings</p>
+                    {/* Quick Stats - Premium Design */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+                      {/* Upcoming Bookings */}
+                      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
+                            <Calendar className="w-6 h-6" />
+                          </div>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900">{upcomingBookings.length || 0}</h3>
+                        <p className="text-sm text-gray-500 font-medium">Upcoming Bookings</p>
                       </div>
-                      <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-                        <h3 className="text-2xl font-bold text-green-600">{savedProperties.length || 0}</h3>
-                        <p className="text-gray-500">❤️ Saved Properties</p>
+
+                      {/* Saved Properties */}
+                      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-3 rounded-xl bg-rose-50 text-rose-600 group-hover:scale-110 transition-transform">
+                            <Heart className="w-6 h-6" />
+                          </div>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900">{savedProperties.length || 0}</h3>
+                        <p className="text-sm text-gray-500 font-medium">Saved Properties</p>
                       </div>
-                      <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-                        <h3 className="text-2xl font-bold text-purple-600">5</h3>
-                        <p className="text-gray-500">💬 Messages</p>
+
+                      {/* Messages */}
+                      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-3 rounded-xl bg-orange-50 text-orange-600 group-hover:scale-110 transition-transform">
+                            <MessageCircle className="w-6 h-6" />
+                          </div>
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900">5</h3>
+                        <p className="text-sm text-gray-500 font-medium">New Messages</p>
                       </div>
-                      <div className="bg-white rounded-xl shadow-sm p-6 text-center">
-                        <h3 className="text-2xl font-bold text-yellow-600">4.8</h3>
-                        <p className="text-gray-500">⭐ Average Rating</p>
+
+                      {/* Loyalty Points */}
+                      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-3 rounded-xl bg-yellow-50 text-yellow-600 group-hover:scale-110 transition-transform">
+                            <Star className="w-6 h-6" />
+                          </div>
+                        </div>
+                        <h3 className="text-2xl font-bold text-gray-900">450</h3>
+                        <p className="text-sm text-gray-500 font-medium">Loyalty Points</p>
                       </div>
                     </div>
 
@@ -364,45 +392,85 @@ function ClientDashboardContent() {
                           </button>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {upcomingBookings.map((booking) => (
-                            <div key={booking.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
-                              <div className="relative h-48">
-                                <img
-                                  src={booking.property.photos[0] || 'https://via.placeholder.com/400x300?text=Property+Image'}
-                                  alt="Property Image"
-                                  className="w-full h-full object-cover"
-                                />
-                                <span className="absolute top-3 right-3 bg-orange-500 text-white text-xs font-semibold px-3 py-1 rounded-full capitalize">
-                                  {booking.status}
-                                </span>
-                              </div>
-                              <div className="p-5">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-1">{booking.property.title}</h3>
-                                <p className="text-sm text-gray-600 mb-3">{booking.property.address}</p>
-                                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                                  <span>Check-in: {new Date(booking.checkIn).toLocaleDateString()}</span>
-                                  <span>Check-out: {new Date(booking.checkOut).toLocaleDateString()}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                          {upcomingBookings.map((booking) => {
+                            // Calculate nights
+                            const checkInDate = new Date(booking.checkIn);
+                            const checkOutDate = new Date(booking.checkOut);
+                            const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                            // Format dates
+                            const formatDate = (date: Date) => {
+                              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                            };
+
+                            return (
+                              <div key={booking.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                                {/* Image Area */}
+                                <div className="relative h-48 bg-gray-200">
+                                  <img
+                                    src={booking.property.photos[0] || 'https://via.placeholder.com/400x300?text=Property+Image'}
+                                    alt={booking.property.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
+                                  {/* Premium Status Badge */}
+                                  <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md border ${
+                                    booking.status === 'confirmed'
+                                      ? 'bg-green-500/90 text-white border-green-400'
+                                      : 'bg-amber-400/90 text-white border-amber-300'
+                                  }`}>
+                                    {booking.status === 'confirmed' ? 'Confirmed' : 'Pending'}
+                                  </div>
                                 </div>
-                                <div className="flex space-x-3">
-                                  <button
-                                    onClick={() => viewBookingDetails(booking.id)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                                  >
-                                    View Details
-                                  </button>
-                                  {booking.hostId && (
+
+                                {/* Card Content */}
+                                <div className="p-5">
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                      <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">
+                                        {booking.property.title}
+                                      </h3>
+                                      <p className="text-sm text-gray-500 flex items-center gap-1">
+                                        <MapPin className="w-4 h-4" />
+                                        {booking.property.address}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Date Range with improved formatting */}
+                                  <div className="mt-4 py-3 border-t border-b border-gray-50">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <span className="block text-xs text-gray-400 uppercase font-semibold">Dates</span>
+                                        <span className="text-sm font-medium text-gray-900">
+                                          {formatDate(checkInDate)} — {formatDate(checkOutDate)}
+                                        </span>
+                                        <p className="text-xs text-gray-500 mt-1">{nights} night{nights > 1 ? 's' : ''}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Action Buttons with proper hierarchy */}
+                                  <div className="mt-5 flex gap-3">
                                     <button
-                                      onClick={() => messageHost(booking.hostId!)}
-                                      className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                                      onClick={() => viewBookingDetails(booking.id)}
+                                      className="flex-1 py-2.5 px-4 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors shadow-sm"
                                     >
-                                      Message Host
+                                      View Details
                                     </button>
-                                  )}
+                                    {booking.hostId && (
+                                      <button
+                                        onClick={() => messageHost(booking.hostId!)}
+                                        className="flex-1 py-2.5 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                      >
+                                        Message Host
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </section>
