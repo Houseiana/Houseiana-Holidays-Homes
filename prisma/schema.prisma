@@ -722,3 +722,230 @@ enum TransactionType {
   REFUND
 }
 
+// ============================================================================
+// FLIGHTS & CAR RENTALS MODELS
+// ============================================================================
+
+model Flight {
+  id              String   @id @default(cuid())
+
+  // Flight Details
+  airline         String
+  flightNumber    String
+  aircraftType    String?
+
+  // Route
+  departureAirport String  // IATA code (e.g., JFK)
+  arrivalAirport   String  // IATA code (e.g., LAX)
+  departureCity    String
+  arrivalCity      String
+  departureCountry String
+  arrivalCountry   String
+
+  // Schedule
+  departureTime   DateTime
+  arrivalTime     DateTime
+  duration        Int      // Duration in minutes
+
+  // Pricing
+  economyPrice    Float?
+  businessPrice   Float?
+  firstClassPrice Float?
+  currency        String   @default("USD")
+
+  // Capacity & Availability
+  totalSeats      Int
+  availableSeats  Int
+
+  // Flight Type
+  flightType      FlightType  @default(ECONOMY)
+  stops           Int         @default(0)  // 0 = direct, 1+ = stops
+
+  // Status
+  status          FlightStatus @default(SCHEDULED)
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  bookings        FlightBooking[]
+
+  @@map("flights")
+  @@index([departureAirport])
+  @@index([arrivalAirport])
+  @@index([departureTime])
+  @@index([status])
+}
+
+model FlightBooking {
+  id            String   @id @default(cuid())
+  flightId      String
+  userId        String
+
+  // Passenger Details
+  passengerName String
+  passengerEmail String
+  passengerPhone String
+  seatNumber    String?
+  classType     FlightClass
+
+  // Pricing
+  totalPrice    Float
+  currency      String   @default("USD")
+
+  // Status
+  status        BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  confirmedAt   DateTime?
+  cancelledAt   DateTime?
+
+  // Relations
+  flight        Flight   @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@map("flight_bookings")
+  @@index([flightId])
+  @@index([userId])
+  @@index([status])
+}
+
+model CarRental {
+  id              String   @id @default(cuid())
+
+  // Car Details
+  carMake         String   // e.g., Toyota
+  carModel        String   // e.g., Camry
+  carYear         Int
+  carType         CarType
+  transmission    TransmissionType
+  fuelType        FuelType
+  seats           Int
+
+  // Features
+  features        Json     @default("[]")  // ["GPS", "Child Seat", "etc"]
+  images          Json     @default("[]")
+
+  // Location
+  pickupLocation  String
+  dropoffLocation String
+  city            String
+  country         String
+
+  // Pricing
+  pricePerDay     Float
+  currency        String   @default("USD")
+
+  // Availability
+  available       Boolean  @default(true)
+  totalCars       Int      @default(1)
+
+  // Company
+  rentalCompany   String
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  bookings        CarRentalBooking[]
+
+  @@map("car_rentals")
+  @@index([city])
+  @@index([carType])
+  @@index([available])
+}
+
+model CarRentalBooking {
+  id              String   @id @default(cuid())
+  carRentalId     String
+  userId          String
+
+  // Rental Period
+  pickupDate      DateTime
+  dropoffDate     DateTime
+  days            Int
+
+  // Driver Details
+  driverName      String
+  driverEmail     String
+  driverPhone     String
+  driverLicense   String
+
+  // Pricing
+  totalPrice      Float
+  currency        String   @default("USD")
+
+  // Add-ons
+  insurance       Boolean  @default(false)
+  gps             Boolean  @default(false)
+  childSeat       Boolean  @default(false)
+
+  // Status
+  status          BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  confirmedAt     DateTime?
+  cancelledAt     DateTime?
+
+  // Relations
+  carRental       CarRental @relation(fields: [carRentalId], references: [id], onDelete: Cascade)
+
+  @@map("car_rental_bookings")
+  @@index([carRentalId])
+  @@index([userId])
+  @@index([pickupDate])
+  @@index([status])
+}
+
+// Enums for Flights & Car Rentals
+enum FlightType {
+  ECONOMY
+  BUSINESS
+  FIRST_CLASS
+}
+
+enum FlightStatus {
+  SCHEDULED
+  DELAYED
+  CANCELLED
+  DEPARTED
+  ARRIVED
+}
+
+enum FlightClass {
+  ECONOMY
+  PREMIUM_ECONOMY
+  BUSINESS
+  FIRST_CLASS
+}
+
+enum CarType {
+  SEDAN
+  SUV
+  HATCHBACK
+  CONVERTIBLE
+  VAN
+  TRUCK
+  LUXURY
+  ELECTRIC
+}
+
+enum TransmissionType {
+  AUTOMATIC
+  MANUAL
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  ELECTRIC
+  HYBRID
+}
+
