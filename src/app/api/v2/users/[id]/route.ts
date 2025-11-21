@@ -15,26 +15,32 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userService = getUserService();
-    const user = await userService.getUserById(params.id);
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'User not found'
-        },
-        { status: 404 }
-      );
+    const url = `http://localhost:3001/users/${params.id}`;
+    console.log(`Proxying request to: ${url}`);
+    
+    // Proxy to NestJS backend
+    const response = await fetch(url);
+    console.log(`Backend response status: ${response.status}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      throw new Error(`Backend responded with ${response.status}`);
     }
+
+    const user = await response.json();
 
     return NextResponse.json({
       success: true,
-      data: user.toJSON(),
+      data: user,
     });
 
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error('Error fetching user from backend:', error);
     return NextResponse.json(
       {
         success: false,

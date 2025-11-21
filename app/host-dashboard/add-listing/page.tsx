@@ -377,7 +377,8 @@ export default function AddListingPage() {
       console.log('📤 Sending property data:', propertyData);
 
       // Get auth token for request
-      const response = await fetch('/api/properties', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+      const response = await fetch(`${API_URL}/api/properties`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
