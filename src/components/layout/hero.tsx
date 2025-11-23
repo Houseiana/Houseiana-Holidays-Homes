@@ -196,7 +196,12 @@ export function Hero() {
           </p>
 
           {/* Property Search Box */}
-          <PropertySearchBar variant="expanded" onSearch={handleSearch} />
+          <div className="hidden md:block">
+            <PropertySearchBar variant="expanded" onSearch={handleSearch} />
+          </div>
+          <div className="md:hidden">
+            <PropertySearchBar variant="compact" onSearch={handleSearch} />
+          </div>
 
           {/* Advanced Filters Button */}
           <div className="mt-4">
@@ -210,20 +215,20 @@ export function Hero() {
           </div>
 
           {/* Quick Stats */}
-          <div className="flex justify-center items-center gap-8 mt-12 text-white/80">
+          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mt-8 sm:mt-12 text-white/80 px-4">
             <div className="text-center">
-              <div className="text-2xl font-bold">2M+</div>
-              <div className="text-sm">Properties</div>
+              <div className="text-xl sm:text-2xl font-bold">2M+</div>
+              <div className="text-xs sm:text-sm">Properties</div>
             </div>
-            <div className="w-px h-8 bg-white/30" />
+            <div className="w-px h-6 sm:h-8 bg-white/30" />
             <div className="text-center">
-              <div className="text-2xl font-bold">190+</div>
-              <div className="text-sm">Countries</div>
+              <div className="text-xl sm:text-2xl font-bold">190+</div>
+              <div className="text-xs sm:text-sm">Countries</div>
             </div>
-            <div className="w-px h-8 bg-white/30" />
+            <div className="w-px h-6 sm:h-8 bg-white/30" />
             <div className="text-center">
-              <div className="text-2xl font-bold">4.8★</div>
-              <div className="text-sm">Rating</div>
+              <div className="text-xl sm:text-2xl font-bold">4.8★</div>
+              <div className="text-xs sm:text-sm">Rating</div>
             </div>
           </div>
         </div>
