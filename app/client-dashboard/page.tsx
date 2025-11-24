@@ -520,11 +520,12 @@ function ClientDashboardContent() {
 
   // Profile management handlers
   const handleEditBasicInfo = () => {
+    const metadata = clerkUser?.unsafeMetadata as any
     setProfileForm({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      phone: user?.phone || '',
-      phoneCountryCode: user?.phoneCountryCode || '+20',
+      firstName: clerkUser?.firstName || user?.firstName || '',
+      lastName: clerkUser?.lastName || user?.lastName || '',
+      phone: metadata?.phone || user?.phone || '',
+      phoneCountryCode: metadata?.phoneCountryCode || user?.phoneCountryCode || '+20',
       language: profileForm.language,
       currency: profileForm.currency
     })
@@ -2451,7 +2452,7 @@ function ClientDashboardContent() {
                                 placeholder="Enter first name"
                               />
                             ) : (
-                              <p className="text-gray-900 font-semibold">{user?.firstName || '—'}</p>
+                              <p className="text-gray-900 font-semibold">{clerkUser?.firstName || user?.firstName || '—'}</p>
                             )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
@@ -2465,7 +2466,7 @@ function ClientDashboardContent() {
                                 placeholder="Enter last name"
                               />
                             ) : (
-                              <p className="text-gray-900 font-semibold">{user?.lastName || '—'}</p>
+                              <p className="text-gray-900 font-semibold">{clerkUser?.lastName || user?.lastName || '—'}</p>
                             )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
@@ -2614,9 +2615,16 @@ function ClientDashboardContent() {
                               </div>
                             ) : (
                               <p className="text-gray-900 font-semibold">
-                                {user?.phoneCountryCode && user?.phone
-                                  ? `${user.phoneCountryCode} ${user.phone}`
-                                  : user?.phone || 'Add phone'}
+                                {(() => {
+                                  const metadata = clerkUser?.unsafeMetadata as any
+                                  const phoneCountryCode = metadata?.phoneCountryCode || user?.phoneCountryCode
+                                  const phone = metadata?.phone || user?.phone
+
+                                  if (phoneCountryCode && phone) {
+                                    return `${phoneCountryCode} ${phone}`
+                                  }
+                                  return phone || 'Add phone'
+                                })()}
                               </p>
                             )}
                           </div>
