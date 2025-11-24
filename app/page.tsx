@@ -2,64 +2,83 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, Shield, Clock, Zap, Star, ArrowRight, Menu, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Search, Shield, Clock, Zap, Star, ArrowRight, Menu, X, MapPin, Calendar, Users, ChevronDown } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
+import LocationDropdown from '@/components/search/location-dropdown'
+import DatePicker from '@/components/search/date-picker'
+import GuestSelector from '@/components/search/guest-selector'
 
 export default function HomePage() {
   const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isSignedIn, isLoaded } = useUser()
-  const [destinationQuery, setDestinationQuery] = useState('')
-  const [datesValue, setDatesValue] = useState('')
-  const [guestsValue, setGuestsValue] = useState('')
-  const [isDestinationFocused, setIsDestinationFocused] = useState(false)
-
-  const destinations = useMemo(
-    () => [
-      { city: 'Doha', country: 'Qatar', region: 'Middle East' },
-      { city: 'Al Rayyan', country: 'Qatar', region: 'Middle East' },
-      { city: 'Al Wakrah', country: 'Qatar', region: 'Middle East' },
-      { city: 'Dubai', country: 'United Arab Emirates', region: 'Middle East' },
-      { city: 'Abu Dhabi', country: 'United Arab Emirates', region: 'Middle East' },
-      { city: 'Riyadh', country: 'Saudi Arabia', region: 'Middle East' },
-      { city: 'Jeddah', country: 'Saudi Arabia', region: 'Middle East' },
-      { city: 'Muscat', country: 'Oman', region: 'Middle East' },
-      { city: 'Marrakesh', country: 'Morocco', region: 'Africa' },
-      { city: 'Casablanca', country: 'Morocco', region: 'Africa' },
-      { city: 'Paris', country: 'France', region: 'Europe' },
-      { city: 'London', country: 'United Kingdom', region: 'Europe' },
-      { city: 'Rome', country: 'Italy', region: 'Europe' },
-      { city: 'Barcelona', country: 'Spain', region: 'Europe' },
-      { city: 'Phuket', country: 'Thailand', region: 'Asia' },
-      { city: 'Bali', country: 'Indonesia', region: 'Asia' },
-    ],
-    [],
-  )
-
-  const filteredDestinations = destinations.filter((d) => {
-    if (!destinationQuery.trim()) return true
-    const q = destinationQuery.toLowerCase()
-    return d.city.toLowerCase().includes(q) || d.country.toLowerCase().includes(q) || d.region.toLowerCase().includes(q)
+  
+  // Search State
+  const [location, setLocation] = useState('')
+  const [checkIn, setCheckIn] = useState<Date | null>(null)
+  const [checkOut, setCheckOut] = useState<Date | null>(null)
+  const [guests, setGuests] = useState({
+    adults: 0,
+    children: 0,
+    infants: 0,
+    pets: 0
   })
+  
+  const [activeDropdown, setActiveDropdown] = useState<'location' | 'checkIn' | 'checkOut' | 'guests' | null>(null)
+  const searchBarRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchBarRef.current && !searchBarRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleSearch = () => {
     const params = new URLSearchParams()
     
-    if (destinationQuery) {
-      // Extract city name if it's in "City, Country" format
-      const city = destinationQuery.split(',')[0].trim()
-      params.set('location', city)
+    if (location) {
+      params.set('location', location)
     }
 
-    if (guestsValue) {
-      const guests = parseInt(guestsValue)
-      if (!isNaN(guests)) {
-        params.set('guests', guests.toString())
-      }
+    if (checkIn) {
+      params.set('checkin', checkIn.toISOString())
+    }
+
+    if (checkOut) {
+      params.set('checkout', checkOut.toISOString())
+    }
+
+    const totalGuests = guests.adults + guests.children
+    if (totalGuests > 0) {
+      params.set('guests', totalGuests.toString())
     }
 
     router.push(`/discover?${params.toString()}`)
+  }
+
+  const formatDateRange = () => {
+    if (!checkIn && !checkOut) return 'Add dates'
+    if (checkIn && !checkOut) {
+      return `${checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - Add checkout`
+    }
+    if (checkIn && checkOut) {
+      return `${checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${checkOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    }
+    return 'Add dates'
+  }
+
+  const formatGuests = () => {
+    const total = guests.adults + guests.children
+    if (total === 0) return 'Add guests'
+    if (total === 1) return '1 guest'
+    return `${total} guests`
   }
 
   return (
@@ -130,7 +149,7 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen pb-80 flex items-center justify-center overflow-hidden">
+      <section className="relative h-[95vh] flex items-center justify-center overflow-hidden">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img
@@ -142,7 +161,7 @@ export default function HomePage() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto mt-10 mb-32">
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto mt-20">
           <div className="inline-block mb-4 px-4 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
             <span className="text-orange-400 font-bold text-xs tracking-widest uppercase">The Future of Hospitality</span>
           </div>
@@ -155,60 +174,84 @@ export default function HomePage() {
           </p>
 
           {/* Search Bar CTA */}
-          <div className="bg-white p-2 rounded-3xl shadow-2xl max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-2 animate-fade-in-up transform hover:scale-[1.01] transition-transform duration-300">
-            <div className="flex-1 w-full md:w-auto px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group relative">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
-                Where
-              </label>
-              <input
-                value={destinationQuery}
-                onChange={(e) => setDestinationQuery(e.target.value)}
-                onFocus={() => setIsDestinationFocused(true)}
-                onBlur={() => setTimeout(() => setIsDestinationFocused(false), 200)}
-                placeholder="City, country, or landmark"
-                className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent"
-              />
-              {isDestinationFocused && (
-                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 max-h-64 overflow-y-auto z-[100]">
-                {filteredDestinations.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-gray-500">No matches. Try another destination.</div>
-                ) : (
-                  filteredDestinations.map((d) => (
-                    <button
-                      key={`${d.city}-${d.country}`}
-                      onClick={() => setDestinationQuery(`${d.city}, ${d.country}`)}
-                      className="w-full text-left px-4 py-3 hover:bg-orange-50 flex items-center justify-between text-sm"
-                    >
-                      <span className="font-semibold text-gray-900">{d.city}</span>
-                      <span className="text-xs text-gray-500">{d.country} · {d.region}</span>
-                    </button>
-                  ))
-                )}
-              </div>
+          <div ref={searchBarRef} className="bg-white p-2 rounded-3xl shadow-2xl max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-2 animate-fade-in-up transform hover:scale-[1.01] transition-transform duration-300 relative">
+            
+            {/* Location */}
+            <div className="flex-1 w-full md:w-auto relative">
+              <button
+                onClick={() => setActiveDropdown(activeDropdown === 'location' ? null : 'location')}
+                className="w-full px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group hover:bg-gray-50 rounded-2xl transition-colors"
+              >
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
+                  Where
+                </label>
+                <div className="text-gray-900 font-medium truncate">
+                  {location || 'Search destinations'}
+                </div>
+              </button>
+              
+              {activeDropdown === 'location' && (
+                <LocationDropdown
+                  value={location}
+                  onChange={(val) => {
+                    setLocation(val)
+                    setActiveDropdown(null)
+                  }}
+                  onClose={() => setActiveDropdown(null)}
+                />
               )}
             </div>
-            <div className="flex-1 w-full md:w-auto px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group cursor-pointer">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
-                Check in / out
-              </label>
-              <input
-                value={datesValue}
-                onChange={(e) => setDatesValue(e.target.value)}
-                placeholder="Add dates"
-                className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent"
-              />
+
+            {/* Dates */}
+            <div className="flex-1 w-full md:w-auto relative">
+              <button
+                onClick={() => setActiveDropdown(activeDropdown === 'checkIn' ? null : 'checkIn')}
+                className="w-full px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group hover:bg-gray-50 rounded-2xl transition-colors"
+              >
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
+                  Check in / out
+                </label>
+                <div className="text-gray-900 font-medium truncate">
+                  {formatDateRange()}
+                </div>
+              </button>
+
+              {(activeDropdown === 'checkIn' || activeDropdown === 'checkOut') && (
+                <DatePicker
+                  checkIn={checkIn}
+                  checkOut={checkOut}
+                  onCheckInChange={setCheckIn}
+                  onCheckOutChange={setCheckOut}
+                  onClose={() => setActiveDropdown(null)}
+                  focusedInput={activeDropdown}
+                />
+              )}
             </div>
-            <div className="flex-1 w-full md:w-auto px-6 py-4 text-left group cursor-pointer">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
-                Guests
-              </label>
-              <input
-                value={guestsValue}
-                onChange={(e) => setGuestsValue(e.target.value)}
-                placeholder="Add guests"
-                className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent"
-              />
+
+            {/* Guests */}
+            <div className="flex-1 w-full md:w-auto relative">
+              <button
+                onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
+                className="w-full px-6 py-4 text-left group hover:bg-gray-50 rounded-2xl transition-colors"
+              >
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
+                  Guests
+                </label>
+                <div className="text-gray-900 font-medium truncate">
+                  {formatGuests()}
+                </div>
+              </button>
+
+              {activeDropdown === 'guests' && (
+                <GuestSelector
+                  guests={guests}
+                  onChange={setGuests}
+                  onClose={() => setActiveDropdown(null)}
+                />
+              )}
             </div>
+
+            {/* Search Button */}
             <div className="w-full md:w-auto p-2">
               <button 
                 onClick={handleSearch}
@@ -218,7 +261,7 @@ export default function HomePage() {
                 <span className="md:hidden font-bold">Search</span>
               </button>
             </div>
-        </div>
+          </div>
         </div>
       </section>
 
