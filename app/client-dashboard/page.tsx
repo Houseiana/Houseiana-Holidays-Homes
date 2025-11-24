@@ -1173,7 +1173,7 @@ function ClientDashboardContent() {
                     </div>
                   </div>
 
-                  {!isAuthenticated && (
+                  {!isSignedIn && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <AlertTriangle size={16} className="text-amber-500" />
@@ -1183,14 +1183,12 @@ function ClientDashboardContent() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {!isSignedIn && (
-                          <button
-                            onClick={() => router.push('/sign-in')}
-                            className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
-                          >
-                            Sign in
-                          </button>
-                        )}
+                        <button
+                          onClick={() => router.push('/sign-in')}
+                          className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
+                        >
+                          Sign in
+                        </button>
                         <button
                           onClick={() => router.push('/support')}
                           className="px-4 py-2 rounded-lg border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
@@ -1245,9 +1243,9 @@ function ClientDashboardContent() {
                       <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 mx-auto mb-3">
                         <Compass size={28} />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900">{isAuthenticated ? 'No trips yet' : 'Please sign in to view your trips.'}</h3>
+                      <h3 className="text-lg font-bold text-gray-900">{isSignedIn ? 'No trips yet' : 'Please sign in to view your trips.'}</h3>
                       <p className="text-sm text-gray-500 mt-1">
-                        {isAuthenticated
+                        {isSignedIn
                           ? 'When you book a stay, it will appear here.'
                           : 'Sign in to load your bookings, or reach out if you need help.'}
                       </p>
@@ -1258,7 +1256,7 @@ function ClientDashboardContent() {
                         >
                           Explore stays
                         </button>
-                        {!isAuthenticated && !isSignedIn && (
+                        {!isSignedIn && (
                           <button
                             onClick={() => router.push('/sign-in')}
                             className="px-6 py-3 border border-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
@@ -1794,7 +1792,7 @@ function ClientDashboardContent() {
 
               {activeTab === 'payments' && (
                 <div className="space-y-8 animate-fade-in">
-                  {!isAuthenticated && (
+                  {!isSignedIn && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <AlertTriangle size={16} className="text-amber-500" />
@@ -1804,14 +1802,12 @@ function ClientDashboardContent() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {!isSignedIn && (
-                          <button
-                            onClick={() => router.push('/sign-in')}
-                            className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
-                          >
-                            Sign in
-                          </button>
-                        )}
+                        <button
+                          onClick={() => router.push('/sign-in')}
+                          className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
+                        >
+                          Sign in
+                        </button>
                         <button
                           onClick={() => router.push('/support')}
                           className="px-4 py-2 rounded-lg border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
@@ -1927,15 +1923,15 @@ function ClientDashboardContent() {
                       ) : paymentHistory.length === 0 ? (
                         <div className="py-10 text-center text-gray-500 space-y-3">
                           <p className="font-semibold text-gray-700">
-                            {isAuthenticated ? 'No payment activity yet' : 'Please sign in to view your payments.'}
+                            {isSignedIn ? 'No payment activity yet' : 'Please sign in to view your payments.'}
                           </p>
                           <p className="text-sm">
-                            {isAuthenticated
+                            {isSignedIn
                               ? 'Your transactions will show up here once you start booking.'
                               : 'Sign in to load your transactions and invoices.'}
                           </p>
                           <div className="flex items-center justify-center gap-3">
-                            {!isAuthenticated && !isSignedIn && (
+                            {!isSignedIn && (
                               <button
                                 onClick={() => router.push('/sign-in')}
                                 className="px-4 py-2 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-700 transition-colors"
