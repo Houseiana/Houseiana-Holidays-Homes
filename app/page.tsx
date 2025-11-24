@@ -13,6 +13,7 @@ export default function HomePage() {
   const [destinationQuery, setDestinationQuery] = useState('')
   const [datesValue, setDatesValue] = useState('')
   const [guestsValue, setGuestsValue] = useState('')
+  const [isDestinationFocused, setIsDestinationFocused] = useState(false)
 
   const destinations = useMemo(
     () => [
@@ -162,10 +163,13 @@ export default function HomePage() {
               <input
                 value={destinationQuery}
                 onChange={(e) => setDestinationQuery(e.target.value)}
+                onFocus={() => setIsDestinationFocused(true)}
+                onBlur={() => setTimeout(() => setIsDestinationFocused(false), 200)}
                 placeholder="City, country, or landmark"
                 className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent"
               />
-              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 max-h-64 overflow-y-auto z-20">
+              {isDestinationFocused && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 max-h-64 overflow-y-auto z-[100]">
                 {filteredDestinations.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-gray-500">No matches. Try another destination.</div>
                 ) : (
@@ -181,6 +185,7 @@ export default function HomePage() {
                   ))
                 )}
               </div>
+              )}
             </div>
             <div className="flex-1 w-full md:w-auto px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group cursor-pointer">
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
