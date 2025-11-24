@@ -123,3 +123,87 @@ export async function listPaymentMethods(customerId: string) {
     type: 'card'
   })
 }
+
+// =============================================
+// STRIPE IDENTITY - KYC VERIFICATION
+// =============================================
+
+/**
+ * Creates a Stripe Identity verification session for KYC
+ * @param userId - The user ID to verify
+ * @param returnUrl - URL to redirect to after verification
+ * @returns Verification session with client_secret and url
+ */
+export async function createVerificationSession(
+  userId: string,
+  email: string,
+  returnUrl: string
+) {
+  try {
+    const verificationSession = await stripe.identity.verificationSessions.create({
+      type: 'document', // Can be 'document' or 'id_number'
+      metadata: {
+        userId,
+        email,
+        platform: 'houseiana'
+      },
+      options: {
+        document: {
+          // Accept passport, driving license, or ID card
+          allowed_types: ['passport', 'driving_license', 'id_card'],
+          // Require matching selfie for extra security
+          require_matching_selfie: true,
+        }
+      },
+      return_url: returnUrl,
+    })
+
+    return verificationSession
+  } catch (error) {
+    console.error('Error creating verification session:', error)
+    throw error
+  }
+}
+
+/**
+ * Retrieves a verification session by ID
+ * @param sessionId - The verification session ID
+ */
+export async function getVerificationSession(sessionId: string) {
+  try {
+    return await stripe.identity.verificationSessions.retrieve(sessionId, {
+      expand: ['verified_outputs']
+    })
+  } catch (error) {
+    console.error('Error retrieving verification session:', error)
+    throw error
+  }
+}
+
+/**
+ * Cancels a verification session
+ * @param sessionId - The verification session ID to cancel
+ */
+export async function cancelVerificationSession(sessionId: string) {
+  try {
+    return await stripe.identity.verificationSessions.cancel(sessionId)
+  } catch (error) {
+    console.error('Error canceling verification session:', error)
+    throw error
+  }
+}
+
+/**
+ * Lists all verification sessions for a user
+ * @param userId - The user ID
+ */
+export async function listVerificationSessions(userId: string) {
+  try {
+    return await stripe.identity.verificationSessions.list({
+      limit: 10,
+    })
+  } catch (error) {
+    console.error('Error listing verification sessions:', error)
+    throw error
+  }
+}
