@@ -125,6 +125,7 @@ function ClientDashboardContent() {
     email: user?.email || 'guest@example.com',
     profilePhoto: user?.profilePhoto
   };
+  const isAuthenticated = Boolean(user?.id)
 
   const [activeTab, setActiveTab] = useState('dashboard')
   const [isLoading, setIsLoading] = useState(false)
@@ -354,6 +355,8 @@ function ClientDashboardContent() {
   const messageHost = (hostId: string) => {
     router.push(`/messages/${hostId}`)
   }
+
+  const isAuthenticated = Boolean(user?.id)
 
   const handleSignOut = () => {
     try {
@@ -1152,6 +1155,32 @@ function ClientDashboardContent() {
                     </div>
                   </div>
 
+                  {!isAuthenticated && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={16} className="text-amber-500" />
+                        <div>
+                          <p className="font-semibold">Please sign in to view your trips.</p>
+                          <p className="text-amber-700/90 text-xs">Your bookings will appear once you’re authenticated.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => router.push('/sign-in')}
+                          className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
+                        >
+                          Sign in
+                        </button>
+                        <button
+                          onClick={() => router.push('/support')}
+                          className="px-4 py-2 rounded-lg border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
+                        >
+                          Contact support
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
                       <p className="text-xs text-gray-500 font-semibold">Upcoming</p>
@@ -1196,14 +1225,34 @@ function ClientDashboardContent() {
                       <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 mx-auto mb-3">
                         <Compass size={28} />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900">No trips yet</h3>
-                      <p className="text-sm text-gray-500 mt-1">When you book a stay, it will appear here.</p>
-                      <button
-                        onClick={startNewSearch}
-                        className="mt-4 px-6 py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-colors"
-                      >
-                        Explore stays
-                      </button>
+                      <h3 className="text-lg font-bold text-gray-900">{isAuthenticated ? 'No trips yet' : 'Please sign in to view your trips.'}</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {isAuthenticated
+                          ? 'When you book a stay, it will appear here.'
+                          : 'Sign in to load your bookings, or reach out if you need help.'}
+                      </p>
+                      <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
+                        <button
+                          onClick={startNewSearch}
+                          className="px-6 py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-colors"
+                        >
+                          Explore stays
+                        </button>
+                        {!isAuthenticated && (
+                          <button
+                            onClick={() => router.push('/sign-in')}
+                            className="px-6 py-3 border border-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                          >
+                            Sign in
+                          </button>
+                        )}
+                        <button
+                          onClick={() => router.push('/support')}
+                          className="px-6 py-3 border border-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                        >
+                          Contact support
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-8">
