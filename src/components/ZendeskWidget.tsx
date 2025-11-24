@@ -24,7 +24,7 @@ export default function ZendeskWidget() {
       if (window.zE && isLoaded && user) {
         window.zE('webWidget', 'prefill', {
           name: {
-            value: user.fullName || user.firstName || 'Guest',
+            value: user.fullName || user.firstName || 'Houseiana User',
             readOnly: true
           },
           email: {
@@ -35,7 +35,7 @@ export default function ZendeskWidget() {
 
         // Identify user for better support
         window.zE('webWidget', 'identify', {
-          name: user.fullName || user.firstName || 'Guest',
+          name: user.fullName || user.firstName || 'Houseiana User',
           email: user.primaryEmailAddress?.emailAddress || '',
           organization: 'Houseiana Customer'
         });

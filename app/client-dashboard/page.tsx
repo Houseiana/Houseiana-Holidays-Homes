@@ -119,14 +119,24 @@ function ClientDashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
-  const { isSignedIn } = useUser()
+  const { isSignedIn, user: clerkUser } = useUser()
   const { signOut } = useClerk()
 
+  // Use backend user data if available, otherwise fall back to Clerk user data
   const userProfile = {
-    name: user?.name || `${user?.firstName || 'Guest'} ${user?.lastName || ''}`.trim() || 'Guest User',
-    initials: user?.initials || `${user?.firstName?.charAt(0) || 'G'}${user?.lastName?.charAt(0) || ''}`.trim() || 'GU',
-    email: user?.email || 'guest@example.com',
-    profilePhoto: user?.profilePhoto
+    name: user?.name ||
+          user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}`.trim() :
+          clerkUser?.fullName ||
+          clerkUser?.firstName && clerkUser?.lastName ? `${clerkUser.firstName} ${clerkUser.lastName}`.trim() :
+          clerkUser?.firstName ||
+          'User',
+    initials: user?.initials ||
+              user?.firstName && user?.lastName ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() :
+              clerkUser?.firstName && clerkUser?.lastName ? `${clerkUser.firstName.charAt(0)}${clerkUser.lastName.charAt(0)}`.toUpperCase() :
+              clerkUser?.firstName ? clerkUser.firstName.charAt(0).toUpperCase() :
+              'U',
+    email: user?.email || clerkUser?.emailAddresses?.[0]?.emailAddress || 'user@example.com',
+    profilePhoto: user?.profilePhoto || clerkUser?.imageUrl
   };
   const isAuthenticated = Boolean(user?.id)
 
@@ -934,7 +944,7 @@ function ClientDashboardContent() {
                           Premium guest benefits active
                         </div>
                         <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-                          Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-300">{user?.firstName || 'Guest'}</span>
+                          Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-300">{user?.firstName || clerkUser?.firstName || 'there'}</span>
                         </h1>
                         <p className="text-white/70 text-lg max-w-2xl">
                           Plan your next stay, track active trips, and pick up where you left off with saved places.
