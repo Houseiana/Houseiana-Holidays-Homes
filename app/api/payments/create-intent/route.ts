@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/auth'
-import Stripe from 'stripe'
-
-const getStripe = () => {
-  const secretKey = process.env.STRIPE_SECRET_KEY
-  if (!secretKey || secretKey.includes('placeholder')) {
-    throw new Error('Stripe is not configured. Please add a valid STRIPE_SECRET_KEY.')
-  }
-  return new Stripe(secretKey, {
-    apiVersion: '2025-09-30.clover'
-  })
-}
+import { createPaymentIntent, getOrCreateStripeCustomer } from '@/lib/stripe'
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,23 +59,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create Stripe PaymentIntent
-    const stripe = getStripe()
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(booking.totalAmount * 100), // Convert to cents
-      currency: booking.currency.toLowerCase(),
-      customer: undefined, // You can create/get Stripe customer here
-      metadata: {
+    // Get or create Stripe customer
+    const customerId = await getOrCreateStripeCustomer(
+      booking.guest.id,
+      booking.guest.email,
+      `${booking.guest.firstName} ${booking.guest.lastName}`
+    )
+
+    // Create Stripe PaymentIntent with customer
+    const paymentIntent = await createPaymentIntent(
+      booking.totalAmount,
+      booking.currency,
+      customerId,
+      {
         bookingId: booking.id,
         propertyId: booking.propertyId,
         guestId: booking.guestId,
         hostId: booking.hostId
-      },
-      description: `Booking for ${booking.property.title}`,
-      automatic_payment_methods: {
-        enabled: true
       }
-    })
+    )
 
     // Create payment record
     await (prisma as any).payment.create({
