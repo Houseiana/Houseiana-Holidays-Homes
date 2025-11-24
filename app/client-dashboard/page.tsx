@@ -176,6 +176,7 @@ function ClientDashboardContent() {
     firstName: '',
     lastName: '',
     phone: '',
+    phoneCountryCode: '+20', // Default to Egypt
     language: 'English',
     currency: 'QAR'
   })
@@ -523,6 +524,7 @@ function ClientDashboardContent() {
       firstName: user?.firstName || '',
       lastName: user?.lastName || '',
       phone: user?.phone || '',
+      phoneCountryCode: user?.phoneCountryCode || '+20',
       language: profileForm.language,
       currency: profileForm.currency
     })
@@ -556,6 +558,7 @@ function ClientDashboardContent() {
             unsafeMetadata: {
               ...clerkUser.unsafeMetadata,
               phone: profileForm.phone,
+              phoneCountryCode: profileForm.phoneCountryCode,
               preferredLanguage: profileForm.language,
               preferredCurrency: profileForm.currency
             }
@@ -571,6 +574,7 @@ function ClientDashboardContent() {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         phone: profileForm.phone,
+        phoneCountryCode: profileForm.phoneCountryCode,
         preferredLanguage: profileForm.language,
         preferredCurrency: profileForm.currency
       }
@@ -2451,20 +2455,55 @@ function ClientDashboardContent() {
                           <div className="p-4 border border-gray-100 rounded-2xl">
                             <p className="text-xs text-gray-500 font-semibold uppercase mb-2">Phone</p>
                             {isEditingBasicInfo ? (
-                              <input
-                                type="tel"
-                                value={profileForm.phone}
-                                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                placeholder="Enter phone number"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  value={profileForm.phoneCountryCode}
+                                  onChange={(e) => setProfileForm({ ...profileForm, phoneCountryCode: e.target.value })}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                >
+                                  <option value="+1">🇺🇸 +1</option>
+                                  <option value="+20">🇪🇬 +20</option>
+                                  <option value="+44">🇬🇧 +44</option>
+                                  <option value="+91">🇮🇳 +91</option>
+                                  <option value="+86">🇨🇳 +86</option>
+                                  <option value="+33">🇫🇷 +33</option>
+                                  <option value="+49">🇩🇪 +49</option>
+                                  <option value="+81">🇯🇵 +81</option>
+                                  <option value="+82">🇰🇷 +82</option>
+                                  <option value="+971">🇦🇪 +971</option>
+                                  <option value="+966">🇸🇦 +966</option>
+                                  <option value="+974">🇶🇦 +974</option>
+                                  <option value="+965">🇰🇼 +965</option>
+                                  <option value="+973">🇧🇭 +973</option>
+                                  <option value="+968">🇴🇲 +968</option>
+                                </select>
+                                <input
+                                  type="tel"
+                                  value={profileForm.phone}
+                                  onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                  placeholder="Enter phone number"
+                                />
+                              </div>
                             ) : (
-                              <p className="text-gray-900 font-semibold">{user?.phone || 'Add phone'}</p>
+                              <p className="text-gray-900 font-semibold">
+                                {user?.phoneCountryCode && user?.phone
+                                  ? `${user.phoneCountryCode} ${user.phone}`
+                                  : user?.phone || 'Add phone'}
+                              </p>
                             )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
                             <p className="text-xs text-gray-500 font-semibold uppercase">Member since</p>
-                            <p className="text-gray-900 font-semibold">{user?.memberSince || '—'}</p>
+                            <p className="text-gray-900 font-semibold">
+                              {clerkUser?.createdAt
+                                ? new Date(clerkUser.createdAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })
+                                : user?.memberSince || '—'}
+                            </p>
                           </div>
                         </div>
                       </div>
