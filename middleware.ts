@@ -15,11 +15,16 @@ const isPublicRoute = createRouteMatcher([
 ])
 
 export default clerkMiddleware(async (auth, request) => {
-  // Don't use auth.protect() - let route handlers check auth themselves
-  // This avoids Clerk's protect-rewrite behavior that causes 404s
+  // Protect all private routes by redirecting to sign-in
   if (!isPublicRoute(request)) {
-    // Just populate auth context, don't protect
-    await auth()
+    const authObj = await auth()
+
+    if (!authObj.userId) {
+      // User is not authenticated, redirect to sign-in
+      const signInUrl = new URL('/sign-in', request.url)
+      signInUrl.searchParams.set('redirect_url', request.url)
+      return Response.redirect(signInUrl)
+    }
   }
 })
 
