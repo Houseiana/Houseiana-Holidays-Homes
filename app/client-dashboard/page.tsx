@@ -414,6 +414,14 @@ function ClientDashboardContent() {
     }
   }
 
+  const requireAuthAction = (action: () => void) => {
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
+    }
+    action()
+  }
+
   const handleSendMessage = async () => {
     if (!selectedConversationId || !messageInput.trim()) return
     const tempId = `local-${Date.now()}`
@@ -1895,16 +1903,19 @@ function ClientDashboardContent() {
                             </div>
                           </div>
                         )}
-                      <div className="flex items-center gap-2 mt-4">
-                        <button className="text-sm font-semibold text-orange-600 hover:text-orange-700" onClick={fetchPayments}>
-                          Refresh
-                        </button>
-                        <span className="text-gray-300">•</span>
-                        <button className="text-sm font-semibold text-gray-600 hover:text-gray-900" onClick={scrollToPaymentMethods}>
-                          Add card
-                        </button>
+                        <div className="flex items-center gap-2 mt-4">
+                          <button className="text-sm font-semibold text-orange-600 hover:text-orange-700" onClick={fetchPayments}>
+                            Refresh
+                          </button>
+                          <span className="text-gray-300">•</span>
+                          <button
+                            className="text-sm font-semibold text-gray-600 hover:text-gray-900"
+                            onClick={() => requireAuthAction(scrollToPaymentMethods)}
+                          >
+                            Add card
+                          </button>
+                        </div>
                       </div>
-                    </div>
                       <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-3xl p-5 shadow-lg">
                         <div className="flex items-center gap-3">
                           <Receipt size={20} />
@@ -2071,7 +2082,10 @@ function ClientDashboardContent() {
                       <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm" ref={paymentMethodsRef}>
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-bold text-gray-900">Payment methods</h3>
-                          <button className="text-sm font-semibold text-orange-600 hover:text-orange-700" onClick={fetchPayments}>
+                          <button
+                            className="text-sm font-semibold text-orange-600 hover:text-orange-700"
+                            onClick={() => requireAuthAction(scrollToPaymentMethods)}
+                          >
                             Add
                           </button>
                         </div>
