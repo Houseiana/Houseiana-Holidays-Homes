@@ -1,6 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
+// Session Configuration:
+// - Session timeout: 30 minutes of inactivity
+// - Configured in Clerk Dashboard > Sessions > Session lifetime
+// - Set "Inactivity timeout" to 30 minutes (1800 seconds)
+// - Sessions automatically expire after 30 minutes of user inactivity
+
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
@@ -15,19 +21,25 @@ const isPublicRoute = createRouteMatcher([
   '/api/properties(.*)',
 ])
 
-export default clerkMiddleware(async (auth, request) => {
-  // Protect all private routes by redirecting to sign-in
-  if (!isPublicRoute(request)) {
-    const authObj = await auth()
+export default clerkMiddleware(
+  async (auth, request) => {
+    // Protect all private routes by redirecting to sign-in
+    if (!isPublicRoute(request)) {
+      const authObj = await auth()
 
-    if (!authObj.userId) {
-      // User is not authenticated, redirect to sign-in
-      const signInUrl = new URL('/sign-in', request.url)
-      signInUrl.searchParams.set('redirect_url', request.url)
-      return NextResponse.redirect(signInUrl)
+      if (!authObj.userId) {
+        // User is not authenticated, redirect to sign-in
+        const signInUrl = new URL('/sign-in', request.url)
+        signInUrl.searchParams.set('redirect_url', request.url)
+        return NextResponse.redirect(signInUrl)
+      }
     }
+  },
+  {
+    // Enable debug mode for session tracking (optional)
+    debug: false,
   }
-})
+)
 
 export const config = {
   matcher: [
