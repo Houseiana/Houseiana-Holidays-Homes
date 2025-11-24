@@ -547,36 +547,42 @@ function ClientDashboardContent() {
     setIsSavingProfile(true)
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+      // Update Clerk user metadata
+      if (clerkUser) {
+        try {
+          await clerkUser.update({
+            firstName: profileForm.firstName || clerkUser.firstName,
+            lastName: profileForm.lastName || clerkUser.lastName,
+            unsafeMetadata: {
+              ...clerkUser.unsafeMetadata,
+              phone: profileForm.phone,
+              preferredLanguage: profileForm.language,
+              preferredCurrency: profileForm.currency
+            }
+          })
+        } catch (clerkError) {
+          console.error('Error updating Clerk user:', clerkError)
+        }
+      }
 
-      // For now, just update localStorage
-      // Later, you can integrate with your backend API
+      // Update local storage
       const updatedUser = {
         ...user,
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
-        phone: profileForm.phone
+        phone: profileForm.phone,
+        preferredLanguage: profileForm.language,
+        preferredCurrency: profileForm.currency
       }
-
-      if (token) {
-        // TODO: Call your update profile API
-        // const response = await fetch('/api/profile', {
-        //   method: 'PATCH',
-        //   headers: {
-        //     'Content-Type': 'application/json',
-        //     Authorization: `Bearer ${token}`
-        //   },
-        //   body: JSON.stringify(profileForm)
-        // })
-      }
-
-      // Update local storage
       localStorage.setItem('auth_user', JSON.stringify(updatedUser))
 
       setIsEditingBasicInfo(false)
       setIsEditingPreferences(false)
 
       alert('Profile updated successfully!')
+
+      // Reload the page to reflect changes
+      window.location.reload()
     } catch (error) {
       console.error('Error updating profile:', error)
       alert('Failed to update profile. Please try again.')
@@ -2415,16 +2421,46 @@ function ClientDashboardContent() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div className="p-4 border border-gray-100 rounded-2xl">
-                            <p className="text-xs text-gray-500 font-semibold uppercase">First name</p>
-                            <p className="text-gray-900 font-semibold">{user?.firstName || '—'}</p>
+                            <p className="text-xs text-gray-500 font-semibold uppercase mb-2">First name</p>
+                            {isEditingBasicInfo ? (
+                              <input
+                                type="text"
+                                value={profileForm.firstName}
+                                onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                placeholder="Enter first name"
+                              />
+                            ) : (
+                              <p className="text-gray-900 font-semibold">{user?.firstName || '—'}</p>
+                            )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
-                            <p className="text-xs text-gray-500 font-semibold uppercase">Last name</p>
-                            <p className="text-gray-900 font-semibold">{user?.lastName || '—'}</p>
+                            <p className="text-xs text-gray-500 font-semibold uppercase mb-2">Last name</p>
+                            {isEditingBasicInfo ? (
+                              <input
+                                type="text"
+                                value={profileForm.lastName}
+                                onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                placeholder="Enter last name"
+                              />
+                            ) : (
+                              <p className="text-gray-900 font-semibold">{user?.lastName || '—'}</p>
+                            )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
-                            <p className="text-xs text-gray-500 font-semibold uppercase">Phone</p>
-                            <p className="text-gray-900 font-semibold">{user?.phone || 'Add phone'}</p>
+                            <p className="text-xs text-gray-500 font-semibold uppercase mb-2">Phone</p>
+                            {isEditingBasicInfo ? (
+                              <input
+                                type="tel"
+                                value={profileForm.phone}
+                                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                placeholder="Enter phone number"
+                              />
+                            ) : (
+                              <p className="text-gray-900 font-semibold">{user?.phone || 'Add phone'}</p>
+                            )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
                             <p className="text-xs text-gray-500 font-semibold uppercase">Member since</p>
@@ -2448,12 +2484,40 @@ function ClientDashboardContent() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div className="p-4 border border-gray-100 rounded-2xl">
-                            <p className="text-xs text-gray-500 font-semibold uppercase">Language</p>
-                            <p className="text-gray-900 font-semibold">{user?.preferredLanguage || 'English'}</p>
+                            <p className="text-xs text-gray-500 font-semibold uppercase mb-2">Language</p>
+                            {isEditingPreferences ? (
+                              <select
+                                value={profileForm.language}
+                                onChange={(e) => setProfileForm({ ...profileForm, language: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                              >
+                                <option value="English">English</option>
+                                <option value="Arabic">Arabic</option>
+                                <option value="Spanish">Spanish</option>
+                                <option value="French">French</option>
+                                <option value="German">German</option>
+                              </select>
+                            ) : (
+                              <p className="text-gray-900 font-semibold">{user?.preferredLanguage || 'English'}</p>
+                            )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
-                            <p className="text-xs text-gray-500 font-semibold uppercase">Currency</p>
-                            <p className="text-gray-900 font-semibold">{user?.preferredCurrency || 'USD'}</p>
+                            <p className="text-xs text-gray-500 font-semibold uppercase mb-2">Currency</p>
+                            {isEditingPreferences ? (
+                              <select
+                                value={profileForm.currency}
+                                onChange={(e) => setProfileForm({ ...profileForm, currency: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                              >
+                                <option value="USD">USD</option>
+                                <option value="QAR">QAR</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="AED">AED</option>
+                              </select>
+                            ) : (
+                              <p className="text-gray-900 font-semibold">{user?.preferredCurrency || 'USD'}</p>
+                            )}
                           </div>
                           <div className="p-4 border border-gray-100 rounded-2xl">
                             <p className="text-xs text-gray-500 font-semibold uppercase">Notifications</p>
