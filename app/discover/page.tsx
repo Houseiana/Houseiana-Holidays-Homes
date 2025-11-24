@@ -8,8 +8,8 @@ import { PropertyCard } from '@/components/property/property-card'
 import { PropertyGridSkeleton, MapSkeleton } from '@/components/ui/skeleton'
 import { MobileNav } from '@/components/layout/mobile-nav'
 
-// Dynamically import PropertyMap to avoid SSR issues with Leaflet
-const PropertyMap = dynamic(() => import('@/components/map/PropertyMap'), {
+// Dynamically import GoogleMapsMultiView to avoid SSR issues
+const GoogleMapsMultiView = dynamic(() => import('@/components/GoogleMapsMultiView'), {
   ssr: false,
   loading: () => <MapSkeleton />,
 })
@@ -411,27 +411,27 @@ export default function DiscoverPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-8">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+        <div className="flex gap-4 md:gap-8">
           {/* Filter Sidebar - Now uses AirbnbFilter component */}
           <aside className={`lg:w-80 lg:block ${showFilters ? 'block' : 'hidden'} lg:sticky lg:top-24 lg:h-fit`}>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Filters</h2>
+              <div className="px-4 sm:px-5 md:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Filters</h2>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="lg:hidden text-gray-500 hover:text-gray-700"
+                  className="lg:hidden text-gray-500 hover:text-gray-700 p-2"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
 
               {/* Embedded Airbnb Filter Content */}
-              <div className="max-h-[80vh] overflow-y-auto">
-                <div className="px-6">
+              <div className="max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
+                <div className="px-4 sm:px-5 md:px-6">
                   {/* Quick Filters */}
-                  <div className="py-6 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick filters</h2>
+                  <div className="py-4 sm:py-5 md:py-6 border-b border-gray-200">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">Quick filters</h2>
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => updateFilter('instantBooking', !filters.instantBooking)}
@@ -703,19 +703,19 @@ export default function DiscoverPage() {
           {/* Results Section */}
           <main className="flex-1">
             {/* Results Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                   {filteredListings.length} vacation rentals
                 </h1>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 {/* Sort Dropdown */}
                 <select
                   value={filters.sortBy}
                   onChange={(e) => updateFilter('sortBy', e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
+                  className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-primary-500"
                 >
                   <option value="recommended">Recommended</option>
                   <option value="price_low">Price: Low to High</option>
@@ -725,22 +725,22 @@ export default function DiscoverPage() {
                 </select>
 
                 {/* View Toggle */}
-                <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                <div className="hidden sm:flex border border-gray-300 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    className={`p-2.5 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
                     <Grid className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    className={`p-2.5 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
                     <List className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setViewMode('map')}
-                    className={`p-2 ${viewMode === 'map' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    className={`p-2.5 ${viewMode === 'map' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
                     <Map className="w-5 h-5" />
                   </button>
@@ -781,14 +781,14 @@ export default function DiscoverPage() {
             {loading ? (
               <PropertyGridSkeleton count={9} />
             ) : viewMode === 'map' ? (
-              <div className="h-[600px] w-full">
-                <PropertyMap
+              <div className="h-[400px] sm:h-[500px] md:h-[600px] w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                <GoogleMapsMultiView
                   properties={filteredListings}
                   center={[25.2854, 51.5310]}
                   zoom={12}
                   onPropertyClick={(propertyId) => {
-                    // Handle property click - could open property details or scroll to property card
-                    console.log('Property clicked:', propertyId);
+                    // Navigate to property details
+                    window.location.href = `/property/${propertyId}`;
                   }}
                 />
               </div>

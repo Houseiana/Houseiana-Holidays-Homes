@@ -2,17 +2,33 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   ChevronLeft, Share, Heart, Star, Diamond, Users,
   CheckCircle, Calendar, Flag, ChevronDown, Minus, Plus,
-  ChevronRight, MapPin, Wifi, Car, Coffee, Tv, MoreHorizontal
+  ChevronRight, MapPin, Wifi, Car, Coffee, Tv, MoreHorizontal, ShieldCheck, Clock, MessageCircle, Tag, Sparkles, X
 } from 'lucide-react'
+
+// Dynamically import GoogleMapsView to avoid SSR issues
+const GoogleMapsView = dynamic(() => import('@/components/GoogleMapsView'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 bg-gray-100 rounded-2xl flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+        <p className="text-gray-600 text-sm">Loading map...</p>
+      </div>
+    </div>
+  ),
+})
 
 interface Property {
   id: string
   title: string
   type: string
   location: string
+  latitude?: number
+  longitude?: number
   price: number
   rating: number
   reviews: number
@@ -30,6 +46,7 @@ interface Property {
   description: string
   isRareFind: boolean
   guestFavorite: boolean
+  perks?: string[]
 }
 
 interface BookingForm {
@@ -43,10 +60,8 @@ export default function PropertyDetailPage() {
   const router = useRouter()
   const [property, setProperty] = useState<Property | null>(null)
   const [isLiked, setIsLiked] = useState(false)
-  const [showGuestDropdown, setShowGuestDropdown] = useState(false)
-  const [showCalendar, setShowCalendar] = useState(false)
-  const [activeTab, setActiveTab] = useState('photos')
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [showLightbox, setShowLightbox] = useState(false)
 
   const [bookingForm, setBookingForm] = useState<BookingForm>({
     checkIn: '',
@@ -86,12 +101,25 @@ export default function PropertyDetailPage() {
         joinDate: 'June 2020',
         verified: true
       },
+      latitude: -8.674,
+      longitude: 115.448,
       description: 'lembongan Inn has a private room decorated with gardens around it, strategic location of the Inn, close to diving shop and yoga place just 5 minutes walk. we invite tourists to stay at the Inn.',
       isRareFind: true,
-      guestFavorite: true
+      guestFavorite: true,
+      perks: ['Flexible check-in', 'Self check-in', 'Dedicated workspace']
     }
 
     setProperty(mockProperty)
+  }
+
+  const nextImage = () => {
+    if (!property) return
+    setSelectedImageIndex((prev) => (prev + 1) % property.images.length)
+  }
+
+  const prevImage = () => {
+    if (!property) return
+    setSelectedImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length)
   }
 
   const setDefaultDates = () => {
@@ -115,9 +143,12 @@ export default function PropertyDetailPage() {
 
   const calculateTotal = () => {
     const nights = calculateNights()
-    if (!nights || !property) return { base: 0, total: 0 }
+    if (!nights || !property) return { base: 0, total: 0, service: 0, cleaning: 0 }
     const base = property.price * nights
-    return { base, total: base }
+    const service = Math.round(base * 0.08)
+    const cleaning = 35
+    const total = base + service + cleaning
+    return { base, service, cleaning, total }
   }
 
   const updateGuests = (change: number) => {
@@ -127,12 +158,6 @@ export default function PropertyDetailPage() {
 
   const proceedToReserve = () => {
     if (calculateNights() > 0) {
-      const bookingData = {
-        property,
-        booking: bookingForm,
-        pricing: calculateTotal(),
-        nights: calculateNights()
-      }
       router.push('/booking/confirm')
     }
   }
@@ -166,37 +191,42 @@ export default function PropertyDetailPage() {
 
   if (!property) return <div>Loading...</div>
 
+  const isNewListing = (property.reviews || 0) < 5
+  const reviewLabel = isNewListing ? 'New listing · be among the first guests' : `${property.reviews} reviews`
+  const ratingLabel = isNewListing ? 'New on Houseiana' : `${property.rating} • ${reviewLabel}`
+
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header with Back Button */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
+      {showLightbox && property && (
+        <Lightbox
+          images={property.images}
+          index={selectedImageIndex}
+          onClose={() => setShowLightbox(false)}
+          onPrev={prevImage}
+          onNext={nextImage}
+        />
+      )}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
           >
             <ChevronLeft className="w-5 h-5" />
             Back
           </button>
-        </div>
-      </header>
-
-      {/* Property Title and Actions */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex items-start justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">{property.title}</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={shareProperty}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-semibold"
             >
               <Share className="w-4 h-4" />
               Share
             </button>
             <button
               onClick={() => setIsLiked(!isLiked)}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50 ${
-                isLiked ? 'text-red-600 border-red-300' : 'border-gray-300'
+              className={`flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm font-semibold ${
+                isLiked ? 'text-rose-600 border-rose-200' : 'border-gray-200'
               }`}
             >
               <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
@@ -204,31 +234,76 @@ export default function PropertyDetailPage() {
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Image Gallery */}
-        <div className="grid grid-cols-4 gap-4 h-96 mb-8 rounded-xl overflow-hidden">
-          <div className="col-span-2">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {property.isRareFind && (
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">
+                <Diamond className="w-4 h-4" /> Rare find
+              </span>
+            )}
+            {property.guestFavorite && (
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
+                <Heart className="w-4 h-4 fill-current" /> Guest favorite
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">{property.title}</h1>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 text-gray-800 font-semibold">
+                <Star className="w-4 h-4 fill-current text-amber-400" />
+                <span className="text-sm">{ratingLabel}</span>
+              </div>
+              <span className="text-sm text-gray-600 flex items-center gap-1">
+                <MapPin className="w-4 h-4" /> {property.location}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <img
+              src={property.host.avatar}
+              alt={property.host.name}
+              className="w-12 h-12 rounded-full object-cover border-2 border-emerald-100"
+            />
+            <div>
+              <p className="font-semibold text-gray-900">Hosted by {property.host.name}</p>
+              <p className="text-sm text-gray-600">New on Houseiana</p>
+              {property.host.verified && (
+                <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full mt-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  Verified host
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 h-[280px] sm:h-[360px] md:h-[420px] rounded-xl sm:rounded-2xl overflow-hidden shadow-lg">
+          <div className="col-span-1 sm:col-span-1 md:col-span-2">
             <img
               src={property.images[0]}
               alt={property.title}
-              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setSelectedImageIndex(0)}
+              className="w-full h-full object-cover hover:scale-[1.01] transition-transform cursor-pointer"
+              onClick={() => { setSelectedImageIndex(0); setShowLightbox(true) }}
             />
           </div>
-          <div className="col-span-2 grid grid-cols-2 gap-4">
+          <div className="hidden sm:grid sm:col-span-1 md:col-span-2 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
             {property.images.slice(1, 5).map((image, index) => (
               <div key={index} className="relative">
                 <img
                   src={image}
                   alt={`Image ${index + 2}`}
-                  className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => setSelectedImageIndex(index + 1)}
+                  className="w-full h-full object-cover hover:scale-[1.01] transition-transform cursor-pointer"
+                  onClick={() => { setSelectedImageIndex(index + 1); setShowLightbox(true) }}
                 />
                 {index === 3 && property.images.length > 5 && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <button className="flex items-center gap-2 text-white font-medium">
-                      <MoreHorizontal className="w-5 h-5" />
-                      Show all photos
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <button className="flex items-center gap-2 text-white font-semibold text-sm sm:text-base">
+                      <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden sm:inline">Show all photos</span>
                     </button>
                   </div>
                 )}
@@ -237,351 +312,262 @@ export default function PropertyDetailPage() {
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2">
-            {/* Property Info Header */}
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  {property.type} in {property.location}
-                </h2>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <span>{property.guests} guests</span>
-                  <span>·</span>
-                  <span>{property.bedrooms} bedroom</span>
-                  <span>·</span>
-                  <span>{property.bathrooms} bath</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                <span className="font-medium">{property.rating}</span>
-                <span className="text-gray-500">({property.reviews} reviews)</span>
-              </div>
-            </div>
-
-            {/* Rare Find Banner */}
-            {property.isRareFind && (
-              <div className="flex items-center gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg mb-6">
-                <Diamond className="w-5 h-5 text-orange-600" />
-                <span className="text-orange-800 font-medium">Rare find! This place is usually booked</span>
-              </div>
-            )}
-
-            {/* Guest Favorite Section */}
-            {property.guestFavorite && (
-              <div className="flex items-center gap-4 p-6 bg-gray-50 rounded-lg mb-8">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">Guest favorite</h3>
-                  <p className="text-gray-600">One of the most loved homes on Houseiana, according to guests</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900">{property.rating}</div>
-                  <div className="flex items-center gap-1">
-                    {[1,2,3,4,5].map((star) => (
-                      <Star key={star} className="w-3 h-3 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <div className="text-sm text-gray-600">{property.reviews} Reviews</div>
-                </div>
-              </div>
-            )}
-
-            {/* Host Info */}
-            <div className="flex items-center gap-4 pb-8 border-b border-gray-200 mb-8">
-              <img
-                src={property.host.avatar}
-                alt={property.host.name}
-                className="w-12 h-12 rounded-full"
-              />
-              <div>
-                <h3 className="font-semibold text-gray-900">Hosted by {property.host.name}</h3>
-                <p className="text-gray-600">Superhost · 9 years hosting</p>
-              </div>
-            </div>
-
-            {/* Property Features */}
-            <div className="space-y-6 mb-8">
-              <div className="flex items-start gap-4">
-                <MapPin className="w-6 h-6 text-gray-400 mt-1" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 border border-gray-200 rounded-xl flex items-center gap-3 bg-white shadow-sm">
+                <Users className="w-5 h-5 text-indigo-600" />
                 <div>
-                  <h4 className="font-medium text-gray-900">Amazing outdoor space</h4>
-                  <p className="text-gray-600">Guests mention the pool as a highlight.</p>
+                  <p className="text-sm text-gray-500">Up to</p>
+                  <p className="text-lg font-semibold text-gray-900">{property.guests} guests</p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <CheckCircle className="w-6 h-6 text-gray-400 mt-1" />
+              <div className="p-4 border border-gray-200 rounded-xl flex items-center gap-3 bg-white shadow-sm">
+                <CheckCircle className="w-5 h-5 text-indigo-600" />
                 <div>
-                  <h4 className="font-medium text-gray-900">Great check-in experience</h4>
-                  <p className="text-gray-600">Recent guests loved the smooth start to this stay.</p>
+                  <p className="text-sm text-gray-500">Bedrooms</p>
+                  <p className="text-lg font-semibold text-gray-900">{property.bedrooms}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <Calendar className="w-6 h-6 text-gray-400 mt-1" />
+              <div className="p-4 border border-gray-200 rounded-xl flex items-center gap-3 bg-white shadow-sm">
+                <Flag className="w-5 h-5 text-indigo-600" />
                 <div>
-                  <h4 className="font-medium text-gray-900">Free cancellation for 48 hours</h4>
-                  <p className="text-gray-600">Get a full refund if you change your mind.</p>
+                  <p className="text-sm text-gray-500">Bathrooms</p>
+                  <p className="text-lg font-semibold text-gray-900">{property.bathrooms}</p>
                 </div>
               </div>
             </div>
 
-            {/* Property Description */}
-            <div className="mb-8">
-              <p className="text-gray-700 leading-relaxed mb-4">{property.description}</p>
-              <button className="text-orange-600 font-medium hover:underline">Show more</button>
-            </div>
-
-            {/* Amenities Section */}
-            <div className="border-t border-gray-200 pt-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">What this place offers</h3>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {property.amenities.slice(0, 6).map((amenity, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    {getAmenityIcon(amenity)}
-                    <span className="text-gray-700 capitalize">{amenity.replace('-', ' ')}</span>
-                  </div>
+            <div className="space-y-3 p-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-xl font-bold text-gray-900">Why you'll love it</h2>
+              </div>
+              <p className="text-gray-700 leading-relaxed">{property.description}</p>
+              <div className="flex flex-wrap gap-2">
+                {(property.perks || ['Flexible check-in', 'Self check-in', 'Dedicated workspace']).map((perk) => (
+                  <span key={perk} className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold">
+                    {perk}
+                  </span>
                 ))}
               </div>
-              {property.amenities.length > 6 && (
-                <button className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  Show all {property.amenities.length} amenities
-                </button>
-              )}
             </div>
+
+          <div className="p-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">What this place offers</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {property.amenities.map((amenity) => (
+                <div key={amenity} className="flex items-center gap-3 text-gray-800">
+                  {getAmenityIcon(amenity)}
+                  <span className="font-medium capitalize">{amenity}</span>
+                </div>
+              ))}
+            </div>
+            <button className="mt-4 px-4 py-2 border border-gray-200 rounded-lg font-semibold hover:bg-gray-50">
+              Show all amenities
+            </button>
           </div>
 
-          {/* Booking Widget Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-32 bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
-              {/* Price Section */}
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <span className="text-2xl font-bold text-gray-900">${property.price}</span>
-                  <span className="text-gray-600"> for {calculateNights()} nights</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                  <span className="font-medium">{property.rating}</span>
-                  <span className="text-gray-500">· {property.reviews} reviews</span>
-                </div>
+            <div className="p-6 rounded-2xl border border-gray-200 bg-white shadow-sm space-y-3">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-xl font-bold text-gray-900">Where you’ll be</h2>
               </div>
-
-              {/* Date Selection */}
-              <div className="border border-gray-300 rounded-lg mb-4">
-                <div className="grid grid-cols-2">
-                  <div className="p-3 border-r border-gray-300">
-                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Check-in</label>
-                    <input
-                      type="date"
-                      value={bookingForm.checkIn}
-                      onChange={(e) => setBookingForm(prev => ({ ...prev, checkIn: e.target.value }))}
-                      className="w-full text-sm text-gray-900 border-0 p-0 focus:ring-0"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Checkout</label>
-                    <input
-                      type="date"
-                      value={bookingForm.checkOut}
-                      onChange={(e) => setBookingForm(prev => ({ ...prev, checkOut: e.target.value }))}
-                      className="w-full text-sm text-gray-900 border-0 p-0 focus:ring-0"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Guest Selection */}
-              <div className="relative mb-6">
-                <button
-                  onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                  className="w-full p-3 border border-gray-300 rounded-lg flex items-center justify-between"
-                >
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Guests</label>
-                    <div className="text-sm text-gray-900">
-                      {bookingForm.guests} guest{bookingForm.guests !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showGuestDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showGuestDropdown && (
-                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-700">Guests</span>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => updateGuests(-1)}
-                          disabled={bookingForm.guests <= 1}
-                          className="w-8 h-8 border border-gray-300 rounded-full flex items-center justify-center disabled:opacity-50"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-8 text-center">{bookingForm.guests}</span>
-                        <button
-                          onClick={() => updateGuests(1)}
-                          disabled={bookingForm.guests >= property.guests}
-                          className="w-8 h-8 border border-gray-300 rounded-full flex items-center justify-center disabled:opacity-50"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
+              <p className="text-sm text-gray-700">{property.location}</p>
+              <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm h-64">
+                {property.latitude && property.longitude ? (
+                  <GoogleMapsView
+                    latitude={property.latitude}
+                    longitude={property.longitude}
+                    title={property.title}
+                    zoom={15}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <p className="text-gray-600">Map not available</p>
                   </div>
                 )}
               </div>
+              <p className="text-xs text-gray-600">Exact location shown on map. Pin placed by host during listing.</p>
+            </div>
+          </div>
 
-              {/* Reserve Button */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 border border-gray-200 rounded-2xl p-6 shadow-xl bg-white space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    ${property.price.toFixed(0)} <span className="text-sm text-gray-600 font-normal">night</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Tag className="w-4 h-4 text-amber-500" />
+                    <span className="font-semibold">{isNewListing ? 'Intro price for early guests' : reviewLabel}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <Share className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <MessageCircle className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl divide-y divide-gray-200">
+                <div className="grid grid-cols-2">
+                  <div className="p-3 border-r border-gray-200">
+                    <label className="text-xs font-semibold text-gray-600">CHECK-IN</label>
+                    <input
+                      type="date"
+                      value={bookingForm.checkIn}
+                      onChange={(e) => setBookingForm({ ...bookingForm, checkIn: e.target.value })}
+                      className="w-full text-sm font-semibold text-gray-900"
+                    />
+                  </div>
+                  <div className="p-3">
+                    <label className="text-xs font-semibold text-gray-600">CHECKOUT</label>
+                    <input
+                      type="date"
+                      value={bookingForm.checkOut}
+                      onChange={(e) => setBookingForm({ ...bookingForm, checkOut: e.target.value })}
+                      className="w-full text-sm font-semibold text-gray-900"
+                    />
+                  </div>
+                </div>
+                <div className="p-3">
+                  <label className="text-xs font-semibold text-gray-600">GUESTS</label>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="text-sm font-semibold text-gray-900">{bookingForm.guests} guests</div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateGuests(-1)}
+                        className="p-2 rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50"
+                        disabled={bookingForm.guests <= 1}
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => updateGuests(1)}
+                        className="p-2 rounded-full border border-gray-200 hover:border-gray-300"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={proceedToReserve}
-                disabled={calculateNights() <= 0}
-                className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full bg-gradient-to-r from-rose-500 to-amber-500 text-white py-3 rounded-xl font-bold hover:from-rose-600 hover:to-amber-600 transition-all shadow-lg shadow-rose-200"
               >
                 Reserve
               </button>
 
-              <p className="text-center text-gray-600 text-sm mt-3">You won't be charged yet</p>
+              <p className="text-center text-sm text-gray-600">You won't be charged yet</p>
 
-              {/* Price Breakdown */}
-              {calculateNights() > 0 && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-gray-600">${property.price} x {calculateNights()} nights</span>
-                    <span className="text-gray-900">${calculateTotal().total.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between font-semibold text-gray-900">
-                    <span>Total before taxes</span>
-                    <span>${calculateTotal().total.toFixed(2)}</span>
+              <div className="border-t pt-4 space-y-2 text-sm text-gray-700">
+                <div className="flex justify-between">
+                  <span>${property.price.toFixed(0)} x {calculateNights()} nights</span>
+                  <span>${calculateTotal().base?.toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Cleaning fee</span>
+                  <span>${calculateTotal().cleaning?.toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Service fee</span>
+                  <span>${calculateTotal().service?.toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-gray-900">
+                  <span>Total before taxes</span>
+                  <span>${calculateTotal().total?.toFixed(0)}</span>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">48-hour free cancellation</p>
+                    <p className="text-xs text-gray-600">Then moderate policy applies</p>
                   </div>
                 </div>
-              )}
-
-              {/* Report Link */}
-              <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm mt-6">
-                <Flag className="w-4 h-4" />
-                Report this listing
-              </button>
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-5 h-5 text-indigo-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Houseiana protection</p>
+                    <p className="text-xs text-gray-600">Secure payments and verified hosts</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Instant confirmation</p>
+                    <p className="text-xs text-gray-600">You'll get details right away</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <nav className="border-b border-gray-200 mt-12 mb-8">
-          <div className="flex gap-8">
-            {['photos', 'amenities', 'reviews', 'location'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-4 border-b-2 font-medium capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'border-orange-600 text-orange-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </nav>
-
-        {/* Tab Content */}
-        <div className="mb-12">
-          {activeTab === 'reviews' && (
-            <div className="space-y-8">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <div className="text-6xl font-bold text-gray-900 mb-2">{property.rating}</div>
-                  <h3 className="text-xl font-semibold mb-2">Guest favorite</h3>
-                  <p className="text-gray-600">This home is in the <strong>top 5%</strong> of eligible listings based on ratings, reviews, and reliability</p>
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { name: 'Cleanliness', score: 5.0 },
-                    { name: 'Accuracy', score: 5.0 },
-                    { name: 'Check-in', score: 5.0 },
-                    { name: 'Communication', score: 5.0 },
-                    { name: 'Location', score: 5.0 },
-                    { name: 'Value', score: 4.9 }
-                  ].map((category) => (
-                    <div key={category.name} className="flex items-center justify-between">
-                      <span className="text-gray-600">{category.name}</span>
-                      <span className="font-medium">{category.score}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sample Reviews */}
-              <div className="grid md:grid-cols-2 gap-8">
-                <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <img
-                      src="https://images.unsplash.com/photo-1494790108755-2616b612b2f3?w=100"
-                      alt="Moon Michelle"
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div>
-                      <h4 className="font-medium">Moon Michelle</h4>
-                      <p className="text-sm text-gray-600">Bellevue, Washington</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex">
-                      {[1,2,3,4,5].map((star) => (
-                        <Star key={star} className="w-4 h-4 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-600">1 week ago · Stayed about a week</span>
-                  </div>
-                  <p className="text-gray-700">Everything was perfect and the host left no stone unturned. Felt right like home and the location was in a very central part...</p>
-                  <button className="text-orange-600 text-sm font-medium mt-2">Show more</button>
-                </div>
-                <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <img
-                      src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100"
-                      alt="Yasmine"
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div>
-                      <h4 className="font-medium">Yasmine</h4>
-                      <p className="text-sm text-gray-600">8 years on Houseiana</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex">
-                      {[1,2,3,4,5].map((star) => (
-                        <Star key={star} className="w-4 h-4 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-600">3 weeks ago · Stayed a few nights</span>
-                  </div>
-                  <p className="text-gray-700">We had a great time at this Houseiana in Copenhagen! The apartment was spotless. The hosts were welcoming and friendly...</p>
-                  <button className="text-orange-600 text-sm font-medium mt-2">Show more</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'location' && (
-            <div>
-              <h3 className="text-xl font-semibold mb-6">Where you'll be</h3>
-              <div className="bg-gray-100 h-64 rounded-lg flex items-center justify-center mb-6">
-                <p className="text-gray-600">Map of {property.location}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">{property.location}</h4>
-                <p className="text-gray-600">Getting there</p>
-                <p className="text-gray-600">Banjar Kangin Jungut Batu</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Lightbox overlay for photo carousel
+function Lightbox({
+  images,
+  index,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  images: string[]
+  index: number
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+}) {
+  if (!images.length) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+      <button
+        onClick={onClose}
+        className="absolute top-5 right-5 text-white/80 hover:text-white p-2 rounded-full bg-white/10"
+      >
+        <X className="w-6 h-6" />
+      </button>
+      <button
+        onClick={onPrev}
+        className="absolute left-5 text-white/80 hover:text-white p-3 rounded-full bg-white/10"
+      >
+        <ChevronLeft className="w-6 h-6" />
+      </button>
+      <div className="max-w-5xl w-full px-6">
+        <img
+          src={images[index]}
+          alt={`Photo ${index + 1}`}
+          className="w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl"
+        />
+        <div className="mt-4 flex justify-center gap-2">
+          {images.map((_, i) => (
+            <span
+              key={i}
+              className={`w-2 h-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/40'}`}
+            />
+          ))}
+        </div>
+      </div>
+      <button
+        onClick={onNext}
+        className="absolute right-5 text-white/80 hover:text-white p-3 rounded-full bg-white/10"
+      >
+        <ChevronRight className="w-6 h-6" />
+      </button>
     </div>
   )
 }

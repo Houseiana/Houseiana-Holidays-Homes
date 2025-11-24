@@ -77,6 +77,7 @@ model User {
   // PROFILE RELATIONS (Separate data for each role)
   guestProfile             GuestProfile?
   hostProfile              HostProfile?
+  hostSettings             HostSettings?
 
   // AUTHENTICATION RELATIONS
   accounts                 Account[]
@@ -105,6 +106,10 @@ model User {
   paymentMethods           PaymentMethod[]
   payoutMethods            PayoutMethod[]
   transactions             Transaction[]
+  payouts                  Payout[]        @relation("HostPayouts")
+
+  // SUPPORT RELATIONS
+  supportTickets           SupportTicket[]
 
   @@index([email])
   @@index([clerkId])
@@ -261,6 +266,33 @@ enum VerificationLevel {
   BASIC           // ID verified
   ENHANCED        // ID + Address verified
   PREMIUM         // ID + Address + Business verified
+}
+
+// ============================================================================
+// HOST SETTINGS (Notifications & Payout Preferences)
+// ============================================================================
+
+model HostSettings {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+
+  // Notification Preferences
+  emailAlerts          Boolean  @default(true)
+  smsAlerts            Boolean  @default(false)
+  pushAlerts           Boolean  @default(true)
+
+  // Payout Preferences
+  autoPayouts          Boolean  @default(true)
+  defaultPayoutMethod  String?  // e.g., "Bank •••• 1022"
+
+  // Timestamps
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("host_settings")
 }
 
 // ============================================================================
@@ -543,6 +575,7 @@ model Property {
   reviews         Review[]
   favorites       Favorite[]
   approvals       PropertyApproval[]
+  kyc             PropertyKYC?
 
   @@index([ownerId])
   @@index([organizationId])
@@ -1279,4 +1312,163 @@ model SystemMetric {
   createdAt   DateTime @default(now())
 
   @@map("system_metrics")
+}
+
+// ============================================================================
+// SUPPORT MODELS
+// ============================================================================
+
+model SupportTicket {
+  id              String        @id @default(cuid())
+  userId          String
+  category        TicketCategory
+  subject         String
+  priority        TicketPriority @default(MEDIUM)
+  status          TicketStatus   @default(OPEN)
+
+  bookingId       String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  closedAt        DateTime?
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages        SupportMessage[]
+
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id              String   @id @default(cuid())
+  ticketId        String
+  senderId        String
+  senderRole      MessageSenderRole
+  content         String
+  attachments     String[]
+
+  createdAt       DateTime @default(now())
+
+  ticket          SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("support_messages")
+}
+
+enum TicketCategory {
+  BOOKING_ISSUE
+  PAYMENT
+  ACCOUNT
+  TECHNICAL
+  GENERAL
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_USER
+  RESOLVED
+  CLOSED
+}
+
+enum MessageSenderRole {
+  USER
+  SUPPORT
+  SYSTEM
+}
+
+// ============================================================================
+// PROPERTY KYC VERIFICATION (Host Console UI)
+// ============================================================================
+
+model PropertyKYC {
+  id              String   @id @default(cuid())
+  propertyId      String   @unique
+
+  // Host Identity
+  hostName        String
+  hostIdType      String?  // QID, Passport, etc.
+  hostIdNumber    String?
+  hostIdExpiry    DateTime?
+  hostDob         DateTime?
+
+  // Company Details (if applicable)
+  companyName     String?
+  crNumber        String?  // Commercial Registration
+  crExpiry        DateTime?
+
+  // Documents
+  idDocument      String?  // URL to uploaded document
+  deedDocument    String?  // Property deed
+  utilityDocument String?  // Utility bill
+
+  // Verification Status
+  verificationStatus KycStatus @default(PENDING)
+  verifiedAt      DateTime?
+  verifiedBy      String?  // Admin ID
+  rejectionReason String?  @db.Text
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([verificationStatus])
+  @@map("property_kyc")
+}
+
+// ============================================================================
+// PAYOUT MODEL (Host Earnings)
+// ============================================================================
+
+model Payout {
+  id              String   @id @default(cuid())
+  hostId          String   // User ID of the host
+
+  // Payout Details
+  amount          Float
+  currency        String   @default("QAR")
+  status          PayoutStatus @default(SCHEDULED)
+  method          String?  // Bank Transfer, Mobile Payment, etc.
+
+  // Period
+  periodStart     DateTime?
+  periodEnd       DateTime?
+
+  // Scheduling
+  scheduledDate   DateTime?
+  paidDate        DateTime?
+
+  // Payment Reference
+  referenceId     String?
+  transactionId   String?
+
+  // Metadata
+  bookingIds      String[] // Array of booking IDs included in this payout
+  metadata        Json?
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  host            User     @relation("HostPayouts", fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([hostId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("payouts")
+}
+
+enum PayoutStatus {
+  SCHEDULED
+  PROCESSING
+  PAID
+  FAILED
+  CANCELLED
 }

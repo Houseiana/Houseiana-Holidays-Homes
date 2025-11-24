@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     const properties = await prisma.property.findMany({
       where,
       include: {
-        host: {
+        owner: {
           select: {
             id: true,
             firstName: true,

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
   Upload,
@@ -15,6 +16,19 @@ import {
   X,
   Camera
 } from 'lucide-react';
+
+// Dynamically import GoogleMapsPicker to avoid SSR issues
+const GoogleMapsPicker = dynamic(() => import('@/components/GoogleMapsPicker'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[300px] sm:h-[400px] lg:h-[450px] bg-gray-50 border-2 border-gray-200 rounded-xl flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-indigo-600 mx-auto mb-2 sm:mb-4"></div>
+        <p className="text-gray-600 font-medium text-sm sm:text-base">Loading map...</p>
+      </div>
+    </div>
+  ),
+});
 
 interface PropertyFormData {
   // Basic Information
@@ -34,6 +48,8 @@ interface PropertyFormData {
     country: string;
     zipCode: string;
   };
+  latitude?: number;
+  longitude?: number;
 
   // Property Details
   bedrooms: number;
@@ -57,6 +73,22 @@ interface PropertyFormData {
   allowPets: boolean;
   allowSmoking: boolean;
   allowParties: boolean;
+
+  // KYC
+  kyc: {
+    hostName: string;
+    hostIdType: string;
+    hostIdNumber: string;
+    hostIdExpiry: string;
+    hostDob: string;
+    companyName: string;
+    crNumber: string;
+    crExpiry: string;
+    deedDocument?: File;
+    idDocument?: File;
+    utilityDocument?: File;
+    verificationStatus: 'pending' | 'submitted' | 'verified';
+  };
 }
 
 const STEPS = [
@@ -67,7 +99,8 @@ const STEPS = [
   { id: 5, title: 'Photos', description: 'Show off your space' },
   { id: 6, title: 'Pricing', description: 'Set your nightly rate' },
   { id: 7, title: 'House Rules', description: 'Set expectations for guests' },
-  { id: 8, title: 'Review', description: 'Review and publish' }
+  { id: 8, title: 'KYC & Ownership', description: 'Verify host and property' },
+  { id: 9, title: 'Review', description: 'Review and publish' }
 ];
 
 export default function AddListingPage() {
@@ -102,7 +135,18 @@ export default function AddListingPage() {
     checkOut: '11:00',
     allowPets: false,
     allowSmoking: false,
-    allowParties: false
+    allowParties: false,
+    kyc: {
+      hostName: '',
+      hostIdType: '',
+      hostIdNumber: '',
+      hostIdExpiry: '',
+      hostDob: '',
+      companyName: '',
+      crNumber: '',
+      crExpiry: '',
+      verificationStatus: 'pending'
+    }
   });
 
   const propertyTypes = [
@@ -337,8 +381,8 @@ export default function AddListingPage() {
         state: formData.address.state || formData.address.district,
         address: `${formData.address.building ? formData.address.building + ', ' : ''}${formData.address.streetNumber} ${formData.address.street}, Zone ${formData.address.zone}, ${formData.address.district}`.trim(),
         zipCode: formData.address.zipCode || null,
-        latitude: null, // Can add geocoding later
-        longitude: null,
+        latitude: formData.latitude || null,
+        longitude: formData.longitude || null,
 
         // Capacity
         guests: formData.maxGuests,
@@ -371,7 +415,20 @@ export default function AddListingPage() {
         allowEvents: formData.allowParties,
 
         // Status
-        status: 'DRAFT' // Save as draft initially
+        status: 'DRAFT', // Save as draft initially
+
+        // KYC payload (to forward to backend/provider)
+        kyc: {
+          hostName: formData.kyc.hostName,
+          hostIdType: formData.kyc.hostIdType,
+          hostIdNumber: formData.kyc.hostIdNumber,
+          hostIdExpiry: formData.kyc.hostIdExpiry,
+          hostDob: formData.kyc.hostDob,
+          companyName: formData.kyc.companyName,
+          crNumber: formData.kyc.crNumber,
+          crExpiry: formData.kyc.crExpiry,
+          verificationStatus: formData.kyc.verificationStatus
+        }
       };
 
       console.log('📤 Sending property data:', propertyData);
@@ -573,6 +630,42 @@ export default function AddListingPage() {
                 </div>
               </div>
               <p className="text-xs text-indigo-600 mt-1">Properties are only available in Qatar</p>
+            </div>
+
+            {/* Google Maps Location Picker */}
+            <div className="mt-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Set Property Location on Map</h3>
+              <GoogleMapsPicker
+                initialAddress={
+                  formData.address.building || formData.address.street
+                    ? `${formData.address.building ? formData.address.building + ', ' : ''}${formData.address.streetNumber} ${formData.address.street}, ${formData.address.district}, ${formData.address.city}, Qatar`
+                    : undefined
+                }
+                initialCoordinates={
+                  formData.latitude && formData.longitude
+                    ? { lat: formData.latitude, lng: formData.longitude }
+                    : undefined
+                }
+                onLocationSelect={(location) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    latitude: location.lat,
+                    longitude: location.lng
+                  }));
+                }}
+              />
+            </div>
+
+            <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50/60">
+              <h4 className="text-sm font-bold text-indigo-900 mb-2">Set your exact pin</h4>
+              <p className="text-xs text-indigo-800">
+                Drop the exact location on the map so guests can find the entrance easily. For privacy, we'll show an approximate area until booking.
+              </p>
+              <div className="mt-3 flex gap-2 flex-wrap text-xs text-gray-700">
+                <span className="px-3 py-1 rounded-full bg-white border border-indigo-100 font-semibold">Pin entrance</span>
+                <span className="px-3 py-1 rounded-full bg-white border border-indigo-100 font-semibold">Add building/flat details</span>
+                <span className="px-3 py-1 rounded-full bg-white border border-indigo-100 font-semibold">Share access notes</span>
+              </div>
             </div>
           </div>
         );
@@ -906,6 +999,114 @@ export default function AddListingPage() {
 
       case 8:
         return (
+          <div className="space-y-6">
+            <h3 className="text-lg font-bold text-gray-900">KYC & Ownership</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 border-2 border-gray-100 rounded-xl bg-white shadow-sm space-y-3">
+                <p className="text-sm font-semibold text-gray-900">Host identity</p>
+                <input
+                  type="text"
+                  placeholder="Full name on ID"
+                  value={formData.kyc.hostName}
+                  onChange={(e) => updateNestedFormData('kyc', 'hostName', e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <select
+                    value={formData.kyc.hostIdType}
+                    onChange={(e) => updateNestedFormData('kyc', 'hostIdType', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  >
+                    <option value="">Select ID type</option>
+                    <option value="passport">Passport</option>
+                    <option value="nid">National ID</option>
+                    <option value="residence">Residence ID</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="ID number"
+                    value={formData.kyc.hostIdNumber}
+                    onChange={(e) => updateNestedFormData('kyc', 'hostIdNumber', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="date"
+                    value={formData.kyc.hostDob}
+                    onChange={(e) => updateNestedFormData('kyc', 'hostDob', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  />
+                  <input
+                    type="date"
+                    value={formData.kyc.hostIdExpiry}
+                    onChange={(e) => updateNestedFormData('kyc', 'hostIdExpiry', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-2 border-gray-100 rounded-xl bg-white shadow-sm space-y-3">
+                <p className="text-sm font-semibold text-gray-900">Ownership</p>
+                <input
+                  type="text"
+                  placeholder="Company name (if applicable)"
+                  value={formData.kyc.companyName}
+                  onChange={(e) => updateNestedFormData('kyc', 'companyName', e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="CR number"
+                    value={formData.kyc.crNumber}
+                    onChange={(e) => updateNestedFormData('kyc', 'crNumber', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  />
+                  <input
+                    type="date"
+                    value={formData.kyc.crExpiry}
+                    onChange={(e) => updateNestedFormData('kyc', 'crExpiry', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { key: 'idDocument', label: 'Host ID (passport or NID)', hint: 'JPEG, PNG, or PDF' },
+                { key: 'deedDocument', label: 'Proof of ownership (title/deed)', hint: 'PDF or image upload' },
+                { key: 'utilityDocument', label: 'Recent utility bill', hint: 'Last 3 months' }
+              ].map((doc) => (
+                <label key={doc.key} className="p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-400 cursor-pointer transition-all flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-gray-900">{doc.label}</span>
+                  <span className="text-xs text-gray-500">{doc.hint}</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,image/*"
+                    onChange={(e) => updateNestedFormData('kyc', doc.key, e.target.files?.[0] || null)}
+                  />
+                  <div className="flex items-center gap-2 text-indigo-600 text-sm font-bold">
+                    <Upload size={16} /> Upload
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
+              <CheckCircle className="text-indigo-600" size={20} />
+              <div>
+                <p className="font-bold text-indigo-900">How it works</p>
+                <p className="text-sm text-indigo-800">We collect these documents, then submit to our KYC provider for verification. Your listing stays in draft until approved.</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 9:
+        return (
           <div className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl overflow-hidden shadow-xl">
             <div className="grid grid-cols-1 lg:grid-cols-2">
               <div className="bg-gray-100 h-64 lg:h-80 flex items-center justify-center">
@@ -923,11 +1124,11 @@ export default function AddListingPage() {
                 )}
               </div>
 
-              <div className="p-6 lg:p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 line-clamp-2">
+              <div className="p-6 lg:p-8 space-y-4">
+                <h3 className="text-2xl font-bold text-gray-900 mb-1 line-clamp-2">
                   {formData.title || 'Untitled Property'}
                 </h3>
-                <p className="text-base text-gray-600 mb-5 line-clamp-3">
+                <p className="text-base text-gray-600 mb-3 line-clamp-3">
                   {formData.description || 'No description provided'}
                 </p>
 
@@ -981,7 +1182,18 @@ export default function AddListingPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 pt-5 border-t-2 border-gray-200">
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-semibold">KYC Status:</span>
+                    <span className="text-gray-900 font-bold capitalize">{formData.kyc.verificationStatus}</span>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-700 space-y-1">
+                    <p><span className="font-semibold">Host:</span> {formData.kyc.hostName || 'Not set'} ({formData.kyc.hostIdType || 'ID type not set'})</p>
+                    <p><span className="font-semibold">Company:</span> {formData.kyc.companyName || 'Not set'} • CR: {formData.kyc.crNumber || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="mt-2 pt-4 border-t-2 border-gray-200">
                   <div className="flex justify-between items-center p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
                     <span className="text-lg font-bold text-gray-900">Price per night:</span>
                     <span className="text-2xl font-bold text-indigo-600">
@@ -1068,13 +1280,13 @@ export default function AddListingPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-32 sm:pb-36">
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{STEPS[currentStep - 1].title}</h1>
-          <p className="text-base text-gray-600">{STEPS[currentStep - 1].description}</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{STEPS[currentStep - 1].title}</h1>
+          <p className="text-sm sm:text-base text-gray-600">{STEPS[currentStep - 1].description}</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
           {renderStepContent()}
         </div>
       </div>
@@ -1082,11 +1294,11 @@ export default function AddListingPage() {
       {/* Footer Navigation */}
       <div className="bg-white border-t shadow-lg fixed bottom-0 left-0 right-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4 gap-4">
+          <div className="flex items-center justify-between py-3 sm:py-4 gap-2 sm:gap-4">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold hover:border-gray-400 hover:shadow-md disabled:hover:shadow-none"
+              className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-sm sm:text-base hover:border-gray-400 hover:shadow-md disabled:hover:shadow-none"
             >
               Previous
             </button>
@@ -1094,14 +1306,14 @@ export default function AddListingPage() {
             {currentStep === STEPS.length ? (
               <button
                 onClick={handleSubmit}
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold shadow-lg hover:shadow-xl"
+                className="px-4 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg sm:rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl"
               >
                 Publish Listing
               </button>
             ) : (
               <button
                 onClick={nextStep}
-                className="px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-semibold shadow-lg hover:shadow-xl"
+                className="px-4 sm:px-8 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-lg sm:rounded-xl hover:bg-indigo-700 transition-all font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl"
               >
                 Continue
               </button>

@@ -1,32 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
-// Helper function to get user from JWT token
-function getUserFromToken(request: NextRequest): { userId: string } | null {
-  try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ')
-      ? authHeader.substring(7)
-      : request.cookies.get('auth_token')?.value;
-
-    if (!token) return null;
-
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    return decoded;
-  } catch (error) {
-    return null;
-  }
-}
+import { prisma } from '@/lib/prisma-server';
+import { getUserFromRequest } from '@/lib/auth';
 
 // GET /api/favorites - Get user's favorite properties
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user
-    const user = getUserFromToken(request);
+    const user = getUserFromRequest(request);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
@@ -37,7 +17,7 @@ export async function GET(request: NextRequest) {
     console.log(`🔍 Fetching favorites for user: ${user.userId}`);
 
     // Fetch favorites with property details
-    const favorites = await prisma.favorite.findMany({
+    const favorites = await (prisma as any).favorite.findMany({
       where: {
         userId: user.userId,
       },
@@ -86,7 +66,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Authenticate user
-    const user = getUserFromToken(request);
+    const user = getUserFromRequest(request);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
@@ -107,7 +87,7 @@ export async function POST(request: NextRequest) {
     console.log(`❤️ Adding property ${propertyId} to favorites for user ${user.userId}`);
 
     // Check if property exists
-    const property = await prisma.property.findUnique({
+    const property = await (prisma as any).property.findUnique({
       where: { id: propertyId },
     });
 
@@ -119,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already favorited
-    const existingFavorite = await prisma.favorite.findUnique({
+    const existingFavorite = await (prisma as any).favorite.findUnique({
       where: {
         userId_propertyId: {
           userId: user.userId,
@@ -136,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create favorite
-    const favorite = await prisma.favorite.create({
+    const favorite = await (prisma as any).favorite.create({
       data: {
         userId: user.userId,
         propertyId,
@@ -179,7 +159,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Authenticate user
-    const user = getUserFromToken(request);
+    const user = getUserFromRequest(request);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
@@ -200,7 +180,7 @@ export async function DELETE(request: NextRequest) {
     console.log(`🗑️ Removing favorite: ${favoriteId}`);
 
     // Check if favorite exists and belongs to user
-    const favorite = await prisma.favorite.findUnique({
+    const favorite = await (prisma as any).favorite.findUnique({
       where: { id: favoriteId },
     });
 
@@ -219,7 +199,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete favorite
-    await prisma.favorite.delete({
+    await (prisma as any).favorite.delete({
       where: { id: favoriteId },
     });
 

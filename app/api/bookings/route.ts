@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma-server'
 import { getUserFromRequest, generateConfirmationCode } from '@/lib/auth'
 
 // GET /api/bookings - Get user's bookings
@@ -36,33 +36,27 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         property: {
-          include: {
-            photos: {
-              where: { isMain: true },
-              take: 1
+          select: {
+            id: true,
+            title: true,
+            address: true,
+            city: true,
+            country: true,
+            photos: true,
+            coverPhoto: true
+          }
+        },
+        ...(role === 'host' && {
+          guest: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
             }
           }
-        },
-        guest: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-            memberSince: true
-          }
-        },
-        host: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-            isSuperhost: true
-          }
-        },
-        payments: true,
-        reviews: true
+        })
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * limit,
@@ -71,8 +65,51 @@ export async function GET(request: NextRequest) {
 
     const totalCount = await (prisma as any).booking.count({ where })
 
+    // Transform to match dashboard expectations (with host console fields)
+    const items = bookings.map((booking: any) => {
+      const property = booking.property || {}
+      const photos = Array.isArray(property.photos) ? property.photos : []
+      const coverPhoto = property.coverPhoto || (photos.length > 0 ? photos[0] : null)
+
+      // Guest details for host console
+      const guest = booking.guest || {}
+      const guestName = guest.firstName && guest.lastName
+        ? `${guest.firstName} ${guest.lastName}`
+        : guest.firstName || guest.email || 'Guest'
+      const guestInitials = guest.firstName && guest.lastName
+        ? `${guest.firstName[0]}${guest.lastName[0]}`.toUpperCase()
+        : guestName[0]?.toUpperCase() || 'G'
+
+      return {
+        id: booking.id,
+        status: booking.status,
+        checkIn: booking.checkIn?.toISOString?.() || booking.checkIn,
+        checkOut: booking.checkOut?.toISOString?.() || booking.checkOut,
+        amount: booking.totalPrice || 0,
+        guests: booking.guests || 1,
+        hostId: booking.hostId,
+        // Guest info (for host console)
+        ...(role === 'host' && {
+          guestName,
+          guestPhone: guest.phone || null,
+          guestInitials,
+          guestEmail: guest.email,
+          propertyName: property.title || 'Property',
+        }),
+        property: {
+          title: property.title || 'Property',
+          address: property.address || `${property.city || ''}, ${property.country || ''}`.trim(),
+          city: property.city,
+          country: property.country,
+          coverPhoto,
+          photos
+        }
+      }
+    })
+
     return NextResponse.json({
-      bookings,
+      items,
+      bookings: items, // Keep both for backwards compatibility
       pagination: {
         page,
         limit,
