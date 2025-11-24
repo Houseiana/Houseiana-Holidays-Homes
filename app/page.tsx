@@ -149,7 +149,7 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative h-[95vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen pb-[32rem] flex items-center justify-center overflow-visible">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img
@@ -161,7 +161,7 @@ export default function HomePage() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto mt-20">
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto mt-10 mb-40">
           <div className="inline-block mb-4 px-4 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
             <span className="text-orange-400 font-bold text-xs tracking-widest uppercase">The Future of Hospitality</span>
           </div>
@@ -174,7 +174,7 @@ export default function HomePage() {
           </p>
 
           {/* Search Bar CTA */}
-          <div ref={searchBarRef} className="bg-white p-2 rounded-3xl shadow-2xl max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-2 animate-fade-in-up transform hover:scale-[1.01] transition-transform duration-300 relative">
+          <div ref={searchBarRef} className="bg-white p-2 rounded-3xl shadow-2xl max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-2 animate-fade-in-up transform hover:scale-[1.01] transition-transform duration-300 relative z-50">
             
             {/* Location */}
             <div className="flex-1 w-full md:w-auto relative">
@@ -266,7 +266,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-32 bg-gray-50">
+      <section className="py-32 bg-gray-50 relative z-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">Why Choose Houseiana?</h2>

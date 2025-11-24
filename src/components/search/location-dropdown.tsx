@@ -78,7 +78,7 @@ export default function LocationDropdown({ onChange, onClose }: LocationDropdown
   };
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
+    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 z-[100] max-h-96 overflow-hidden">
       {/* Cities List */}
       <div className="max-h-64 overflow-y-auto">
         {qatarCities.map((city) => (
