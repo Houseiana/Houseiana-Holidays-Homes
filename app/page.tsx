@@ -7,7 +7,7 @@ import { useUser } from '@clerk/nextjs'
 
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { isSignedIn, user } = useUser()
+  const { isSignedIn, user, isLoaded } = useUser()
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -19,15 +19,17 @@ export default function HomePage() {
               Houseiana<span className="text-orange-500">.</span>
             </Link>
           </div>
-          
+
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-8">
             <Link href="/explore" className="text-sm font-medium text-white/90 hover:text-white transition-colors">Explore</Link>
             <Link href="/become-host" className="text-sm font-medium text-white/90 hover:text-white transition-colors">Become a Host</Link>
             <Link href="/help-center" className="text-sm font-medium text-white/90 hover:text-white transition-colors">Support</Link>
-            
-            {isSignedIn ? (
-               <Link href="/explore">
+
+            {!isLoaded ? (
+              <div className="w-32 h-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-full animate-pulse"></div>
+            ) : isSignedIn ? (
+               <Link href="/client-dashboard">
                 <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-white/20 transition-all">
                   Dashboard
                 </button>
@@ -59,8 +61,16 @@ export default function HomePage() {
             <Link href="/become-host" className="text-gray-900 font-medium">Become a Host</Link>
             <Link href="/help-center" className="text-gray-900 font-medium">Support</Link>
             <div className="border-t border-gray-100 pt-4 flex flex-col space-y-3">
-              <Link href="/sign-in" className="text-gray-600 font-medium">Sign In</Link>
-              <Link href="/sign-up" className="bg-orange-600 text-white px-4 py-2 rounded-lg text-center font-bold">Sign Up</Link>
+              {!isLoaded ? (
+                <div className="h-20 bg-gray-100 rounded-lg animate-pulse"></div>
+              ) : isSignedIn ? (
+                <Link href="/client-dashboard" className="bg-orange-600 text-white px-4 py-2 rounded-lg text-center font-bold">Dashboard</Link>
+              ) : (
+                <>
+                  <Link href="/sign-in" className="text-gray-600 font-medium">Sign In</Link>
+                  <Link href="/sign-up" className="bg-orange-600 text-white px-4 py-2 rounded-lg text-center font-bold">Sign Up</Link>
+                </>
+              )}
             </div>
           </div>
         )}
