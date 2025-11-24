@@ -61,6 +61,7 @@ interface Payment {
 }
 
 interface PaymentMethod {
+  id: string
   brand: string
   last4: string
   exp: string
@@ -420,6 +421,88 @@ function ClientDashboardContent() {
       return
     }
     action()
+  }
+
+  const handleSetDefaultPaymentMethod = async (methodId: string) => {
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+
+      const response = await fetch(`/api/payment-methods/${methodId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action: 'set-default' })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to set default payment method')
+      }
+
+      // Refresh payment data to show updated default
+      await fetchPayments()
+    } catch (error) {
+      console.error('Error setting default payment method:', error)
+      setPaymentsError('Failed to set default payment method')
+    }
+  }
+
+  const handleDeletePaymentMethod = async (methodId: string) => {
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
+    }
+
+    if (!confirm('Are you sure you want to delete this payment method?')) {
+      return
+    }
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+
+      const response = await fetch(`/api/payment-methods/${methodId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete payment method')
+      }
+
+      // Refresh payment data to remove deleted method
+      await fetchPayments()
+    } catch (error) {
+      console.error('Error deleting payment method:', error)
+      setPaymentsError('Failed to delete payment method')
+    }
+  }
+
+  const handleAddPaymentMethod = () => {
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
+    }
+
+    // Scroll to payment methods section
+    scrollToPaymentMethods()
+
+    // Show alert for now - you can replace this with a Stripe Elements modal later
+    alert(
+      'To add a payment method:\n\n' +
+      '1. Integrate Stripe Elements in a modal or inline form\n' +
+      '2. Collect card details securely\n' +
+      '3. Create a PaymentMethod with Stripe.js\n' +
+      '4. Send the PaymentMethod ID to POST /api/payment-methods\n\n' +
+      'See STRIPE_PAYMENT_GATEWAY.md for implementation details.'
+    )
   }
 
   const handleSendMessage = async () => {
@@ -1892,7 +1975,7 @@ function ClientDashboardContent() {
                             <div className="flex items-center gap-2">
                               <button
                                 className="text-sm font-semibold text-orange-600 hover:text-orange-700"
-                                onClick={scrollToPaymentMethods}
+                                onClick={handleAddPaymentMethod}
                               >
                                 Add a payment method
                               </button>
@@ -1910,7 +1993,7 @@ function ClientDashboardContent() {
                           <span className="text-gray-300">•</span>
                           <button
                             className="text-sm font-semibold text-gray-600 hover:text-gray-900"
-                            onClick={() => requireAuthAction(scrollToPaymentMethods)}
+                            onClick={() => requireAuthAction(handleAddPaymentMethod)}
                           >
                             Add card
                           </button>
@@ -2084,7 +2167,7 @@ function ClientDashboardContent() {
                           <h3 className="text-lg font-bold text-gray-900">Payment methods</h3>
                           <button
                             className="text-sm font-semibold text-orange-600 hover:text-orange-700"
-                            onClick={() => requireAuthAction(scrollToPaymentMethods)}
+                            onClick={() => requireAuthAction(handleAddPaymentMethod)}
                           >
                             Add
                           </button>
@@ -2094,21 +2177,39 @@ function ClientDashboardContent() {
                       ) : (
                         <div className="space-y-3">
                           {paymentMethods.map((method) => (
-                            <div key={`${method.brand}-${method.last4}`} className="p-4 border border-gray-100 rounded-2xl flex items-center justify-between">
-                              <div>
-                                <p className="font-semibold text-gray-900">{method.brand} •••• {method.last4}</p>
-                                <p className="text-xs text-gray-500">Exp. {method.exp} — {method.name}</p>
+                            <div key={method.id} className="p-4 border border-gray-100 rounded-2xl">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-semibold text-gray-900">{method.brand} •••• {method.last4}</p>
+                                  <p className="text-xs text-gray-500">Exp. {method.exp} — {method.name}</p>
+                                </div>
+                                <div className="text-right">
+                                  {method.primary ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">
+                                      <CheckCircle2 size={14} />
+                                      Default
+                                    </span>
+                                  ) : (
+                                    <button
+                                      className="text-xs font-semibold text-gray-600 hover:text-orange-600"
+                                      onClick={() => handleSetDefaultPaymentMethod(method.id)}
+                                    >
+                                      Make default
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-right">
-                                {method.primary ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">
-                                    <CheckCircle2 size={14} />
-                                    Default
-                                  </span>
-                                ) : (
-                                  <button className="text-xs font-semibold text-gray-600 hover:text-orange-600">Make default</button>
-                                )}
-                              </div>
+                              {!method.primary && (
+                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                  <button
+                                    className="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1"
+                                    onClick={() => handleDeletePaymentMethod(method.id)}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
