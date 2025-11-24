@@ -130,7 +130,7 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative h-[95vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen pb-80 flex items-center justify-center overflow-hidden">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img
@@ -142,7 +142,7 @@ export default function HomePage() {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto mt-20">
+        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto mt-10 mb-32">
           <div className="inline-block mb-4 px-4 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
             <span className="text-orange-400 font-bold text-xs tracking-widest uppercase">The Future of Hospitality</span>
           </div>
