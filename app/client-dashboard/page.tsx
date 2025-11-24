@@ -169,6 +169,18 @@ function ClientDashboardContent() {
   const [messagesLoaded, setMessagesLoaded] = useState(false)
   const paymentMethodsRef = useRef<HTMLDivElement | null>(null)
 
+  // Profile edit states
+  const [isEditingBasicInfo, setIsEditingBasicInfo] = useState(false)
+  const [isEditingPreferences, setIsEditingPreferences] = useState(false)
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    language: 'English',
+    currency: 'QAR'
+  })
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+
   useEffect(() => {
     const kycRequired = searchParams.get('kyc') === 'required'
     const storedUser = localStorage.getItem('auth_user')
@@ -503,6 +515,97 @@ function ClientDashboardContent() {
       '4. Send the PaymentMethod ID to POST /api/payment-methods\n\n' +
       'See STRIPE_PAYMENT_GATEWAY.md for implementation details.'
     )
+  }
+
+  // Profile management handlers
+  const handleEditBasicInfo = () => {
+    setProfileForm({
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      phone: user?.phone || '',
+      language: profileForm.language,
+      currency: profileForm.currency
+    })
+    setIsEditingBasicInfo(true)
+  }
+
+  const handleEditPreferences = () => {
+    setIsEditingPreferences(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditingBasicInfo(false)
+    setIsEditingPreferences(false)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
+    }
+
+    setIsSavingProfile(true)
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+
+      // For now, just update localStorage
+      // Later, you can integrate with your backend API
+      const updatedUser = {
+        ...user,
+        firstName: profileForm.firstName,
+        lastName: profileForm.lastName,
+        phone: profileForm.phone
+      }
+
+      if (token) {
+        // TODO: Call your update profile API
+        // const response = await fetch('/api/profile', {
+        //   method: 'PATCH',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //     Authorization: `Bearer ${token}`
+        //   },
+        //   body: JSON.stringify(profileForm)
+        // })
+      }
+
+      // Update local storage
+      localStorage.setItem('auth_user', JSON.stringify(updatedUser))
+
+      setIsEditingBasicInfo(false)
+      setIsEditingPreferences(false)
+
+      alert('Profile updated successfully!')
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      alert('Failed to update profile. Please try again.')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  const handleChangePassword = () => {
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
+    }
+
+    // Redirect to Clerk's user profile for password change
+    router.push('/user-profile#/security')
+  }
+
+  const handleCompleteKYC = () => {
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
+    }
+
+    setShowKYCModal(true)
+  }
+
+  const handleMessageSupport = () => {
+    router.push('/support')
   }
 
   const handleSendMessage = async () => {
@@ -2258,9 +2361,23 @@ function ClientDashboardContent() {
                       <h2 className="text-2xl font-bold text-gray-900">Profile</h2>
                       <p className="text-gray-600 text-sm">Manage your profile settings and preferences.</p>
                     </div>
-                    <button className="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors">
-                      Save changes
-                    </button>
+                    {(isEditingBasicInfo || isEditingPreferences) && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 text-sm font-bold hover:bg-gray-50 transition-colors"
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
+                          onClick={handleSaveProfile}
+                          disabled={isSavingProfile}
+                        >
+                          {isSavingProfile ? 'Saving...' : 'Save changes'}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -2271,7 +2388,12 @@ function ClientDashboardContent() {
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Account</p>
                             <h3 className="text-lg font-bold text-gray-900">Basic info</h3>
                           </div>
-                          <button className="text-sm font-semibold text-gray-600 hover:text-orange-600">Edit</button>
+                          <button
+                            className="text-sm font-semibold text-gray-600 hover:text-orange-600"
+                            onClick={handleEditBasicInfo}
+                          >
+                            {isEditingBasicInfo ? 'Editing...' : 'Edit'}
+                          </button>
                         </div>
                         <div className="flex items-center gap-4">
                           {userProfile.profilePhoto ? (
@@ -2316,7 +2438,12 @@ function ClientDashboardContent() {
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Preferences</p>
                             <h3 className="text-lg font-bold text-gray-900">Travel settings</h3>
                           </div>
-                          <button className="text-sm font-semibold text-gray-600 hover:text-orange-600">Edit</button>
+                          <button
+                            className="text-sm font-semibold text-gray-600 hover:text-orange-600"
+                            onClick={handleEditPreferences}
+                          >
+                            {isEditingPreferences ? 'Editing...' : 'Edit'}
+                          </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div className="p-4 border border-gray-100 rounded-2xl">
@@ -2344,14 +2471,22 @@ function ClientDashboardContent() {
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Security</p>
                             <h3 className="text-lg font-bold text-gray-900">Password & sessions</h3>
                           </div>
-                          <button className="text-sm font-semibold text-gray-600 hover:text-orange-600">Update</button>
+                          <button
+                            className="text-sm font-semibold text-gray-600 hover:text-orange-600"
+                            onClick={handleChangePassword}
+                          >
+                            Update
+                          </button>
                         </div>
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
                           <div>
                             <p className="text-gray-900 font-semibold">Password last changed</p>
                             <p className="text-gray-500">Keep your account secure by updating regularly.</p>
                           </div>
-                          <button className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50">
+                          <button
+                            className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50"
+                            onClick={handleChangePassword}
+                          >
                             Change password
                           </button>
                         </div>
@@ -2367,7 +2502,10 @@ function ClientDashboardContent() {
                         <p className="text-xs text-white/70 font-semibold uppercase tracking-wide">Verification</p>
                         <h3 className="text-xl font-bold mt-1">Identity status</h3>
                         <p className="text-sm text-white/80 mt-1">Add ID to unlock instant booking.</p>
-                        <button className="mt-4 w-full bg-white text-gray-900 rounded-xl py-2.5 text-sm font-bold hover:bg-orange-50 transition-colors">
+                        <button
+                          className="mt-4 w-full bg-white text-gray-900 rounded-xl py-2.5 text-sm font-bold hover:bg-orange-50 transition-colors"
+                          onClick={handleCompleteKYC}
+                        >
                           Complete KYC
                         </button>
                       </div>
@@ -2375,7 +2513,10 @@ function ClientDashboardContent() {
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact</p>
                         <p className="text-gray-900 font-semibold">Support team</p>
                         <p className="text-gray-500">help@houseiana.com</p>
-                        <button className="mt-2 text-sm font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1">
+                        <button
+                          className="mt-2 text-sm font-semibold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                          onClick={handleMessageSupport}
+                        >
                           Message support
                           <ChevronRight size={14} />
                         </button>
