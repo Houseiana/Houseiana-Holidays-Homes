@@ -737,6 +737,7 @@ function ClientDashboardContent() {
     try {
       if (!isSignedIn) {
         setPaymentsError('Please sign in to view your payments.')
+        setIsPaymentsLoading(false)
         return
       }
 
