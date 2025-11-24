@@ -1,13 +1,65 @@
 'use client';
 
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Shield, Clock, Zap, Star, ArrowRight, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 
 export default function HomePage() {
+  const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { isSignedIn, isLoaded } = useUser()
+  const [destinationQuery, setDestinationQuery] = useState('')
+  const [datesValue, setDatesValue] = useState('')
+  const [guestsValue, setGuestsValue] = useState('')
+
+  const destinations = useMemo(
+    () => [
+      { city: 'Doha', country: 'Qatar', region: 'Middle East' },
+      { city: 'Al Rayyan', country: 'Qatar', region: 'Middle East' },
+      { city: 'Al Wakrah', country: 'Qatar', region: 'Middle East' },
+      { city: 'Dubai', country: 'United Arab Emirates', region: 'Middle East' },
+      { city: 'Abu Dhabi', country: 'United Arab Emirates', region: 'Middle East' },
+      { city: 'Riyadh', country: 'Saudi Arabia', region: 'Middle East' },
+      { city: 'Jeddah', country: 'Saudi Arabia', region: 'Middle East' },
+      { city: 'Muscat', country: 'Oman', region: 'Middle East' },
+      { city: 'Marrakesh', country: 'Morocco', region: 'Africa' },
+      { city: 'Casablanca', country: 'Morocco', region: 'Africa' },
+      { city: 'Paris', country: 'France', region: 'Europe' },
+      { city: 'London', country: 'United Kingdom', region: 'Europe' },
+      { city: 'Rome', country: 'Italy', region: 'Europe' },
+      { city: 'Barcelona', country: 'Spain', region: 'Europe' },
+      { city: 'Phuket', country: 'Thailand', region: 'Asia' },
+      { city: 'Bali', country: 'Indonesia', region: 'Asia' },
+    ],
+    [],
+  )
+
+  const filteredDestinations = destinations.filter((d) => {
+    if (!destinationQuery.trim()) return true
+    const q = destinationQuery.toLowerCase()
+    return d.city.toLowerCase().includes(q) || d.country.toLowerCase().includes(q) || d.region.toLowerCase().includes(q)
+  })
+
+  const handleSearch = () => {
+    const params = new URLSearchParams()
+    
+    if (destinationQuery) {
+      // Extract city name if it's in "City, Country" format
+      const city = destinationQuery.split(',')[0].trim()
+      params.set('location', city)
+    }
+
+    if (guestsValue) {
+      const guests = parseInt(guestsValue)
+      if (!isNaN(guests)) {
+        params.set('guests', guests.toString())
+      }
+    }
+
+    router.push(`/discover?${params.toString()}`)
+  }
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -103,25 +155,65 @@ export default function HomePage() {
 
           {/* Search Bar CTA */}
           <div className="bg-white p-2 rounded-3xl shadow-2xl max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-2 animate-fade-in-up transform hover:scale-[1.01] transition-transform duration-300">
-            <div className="flex-1 w-full md:w-auto px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group cursor-pointer">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">Location</label>
-              <input type="text" placeholder="Where are you going?" className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent" />
+            <div className="flex-1 w-full md:w-auto px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group relative">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
+                Where
+              </label>
+              <input
+                value={destinationQuery}
+                onChange={(e) => setDestinationQuery(e.target.value)}
+                placeholder="City, country, or landmark"
+                className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent"
+              />
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 max-h-64 overflow-y-auto z-20">
+                {filteredDestinations.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">No matches. Try another destination.</div>
+                ) : (
+                  filteredDestinations.map((d) => (
+                    <button
+                      key={`${d.city}-${d.country}`}
+                      onClick={() => setDestinationQuery(`${d.city}, ${d.country}`)}
+                      className="w-full text-left px-4 py-3 hover:bg-orange-50 flex items-center justify-between text-sm"
+                    >
+                      <span className="font-semibold text-gray-900">{d.city}</span>
+                      <span className="text-xs text-gray-500">{d.country} · {d.region}</span>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
             <div className="flex-1 w-full md:w-auto px-6 py-4 text-left border-b md:border-b-0 md:border-r border-gray-100 group cursor-pointer">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">Check in</label>
-              <input type="text" placeholder="Add dates" className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent" />
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
+                Check in / out
+              </label>
+              <input
+                value={datesValue}
+                onChange={(e) => setDatesValue(e.target.value)}
+                placeholder="Add dates"
+                className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent"
+              />
             </div>
             <div className="flex-1 w-full md:w-auto px-6 py-4 text-left group cursor-pointer">
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">Guests</label>
-              <input type="text" placeholder="Add guests" className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent" />
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 group-hover:text-orange-600 transition-colors">
+                Guests
+              </label>
+              <input
+                value={guestsValue}
+                onChange={(e) => setGuestsValue(e.target.value)}
+                placeholder="Add guests"
+                className="w-full outline-none text-gray-900 placeholder-gray-400 font-medium bg-transparent"
+              />
             </div>
-            <Link href="/explore" className="w-full md:w-auto p-2">
-              <button className="w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white rounded-2xl px-8 py-4 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-orange-500/30 group">
+            <div className="w-full md:w-auto p-2">
+              <button 
+                onClick={handleSearch}
+                className="w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white rounded-2xl px-8 py-4 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-orange-500/30 group"
+              >
                 <Search className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 <span className="md:hidden font-bold">Search</span>
               </button>
-            </Link>
-          </div>
+            </div>
+        </div>
         </div>
       </section>
 
