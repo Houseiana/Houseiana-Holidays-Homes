@@ -356,8 +356,6 @@ function ClientDashboardContent() {
     router.push(`/messages/${hostId}`)
   }
 
-  const isAuthenticated = Boolean(user?.id)
-
   const handleSignOut = () => {
     try {
       localStorage.removeItem('auth_token')
