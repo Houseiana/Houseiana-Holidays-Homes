@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/auth-store'
-import { useUser } from '@clerk/nextjs'
+import { useUser, useClerk } from '@clerk/nextjs'
 import KYCModal from '@/components/KYCModal'
 import {
   LayoutDashboard, Clock, Heart, Search, MessageCircle, CreditCard, User,
@@ -120,6 +120,7 @@ function ClientDashboardContent() {
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
   const { isSignedIn } = useUser()
+  const { signOut } = useClerk()
 
   const userProfile = {
     name: user?.name || `${user?.firstName || 'Guest'} ${user?.lastName || ''}`.trim() || 'Guest User',
@@ -358,16 +359,23 @@ function ClientDashboardContent() {
     router.push(`/messages/${hostId}`)
   }
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     try {
+      // Clear local storage and cookies
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_user')
       document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;'
+
+      // Clear Zustand store
       const { logout } = useAuthStore.getState()
       logout()
-      router.push('/')
+
+      // Sign out from Clerk and redirect to homepage
+      await signOut({ redirectUrl: '/' })
     } catch (err) {
       console.error('Sign out error:', err)
+      // Fallback: redirect to homepage even if sign out fails
+      router.push('/')
     }
   }
 
