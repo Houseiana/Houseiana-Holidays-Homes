@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/auth-store'
+import { useUser } from '@clerk/nextjs'
 import KYCModal from '@/components/KYCModal'
 import {
   LayoutDashboard, Clock, Heart, Search, MessageCircle, CreditCard, User,
@@ -118,6 +119,7 @@ function ClientDashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
+  const { isSignedIn } = useUser()
 
   const userProfile = {
     name: user?.name || `${user?.firstName || 'Guest'} ${user?.lastName || ''}`.trim() || 'Guest User',
@@ -1159,16 +1161,18 @@ function ClientDashboardContent() {
                         <AlertTriangle size={16} className="text-amber-500" />
                         <div>
                           <p className="font-semibold">Please sign in to view your trips.</p>
-                          <p className="text-amber-700/90 text-xs">Your bookings will appear once you’re authenticated.</p>
+                          <p className="text-amber-700/90 text-xs">Your bookings will appear once you're authenticated.</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => router.push('/sign-in')}
-                          className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
-                        >
-                          Sign in
-                        </button>
+                        {!isSignedIn && (
+                          <button
+                            onClick={() => router.push('/sign-in')}
+                            className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
+                          >
+                            Sign in
+                          </button>
+                        )}
                         <button
                           onClick={() => router.push('/support')}
                           className="px-4 py-2 rounded-lg border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
@@ -1236,7 +1240,7 @@ function ClientDashboardContent() {
                         >
                           Explore stays
                         </button>
-                        {!isAuthenticated && (
+                        {!isAuthenticated && !isSignedIn && (
                           <button
                             onClick={() => router.push('/sign-in')}
                             className="px-6 py-3 border border-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
@@ -1782,12 +1786,14 @@ function ClientDashboardContent() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => router.push('/sign-in')}
-                          className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
-                        >
-                          Sign in
-                        </button>
+                        {!isSignedIn && (
+                          <button
+                            onClick={() => router.push('/sign-in')}
+                            className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
+                          >
+                            Sign in
+                          </button>
+                        )}
                         <button
                           onClick={() => router.push('/support')}
                           className="px-4 py-2 rounded-lg border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
@@ -1911,7 +1917,7 @@ function ClientDashboardContent() {
                               : 'Sign in to load your transactions and invoices.'}
                           </p>
                           <div className="flex items-center justify-center gap-3">
-                            {!isAuthenticated && (
+                            {!isAuthenticated && !isSignedIn && (
                               <button
                                 onClick={() => router.push('/sign-in')}
                                 className="px-4 py-2 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-700 transition-colors"
