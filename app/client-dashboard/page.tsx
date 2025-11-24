@@ -602,15 +602,16 @@ function ClientDashboardContent() {
     setMessagesLoading(true)
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
-      if (!token) {
+      if (!isSignedIn) {
         throw new Error('Please sign in to view your messages.')
       }
 
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+
       const res = await fetch('/api/conversations', {
-        headers: {
+        headers: token ? {
           Authorization: `Bearer ${token}`
-        }
+        } : {}
       })
 
       if (!res.ok) {
