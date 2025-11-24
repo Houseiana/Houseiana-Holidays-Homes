@@ -1772,6 +1772,32 @@ function ClientDashboardContent() {
 
               {activeTab === 'payments' && (
                 <div className="space-y-8 animate-fade-in">
+                  {!isAuthenticated && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={16} className="text-amber-500" />
+                        <div>
+                          <p className="font-semibold">Please sign in to view your payments.</p>
+                          <p className="text-amber-700/90 text-xs">Your balance, methods, and history will load after signing in.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => router.push('/sign-in')}
+                          className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 transition-colors"
+                        >
+                          Sign in
+                        </button>
+                        <button
+                          onClick={() => router.push('/support')}
+                          className="px-4 py-2 rounded-lg border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
+                        >
+                          Contact support
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     <div className="xl:col-span-2 bg-gray-900 text-white rounded-3xl p-6 relative overflow-hidden">
                       <div className="absolute right-8 bottom-8 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl" />
@@ -1821,14 +1847,14 @@ function ClientDashboardContent() {
                         <p className="text-sm text-gray-500 mt-1">
                           {defaultMethod ? `Exp. ${defaultMethod.exp} — ${defaultMethod.name}` : 'No default method set'}
                         </p>
-                        <div className="flex items-center gap-2 mt-4">
-                          <button className="text-sm font-semibold text-orange-600 hover:text-orange-700" onClick={fetchPayments}>
-                            Refresh
-                          </button>
-                          <span className="text-gray-300">•</span>
-                          <button className="text-sm font-semibold text-gray-600 hover:text-gray-900">Add card</button>
-                        </div>
+                      <div className="flex items-center gap-2 mt-4">
+                        <button className="text-sm font-semibold text-orange-600 hover:text-orange-700" onClick={fetchPayments}>
+                          Refresh
+                        </button>
+                        <span className="text-gray-300">•</span>
+                        <button className="text-sm font-semibold text-gray-600 hover:text-gray-900">Add card</button>
                       </div>
+                    </div>
                       <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-3xl p-5 shadow-lg">
                         <div className="flex items-center gap-3">
                           <Receipt size={20} />
@@ -1875,9 +1901,31 @@ function ClientDashboardContent() {
                           Loading payments...
                         </div>
                       ) : paymentHistory.length === 0 ? (
-                        <div className="py-10 text-center text-gray-500">
-                          <p className="font-semibold text-gray-700">No payment activity yet</p>
-                          <p className="text-sm mt-1">Your transactions will show up here once you start booking.</p>
+                        <div className="py-10 text-center text-gray-500 space-y-3">
+                          <p className="font-semibold text-gray-700">
+                            {isAuthenticated ? 'No payment activity yet' : 'Please sign in to view your payments.'}
+                          </p>
+                          <p className="text-sm">
+                            {isAuthenticated
+                              ? 'Your transactions will show up here once you start booking.'
+                              : 'Sign in to load your transactions and invoices.'}
+                          </p>
+                          <div className="flex items-center justify-center gap-3">
+                            {!isAuthenticated && (
+                              <button
+                                onClick={() => router.push('/sign-in')}
+                                className="px-4 py-2 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-700 transition-colors"
+                              >
+                                Sign in
+                              </button>
+                            )}
+                            <button
+                              onClick={() => router.push('/support')}
+                              className="px-4 py-2 border border-gray-200 text-gray-800 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
+                            >
+                              Contact support
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div className="overflow-x-auto">
@@ -2001,21 +2049,24 @@ function ClientDashboardContent() {
                       )}
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
-                      <div className="flex items-center gap-2 mb-3">
-                        <AlertTriangle size={18} className="text-amber-500" />
-                        <h3 className="text-lg font-bold text-gray-900">Resolution center</h3>
+                      <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <AlertTriangle size={18} className="text-amber-500" />
+                          <h3 className="text-lg font-bold text-gray-900">Resolution center</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">Dispute a charge or request a refund directly with our billing team.</p>
+                        <div className="space-y-2">
+                          <button className="w-full px-4 py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-colors">
+                            Open a ticket
+                          </button>
+                          <button
+                            className="w-full px-4 py-3 bg-gray-50 text-gray-800 rounded-xl font-bold hover:bg-gray-100 transition-colors"
+                            onClick={() => router.push('/support')}
+                          >
+                            Message support
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600 mb-4">Dispute a charge or request a refund directly with our billing team.</p>
-                      <div className="space-y-2">
-                        <button className="w-full px-4 py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-colors">
-                          Open a ticket
-                        </button>
-                        <button className="w-full px-4 py-3 bg-gray-50 text-gray-800 rounded-xl font-bold hover:bg-gray-100 transition-colors">
-                          Message support
-                        </button>
-                      </div>
-                    </div>
 
                     <div className="bg-gray-900 text-white rounded-3xl p-5 shadow-lg">
                       <div className="flex items-center gap-2 mb-2">
