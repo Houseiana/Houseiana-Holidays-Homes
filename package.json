@@ -19,6 +19,8 @@
   "dependencies": {
     "@clerk/nextjs": "^6.35.1",
     "@headlessui/react": "^2.2.9",
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@paypal/react-paypal-js": "^8.9.2",
     "@prisma/client": "^6.18.0",
     "@prisma/extension-accelerate": "^2.0.2",
     "@react-google-maps/api": "^2.20.7",
