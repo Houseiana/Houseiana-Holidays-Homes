@@ -14,6 +14,7 @@ import {
   Bell, Settings, Compass, ShieldCheck, Wallet, ArrowUpRight, ArrowDownRight, CheckCircle2,
   AlertTriangle, Receipt, Download
 } from 'lucide-react'
+import { useRef } from 'react'
 
 interface Booking {
   id: string
@@ -165,6 +166,7 @@ function ClientDashboardContent() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
   const [messagesLoaded, setMessagesLoaded] = useState(false)
+  const paymentMethodsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const kycRequired = searchParams.get('kyc') === 'required'
@@ -406,6 +408,12 @@ function ClientDashboardContent() {
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
   }
 
+  const scrollToPaymentMethods = () => {
+    if (paymentMethodsRef.current) {
+      paymentMethodsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   const handleSendMessage = async () => {
     if (!selectedConversationId || !messageInput.trim()) return
     const tempId = `local-${Date.now()}`
@@ -489,14 +497,15 @@ function ClientDashboardContent() {
     setTripsError(null)
     setTripsLoading(true)
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
-      if (!token) {
+      if (!isSignedIn) {
         setTripsError('Please sign in to view your trips.')
         return
       }
 
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+
       const response = await fetch('/api/bookings?role=guest&limit=50', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       })
 
       if (!response.ok) {
@@ -532,17 +541,17 @@ function ClientDashboardContent() {
     setIsPaymentsLoading(true)
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
-
-      if (!token) {
+      if (!isSignedIn) {
         setPaymentsError('Please sign in to view your payments.')
         return
       }
 
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+
       const response = await fetch('/api/payments', {
-        headers: {
+        headers: token ? {
           Authorization: `Bearer ${token}`
-        }
+        } : {}
       })
 
       if (!response.ok) {
@@ -1868,12 +1877,32 @@ function ClientDashboardContent() {
                         <p className="text-sm text-gray-500 mt-1">
                           {defaultMethod ? `Exp. ${defaultMethod.exp} — ${defaultMethod.name}` : 'No default method set'}
                         </p>
+                        {!defaultMethod && (
+                          <div className="mt-3 text-sm text-gray-600 space-y-2">
+                            <p className="font-semibold text-gray-800">Auto</p>
+                            <p>Save a card to enable autopay and faster checkout.</p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                className="text-sm font-semibold text-orange-600 hover:text-orange-700"
+                                onClick={scrollToPaymentMethods}
+                              >
+                                Add a payment method
+                              </button>
+                              <span className="text-gray-300">•</span>
+                              <button className="text-sm font-semibold text-gray-600 hover:text-gray-900" onClick={fetchPayments}>
+                                Refresh
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       <div className="flex items-center gap-2 mt-4">
                         <button className="text-sm font-semibold text-orange-600 hover:text-orange-700" onClick={fetchPayments}>
                           Refresh
                         </button>
                         <span className="text-gray-300">•</span>
-                        <button className="text-sm font-semibold text-gray-600 hover:text-gray-900">Add card</button>
+                        <button className="text-sm font-semibold text-gray-600 hover:text-gray-900" onClick={scrollToPaymentMethods}>
+                          Add card
+                        </button>
                       </div>
                     </div>
                       <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-3xl p-5 shadow-lg">
@@ -2039,11 +2068,13 @@ function ClientDashboardContent() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">Payment methods</h3>
-                        <button className="text-sm font-semibold text-orange-600 hover:text-orange-700">Add</button>
-                      </div>
+                      <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm" ref={paymentMethodsRef}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-bold text-gray-900">Payment methods</h3>
+                          <button className="text-sm font-semibold text-orange-600 hover:text-orange-700" onClick={fetchPayments}>
+                            Add
+                          </button>
+                        </div>
                       {paymentMethods.length === 0 ? (
                         <p className="text-sm text-gray-500">No saved payment methods.</p>
                       ) : (
