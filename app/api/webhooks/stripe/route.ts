@@ -1,207 +1,247 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/prisma-server'
 import Stripe from 'stripe'
+import { headers } from 'next/headers'
 
-/**
- * POST /api/webhooks/stripe
- * Handles Stripe webhook events for payments and identity verification
- */
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia'
+})
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text()
-    const signature = request.headers.get('stripe-signature')
+    const headersList = await headers()
+    const signature = headersList.get('stripe-signature')
 
     if (!signature) {
-      console.error('Missing stripe-signature header')
+      console.error('Missing Stripe signature')
       return NextResponse.json(
         { error: 'Missing signature' },
         { status: 400 }
       )
     }
 
-    // Verify webhook signature
     let event: Stripe.Event
+
     try {
       event = stripe.webhooks.constructEvent(
         body,
         signature,
-        process.env.STRIPE_WEBHOOK_SECRET || ''
+        webhookSecret
       )
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message)
       return NextResponse.json(
-        { error: `Webhook Error: ${err.message}` },
+        { error: 'Invalid signature' },
         { status: 400 }
       )
     }
 
-    console.log(`Received Stripe webhook: ${event.type}`)
+    console.log('Stripe webhook event:', event.type)
 
-    // Handle different event types
+    // Handle the event
     switch (event.type) {
-      // ==========================================
-      // IDENTITY VERIFICATION EVENTS
-      // ==========================================
-      case 'identity.verification_session.verified':
-        await handleVerificationVerified(event.data.object as Stripe.Identity.VerificationSession)
-        break
-
-      case 'identity.verification_session.requires_input':
-        await handleVerificationRequiresInput(event.data.object as Stripe.Identity.VerificationSession)
-        break
-
-      case 'identity.verification_session.canceled':
-        await handleVerificationCanceled(event.data.object as Stripe.Identity.VerificationSession)
-        break
-
-      case 'identity.verification_session.processing':
-        await handleVerificationProcessing(event.data.object as Stripe.Identity.VerificationSession)
-        break
-
-      // ==========================================
-      // PAYMENT EVENTS (for future expansion)
-      // ==========================================
       case 'payment_intent.succeeded':
-        // Handle successful payment
-        console.log('Payment succeeded:', event.data.object.id)
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent)
         break
 
       case 'payment_intent.payment_failed':
-        // Handle failed payment
-        console.log('Payment failed:', event.data.object.id)
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent)
+        break
+
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object as Stripe.Charge)
+        break
+
+      case 'payment_intent.canceled':
+        await handlePaymentIntentCanceled(event.data.object as Stripe.PaymentIntent)
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        console.log(\`Unhandled event type: \${event.type}\`)
     }
 
     return NextResponse.json({ received: true })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Webhook error:', error)
     return NextResponse.json(
-      { error: error.message || 'Webhook processing failed' },
+      { error: 'Webhook handler failed' },
       { status: 500 }
     )
   }
 }
 
-// ==========================================
-// IDENTITY VERIFICATION HANDLERS
-// ==========================================
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+  console.log('Payment succeeded:', paymentIntent.id)
 
-async function handleVerificationVerified(session: Stripe.Identity.VerificationSession) {
+  const bookingId = paymentIntent.metadata?.bookingId
+
+  if (!bookingId) {
+    console.error('No booking ID in payment intent metadata')
+    return
+  }
+
   try {
-    console.log(`Verification verified: ${session.id}`)
-
-    const userId = session.metadata?.userId
-
-    if (!userId) {
-      console.error('No userId in verification session metadata')
-      return
-    }
-
-    // Extract verified data
-    const verifiedOutputs = session.verified_outputs
-
-    // Update user KYC status in database
-    await (prisma as any).user.update({
-      where: { id: userId },
+    // Update booking to CONFIRMED status with PAID payment status
+    const booking = await (prisma as any).booking.update({
+      where: { id: bookingId },
       data: {
-        kycStatus: 'VERIFIED',
-        kycVerifiedAt: new Date(),
-        kycVerificationId: session.id,
-        // Optionally store verified data
-        firstName: verifiedOutputs?.first_name || undefined,
-        lastName: verifiedOutputs?.last_name || undefined,
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        paymentIntentId: paymentIntent.id,
+        paymentCapturedAt: new Date(),
+        confirmedAt: new Date(),
+        holdExpiresAt: null // Clear hold expiry since payment is confirmed
+      },
+      include: {
+        property: true,
+        guest: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        host: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
       }
     })
 
-    console.log(`User ${userId} KYC verified successfully`)
+    console.log(\`Booking \${bookingId} confirmed - payment successful\`)
+
+    // TODO: Send confirmation email/notification to guest and host
+    // TODO: Add to audit log
 
   } catch (error) {
-    console.error('Error handling verification verified:', error)
+    console.error('Error updating booking after payment success:', error)
+    throw error
   }
 }
 
-async function handleVerificationRequiresInput(session: Stripe.Identity.VerificationSession) {
+async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
+  console.log('Payment failed:', paymentIntent.id)
+
+  const bookingId = paymentIntent.metadata?.bookingId
+
+  if (!bookingId) {
+    console.error('No booking ID in payment intent metadata')
+    return
+  }
+
   try {
-    console.log(`Verification requires input: ${session.id}`)
-
-    const userId = session.metadata?.userId
-
-    if (!userId) {
-      console.error('No userId in verification session metadata')
-      return
-    }
-
-    // Update user KYC status
-    await (prisma as any).user.update({
-      where: { id: userId },
+    // Update booking payment status to FAILED
+    // Keep the booking in REQUESTED/APPROVED status to allow retry
+    await (prisma as any).booking.update({
+      where: { id: bookingId },
       data: {
-        kycStatus: 'PENDING',
-        kycVerificationId: session.id,
+        paymentStatus: 'FAILED'
       }
     })
 
-    console.log(`User ${userId} KYC requires additional input`)
+    console.log(\`Booking \${bookingId} payment failed - status updated\`)
+
+    // TODO: Send notification to guest about payment failure
 
   } catch (error) {
-    console.error('Error handling verification requires input:', error)
+    console.error('Error updating booking after payment failure:', error)
+    throw error
   }
 }
 
-async function handleVerificationCanceled(session: Stripe.Identity.VerificationSession) {
+async function handleChargeRefunded(charge: Stripe.Charge) {
+  console.log('Charge refunded:', charge.id)
+
+  const paymentIntentId = charge.payment_intent as string
+
+  if (!paymentIntentId) {
+    console.error('No payment intent ID in charge')
+    return
+  }
+
   try {
-    console.log(`Verification canceled: ${session.id}`)
+    // Find booking by payment intent ID
+    const booking = await (prisma as any).booking.findFirst({
+      where: { paymentIntentId }
+    })
 
-    const userId = session.metadata?.userId
-
-    if (!userId) {
-      console.error('No userId in verification session metadata')
+    if (!booking) {
+      console.error(\`No booking found for payment intent \${paymentIntentId}\`)
       return
     }
 
-    // Update user KYC status
-    await (prisma as any).user.update({
-      where: { id: userId },
+    // Calculate refund amount
+    const refundAmount = charge.amount_refunded / 100 // Convert from cents
+
+    // Update booking with refund information
+    await (prisma as any).booking.update({
+      where: { id: booking.id },
       data: {
-        kycStatus: 'FAILED',
-        kycVerificationId: session.id,
+        paymentStatus: charge.amount_refunded === charge.amount ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+        refundAmount,
+        refundedAt: new Date(),
+        refundReason: 'Stripe refund processed'
       }
     })
 
-    console.log(`User ${userId} KYC verification canceled`)
+    console.log(\`Booking \${booking.id} refunded: \${refundAmount}\`)
+
+    // TODO: Send refund confirmation to guest
 
   } catch (error) {
-    console.error('Error handling verification canceled:', error)
+    console.error('Error updating booking after refund:', error)
+    throw error
   }
 }
 
-async function handleVerificationProcessing(session: Stripe.Identity.VerificationSession) {
+async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) {
+  console.log('Payment intent canceled:', paymentIntent.id)
+
+  const bookingId = paymentIntent.metadata?.bookingId
+
+  if (!bookingId) {
+    console.error('No booking ID in payment intent metadata')
+    return
+  }
+
   try {
-    console.log(`Verification processing: ${session.id}`)
+    // Find the booking
+    const booking = await (prisma as any).booking.findUnique({
+      where: { id: bookingId }
+    })
 
-    const userId = session.metadata?.userId
-
-    if (!userId) {
-      console.error('No userId in verification session metadata')
+    if (!booking) {
+      console.error(\`Booking \${bookingId} not found\`)
       return
     }
 
-    // Update user KYC status
-    await (prisma as any).user.update({
-      where: { id: userId },
-      data: {
-        kycStatus: 'PENDING',
-        kycVerificationId: session.id,
-      }
-    })
+    // If booking is not yet confirmed, we can mark it as expired
+    if (['REQUESTED', 'APPROVED', 'PENDING'].includes(booking.status)) {
+      await (prisma as any).booking.update({
+        where: { id: bookingId },
+        data: {
+          status: 'EXPIRED',
+          paymentStatus: 'FAILED'
+        }
+      })
 
-    console.log(`User ${userId} KYC verification is processing`)
+      console.log(\`Booking \${bookingId} marked as expired due to canceled payment\`)
+
+      // TODO: Release availability holds
+      // TODO: Send notification
+    }
 
   } catch (error) {
-    console.error('Error handling verification processing:', error)
+    console.error('Error handling canceled payment intent:', error)
+    throw error
   }
 }

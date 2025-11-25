@@ -550,6 +550,11 @@ model Property {
   allowSmoking    Boolean          @default(false)
   allowEvents     Boolean          @default(false)
 
+  // Cancellation Policy
+  cancellationPolicy String?       @default("FLEXIBLE") // FLEXIBLE, MODERATE, STRICT, SUPER_STRICT
+  requestToBook   Boolean          @default(false) // If true, host must approve
+  approvalWindowHours Int?         @default(24) // Hours host has to approve request
+
   // Status
   status          PropertyStatus   @default(DRAFT)
   isActive        Boolean          @default(true)
@@ -678,6 +683,21 @@ model Booking {
   cancelledBy     String?        // USER or HOST or ADMIN
   cancellationReason String?
 
+  // Refund tracking
+  refundAmount    Float?
+  refundedAt      DateTime?
+  refundReason    String?        @db.Text
+
+  // Hold expiry and payment tracking
+  holdExpiresAt   DateTime?      // Auto-expire if payment not received
+  approvedAt      DateTime?      // When host approved
+  paymentIntentId String?        // Stripe payment intent ID
+  paymentCapturedAt DateTime?    // When payment was captured
+
+  // Cancellation policy
+  cancellationPolicyType String? @default("FLEXIBLE") // FLEXIBLE, MODERATE, STRICT
+  cancellationDeadline   DateTime? // Deadline for full/partial refund
+
   // RELATIONS
   property        Property       @relation("PropertyBookings", fields: [propertyId], references: [id], onDelete: Cascade)
   guest           User           @relation("GuestBookings", fields: [guestId], references: [id], onDelete: Cascade)
@@ -687,15 +707,21 @@ model Booking {
   @@index([guestId])
   @@index([hostId])
   @@index([status])
+  @@index([holdExpiresAt])
+  @@index([paymentStatus])
   @@map("bookings")
 }
 
 enum BookingStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-  REJECTED
+  PENDING           // Legacy - keep for backwards compatibility
+  REQUESTED         // Initial booking request (new flow)
+  APPROVED          // Host approved, awaiting payment
+  CONFIRMED         // Payment successful, booking confirmed
+  CANCELLED         // Cancelled by guest or host
+  COMPLETED         // Trip completed
+  REJECTED          // Declined by host
+  EXPIRED           // Payment not received within timeframe
+  CHECKED_IN        // Guest checked in
 }
 
 enum PaymentStatus {

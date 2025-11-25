@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserFromRequest } from '@/lib/auth'
-import { createPaymentIntent, getOrCreateStripeCustomer } from '@/lib/stripe'
+import { createSadadPayment, generateMerchantReference, validateSadadConfig } from '@/lib/sadad'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,51 +51,76 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if booking is in correct status
-    if (booking.status !== 'PENDING') {
+    // Check if booking is in correct status (allow REQUESTED, APPROVED, or legacy PENDING)
+    if (!['REQUESTED', 'APPROVED', 'PENDING'].includes(booking.status)) {
       return NextResponse.json(
-        { error: 'Booking cannot be paid' },
+        { error: `Booking cannot be paid - current status: ${booking.status}` },
         { status: 400 }
       )
     }
 
-    // Get or create Stripe customer
-    const customerId = await getOrCreateStripeCustomer(
-      booking.guest.id,
-      booking.guest.email,
-      `${booking.guest.firstName} ${booking.guest.lastName}`
-    )
+    // Check if hold has expired
+    if (booking.holdExpiresAt && new Date(booking.holdExpiresAt) < new Date()) {
+      return NextResponse.json(
+        { error: 'Booking hold has expired' },
+        { status: 400 }
+      )
+    }
 
-    // Create Stripe PaymentIntent with customer
-    const paymentIntent = await createPaymentIntent(
-      booking.totalAmount,
-      booking.currency,
-      customerId,
-      {
+    // Check if payment is already pending or completed
+    if (booking.paymentStatus === 'PAID') {
+      return NextResponse.json(
+        { error: 'Booking is already paid' },
+        { status: 400 }
+      )
+    }
+
+    // Validate Sadad configuration
+    validateSadadConfig()
+
+    // Prepare payment data
+    const amount = booking.totalPrice || booking.totalAmount || 0
+    const merchantReference = generateMerchantReference(booking.id)
+    const customerName = `${booking.guest.firstName} ${booking.guest.lastName}`
+
+    // Extract phone number and country code from guest
+    const customerPhone = booking.guest.phone || booking.guest.cellnumber || undefined
+    const customerCountryCode = booking.guest.countryCode?.replace('+', '') || '974' // Default to Qatar
+
+    // Create Sadad payment transaction (invoice-based)
+    const sadadPayment = await createSadadPayment({
+      amount,
+      customerName,
+      customerPhone,
+      customerCountryCode,
+      description: `Booking for ${booking.property.title}`,
+      metadata: {
         bookingId: booking.id,
         propertyId: booking.propertyId,
         guestId: booking.guestId,
-        hostId: booking.hostId
+        hostId: booking.hostId,
+        merchantReference,
+        checkIn: booking.checkIn.toISOString(),
+        checkOut: booking.checkOut.toISOString()
       }
-    )
+    })
 
-    // Create payment record
-    await (prisma as any).payment.create({
+    // Update booking with Sadad invoice number and merchant reference
+    await (prisma as any).booking.update({
+      where: { id: bookingId },
       data: {
-        bookingId: booking.id,
-        amount: booking.totalAmount,
-        currency: booking.currency,
-        status: 'PENDING',
-        method: 'credit_card',
-        stripePaymentId: paymentIntent.id
+        paymentIntentId: sadadPayment.invoiceNumber, // Store Sadad invoice number
+        transactionId: merchantReference
       }
     })
 
     return NextResponse.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-      amount: booking.totalAmount,
-      currency: booking.currency
+      transactionId: sadadPayment.invoiceNumber, // Return invoice number as transaction ID
+      paymentUrl: sadadPayment.paymentUrl, // https://sadad.qa/invoice/{invoiceNumber}
+      merchantReference: merchantReference,
+      amount: sadadPayment.amount,
+      currency: 'QAR', // Sadad Qatar uses QAR
+      status: sadadPayment.status
     })
 
   } catch (error) {

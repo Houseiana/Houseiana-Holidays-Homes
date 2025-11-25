@@ -83,11 +83,24 @@ export async function GET(request: NextRequest) {
       return {
         id: booking.id,
         status: booking.status,
+        paymentStatus: booking.paymentStatus,
         checkIn: booking.checkIn?.toISOString?.() || booking.checkIn,
         checkOut: booking.checkOut?.toISOString?.() || booking.checkOut,
+        numberOfNights: booking.numberOfNights || 0,
         amount: booking.totalPrice || 0,
+        totalPrice: booking.totalPrice || 0,
+        subtotal: booking.subtotal || 0,
+        serviceFee: booking.serviceFee || 0,
+        cleaningFee: booking.cleaningFee || 0,
+        taxAmount: booking.taxAmount || 0,
         guests: booking.guests || 1,
         hostId: booking.hostId,
+        holdExpiresAt: booking.holdExpiresAt?.toISOString?.() || null,
+        approvedAt: booking.approvedAt?.toISOString?.() || null,
+        confirmedAt: booking.confirmedAt?.toISOString?.() || null,
+        cancelledAt: booking.cancelledAt?.toISOString?.() || null,
+        cancellationPolicyType: booking.cancellationPolicyType,
+        refundAmount: booking.refundAmount || null,
         // Guest info (for host console)
         ...(role === 'host' && {
           guestName,
@@ -270,11 +283,44 @@ export async function POST(request: NextRequest) {
 
       // Calculate pricing
       const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))
-      const subtotal = nights * property.basePrice
-      const cleaningFee = property.cleaningFee
+      const nightlyRate = property.pricePerNight || property.basePrice || 0
+      const subtotal = nights * nightlyRate
+      const cleaningFee = property.cleaningFee || 0
       const serviceFee = subtotal * 0.1 // 10% service fee
-      const taxes = (subtotal + serviceFee) * 0.12 // 12% taxes
-      const totalAmount = subtotal + cleaningFee + serviceFee + taxes
+      const taxAmount = (subtotal + serviceFee) * 0.12 // 12% taxes
+      const totalPrice = subtotal + cleaningFee + serviceFee + taxAmount
+
+      // Calculate platform commission (e.g., 15% of subtotal)
+      const platformCommission = subtotal * 0.15
+      const hostEarnings = subtotal - platformCommission
+
+      // Determine booking flow: instant book or request-to-book
+      const isInstantBook = property.instantBook && !property.requestToBook
+      const initialStatus = isInstantBook ? 'REQUESTED' : 'REQUESTED' // Both start as REQUESTED
+
+      // Set hold expiry (24 hours for request-to-book, 2 hours for instant book awaiting payment)
+      const holdExpiryHours = property.requestToBook ? (property.approvalWindowHours || 24) : 2
+      const holdExpiresAt = new Date(Date.now() + holdExpiryHours * 60 * 60 * 1000)
+
+      // Get cancellation policy from property
+      const cancellationPolicy = property.cancellationPolicy || 'FLEXIBLE'
+
+      // Calculate cancellation deadline based on policy
+      let cancellationDeadline = new Date(checkInDate)
+      switch (cancellationPolicy) {
+        case 'FLEXIBLE':
+          cancellationDeadline.setDate(cancellationDeadline.getDate() - 1) // 24h before
+          break
+        case 'MODERATE':
+          cancellationDeadline.setDate(cancellationDeadline.getDate() - 5) // 5 days before
+          break
+        case 'STRICT':
+          cancellationDeadline.setDate(cancellationDeadline.getDate() - 14) // 14 days before
+          break
+        case 'SUPER_STRICT':
+          cancellationDeadline.setDate(cancellationDeadline.getDate() - 30) // 30 days before
+          break
+      }
 
       // Create booking
       const newBooking = await (prismaTransaction as any).booking.create({
@@ -284,19 +330,25 @@ export async function POST(request: NextRequest) {
           hostId: property.hostId,
           checkIn: checkInDate,
           checkOut: checkOutDate,
+          numberOfNights: nights,
           guests,
           adults,
           children,
           infants,
+          nightlyRate,
           subtotal,
           cleaningFee,
           serviceFee,
-          taxes,
-          totalAmount,
-          currency: property.currency,
+          taxAmount,
+          totalPrice,
+          platformCommission,
+          hostEarnings,
           specialRequests,
-          confirmationCode: generateConfirmationCode(),
-          status: 'PENDING'
+          status: initialStatus,
+          paymentStatus: 'PENDING',
+          holdExpiresAt,
+          cancellationPolicyType: cancellationPolicy,
+          cancellationDeadline
         },
         include: {
           property: {
