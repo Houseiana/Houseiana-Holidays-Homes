@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle2, XCircle, Loader2, Home } from 'lucide-react'
 
+// Mark as dynamic route to prevent static generation errors
+export const dynamic = 'force-dynamic'
+
 export default function PaymentReturnPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
