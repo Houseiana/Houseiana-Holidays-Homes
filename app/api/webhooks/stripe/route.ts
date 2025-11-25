@@ -117,7 +117,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       }
     })
 
-    console.log(\`Booking \${bookingId} confirmed - payment successful\`)
+    console.log("Booking", bookingId, "confirmed - payment successful")
 
     // TODO: Send confirmation email/notification to guest and host
     // TODO: Add to audit log
@@ -148,7 +148,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
       }
     })
 
-    console.log(\`Booking \${bookingId} payment failed - status updated\`)
+    console.log("Booking", bookingId, "payment failed - status updated")
 
     // TODO: Send notification to guest about payment failure
 
@@ -175,7 +175,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     })
 
     if (!booking) {
-      console.error(\`No booking found for payment intent \${paymentIntentId}\`)
+      console.error("No booking found for payment intent", paymentIntentId)
       return
     }
 
@@ -193,7 +193,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       }
     })
 
-    console.log(\`Booking \${booking.id} refunded: \${refundAmount}\`)
+    console.log("Booking", booking.id, "refunded:", refundAmount)
 
     // TODO: Send refund confirmation to guest
 
@@ -220,7 +220,7 @@ async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) 
     })
 
     if (!booking) {
-      console.error(\`Booking \${bookingId} not found\`)
+      console.error("Booking", bookingId, "not found")
       return
     }
 
@@ -234,7 +234,7 @@ async function handlePaymentIntentCanceled(paymentIntent: Stripe.PaymentIntent) 
         }
       })
 
-      console.log(\`Booking \${bookingId} marked as expired due to canceled payment\`)
+      console.log("Booking", bookingId, "marked as expired due to canceled payment")
 
       // TODO: Release availability holds
       // TODO: Send notification
