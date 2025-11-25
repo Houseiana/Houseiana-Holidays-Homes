@@ -180,6 +180,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // CRITICAL FIX: Ensure user exists in database (Clerk user sync)
+    try {
+      const existingUser = await (prisma as any).user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!existingUser) {
+        console.log('👤 User not found in database, creating user record:', userId);
+        // Create user record in database
+        await (prisma as any).user.create({
+          data: {
+            id: userId,
+            email: `user_${userId}@clerk.temp`,  // Temporary email, will be updated by webhook
+            firstName: 'User',
+            lastName: '',
+            isHost: true,
+            kycStatus: 'PENDING'
+          }
+        });
+        console.log('✅ User record created successfully');
+      }
+    } catch (userError) {
+      console.error('⚠️ Error checking/creating user:', userError);
+      // Continue anyway - the user might exist but there was a race condition
+    }
+
     const body = await request.json();
     console.log('🏠 Creating property for user:', userId);
 
