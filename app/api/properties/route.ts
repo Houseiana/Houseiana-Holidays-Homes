@@ -283,7 +283,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create property in database with KYC if provided
+    // Check if KYC data has any meaningful values
+    const hasKycData = kyc && (
+      (kyc.hostName && kyc.hostName.trim() !== '') ||
+      (kyc.hostIdType && kyc.hostIdType.trim() !== '') ||
+      (kyc.hostIdNumber && kyc.hostIdNumber.trim() !== '') ||
+      (kyc.companyName && kyc.companyName.trim() !== '') ||
+      (kyc.crNumber && kyc.crNumber.trim() !== '')
+    );
+
+    console.log('🔍 KYC data check:', { hasKyc: !!kyc, hasKycData });
+
+    // Create property in database with KYC only if there's actual data
     const property = await (prisma as any).property.create({
       data: {
         ownerId: userId,
@@ -320,10 +331,10 @@ export async function POST(request: NextRequest) {
         allowSmoking: allowSmoking || false,
         allowEvents: allowEvents || false,
         status: status || 'DRAFT',
-        ...(kyc && {
+        ...(hasKycData && {
           kyc: {
             create: {
-              hostName: kyc.hostName,
+              hostName: kyc.hostName || '',
               hostIdType: kyc.hostIdType || null,
               hostIdNumber: kyc.hostIdNumber || null,
               hostIdExpiry: kyc.hostIdExpiry ? new Date(kyc.hostIdExpiry) : null,
