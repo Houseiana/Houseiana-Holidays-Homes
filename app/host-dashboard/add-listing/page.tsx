@@ -339,18 +339,24 @@ export default function AddListingPage() {
   };
 
   const handleSubmit = async () => {
+    console.log('🔍 DEBUG: handleSubmit called');
+    console.log('🔍 DEBUG: isLoaded=', isLoaded, 'isSignedIn=', isSignedIn, 'userId=', userId);
+
     // Check Clerk authentication
     if (!isLoaded || !isSignedIn || !userId) {
+      console.log('❌ DEBUG: Authentication check failed');
       alert('Please sign in to create a listing');
       router.push('/sign-in');
       return;
     }
 
     console.log('🏠 Submitting property listing...');
+    console.log('🔍 DEBUG: Form data:', { title: formData.title, description: formData.description, propertyType: formData.propertyType });
 
     try {
       // Validate required fields
       if (!formData.title || !formData.description) {
+        console.log('❌ DEBUG: Title/Description validation failed');
         alert('Please provide a title and description for your property');
         setCurrentStep(3);
         return;
