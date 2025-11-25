@@ -448,27 +448,51 @@ export default function AddListingPage() {
       }
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-      const response = await fetch(`${API_URL}/api/properties`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${clerkToken}`
-        },
-        credentials: 'include',
-        body: JSON.stringify(propertyData),
-      });
+      const apiEndpoint = `${API_URL}/api/properties`;
 
-      const result = await response.json();
-      console.log('📥 API Response:', result);
+      console.log('🔍 DEBUG: API Endpoint:', apiEndpoint);
+      console.log('🔍 DEBUG: Has Clerk Token:', !!clerkToken);
+
+      let response;
+      try {
+        response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${clerkToken}`
+          },
+          credentials: 'include',
+          body: JSON.stringify(propertyData),
+        });
+
+        console.log('🔍 DEBUG: Response status:', response.status);
+        console.log('🔍 DEBUG: Response ok:', response.ok);
+
+      } catch (fetchError: any) {
+        console.error('❌ FETCH ERROR:', fetchError);
+        throw new Error(`Network error: ${fetchError.message}. Please check your internet connection.`);
+      }
+
+      let result;
+      try {
+        result = await response.json();
+        console.log('📥 API Response:', result);
+      } catch (jsonError) {
+        console.error('❌ JSON Parse Error:', jsonError);
+        const responseText = await response.text();
+        console.error('Response text:', responseText);
+        throw new Error(`Server returned invalid JSON. Status: ${response.status}`);
+      }
 
       if (response.ok && result.success) {
         alert(`✅ Property "${formData.title}" created successfully!\n\nYou can now add photos and publish it from your dashboard.`);
         router.push('/host-dashboard');
       } else {
-        throw new Error(result.error || 'Failed to add property');
+        throw new Error(result.error || `Failed to add property (Status: ${response.status})`);
       }
     } catch (error: any) {
       console.error('❌ Error submitting property:', error);
+      console.error('❌ Error stack:', error.stack);
       alert(`Failed to add property:\n${error.message}\n\nPlease check the console for details and try again.`);
     }
   };
