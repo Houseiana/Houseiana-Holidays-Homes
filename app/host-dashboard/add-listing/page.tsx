@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import dynamic from 'next/dynamic';
 import {
@@ -105,6 +106,8 @@ const STEPS = [
 
 export default function AddListingPage() {
   const router = useRouter();
+  const { getToken, userId, isLoaded, isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const { user } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -336,16 +339,13 @@ export default function AddListingPage() {
   };
 
   const handleSubmit = async () => {
-    // Check authentication
-    const token = localStorage.getItem('auth_token');
-    const userData = localStorage.getItem('auth_user');
-
-    if (!token || !userData) {
-      setShowLoginModal(true);
+    // Check Clerk authentication
+    if (!isLoaded || !isSignedIn || !userId) {
+      alert('Please sign in to create a listing');
+      router.push('/sign-in');
       return;
     }
 
-    const parsedUser = JSON.parse(userData);
     console.log('🏠 Submitting property listing...');
 
     try {
@@ -433,13 +433,20 @@ export default function AddListingPage() {
 
       console.log('📤 Sending property data:', propertyData);
 
-      // Get auth token for request
+      // Get Clerk session token for API request
+      const clerkToken = await getToken();
+      if (!clerkToken) {
+        alert('Authentication failed. Please sign in again.');
+        router.push('/sign-in');
+        return;
+      }
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
       const response = await fetch(`${API_URL}/api/properties`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${clerkToken}`
         },
         credentials: 'include',
         body: JSON.stringify(propertyData),

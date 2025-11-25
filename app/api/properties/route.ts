@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma-server';
 import { getUserFromRequest } from '@/lib/auth';
 import { geocodeAddress } from '@/lib/geocoding';
@@ -164,9 +165,15 @@ export async function GET(request: NextRequest) {
 // POST /api/properties - Create a new property (requires authentication)
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = getUserFromRequest(request);
-    if (!user) {
+    // Try Clerk authentication first
+    const { userId: clerkUserId } = await auth();
+
+    // Fall back to JWT authentication if no Clerk session
+    const jwtUser = getUserFromRequest(request);
+
+    const userId = clerkUserId || jwtUser?.userId;
+
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -174,7 +181,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    console.log('🏠 Creating property for user:', user.userId);
+    console.log('🏠 Creating property for user:', userId);
 
     const {
       title,
@@ -253,7 +260,7 @@ export async function POST(request: NextRequest) {
     // Create property in database with KYC if provided
     const property = await (prisma as any).property.create({
       data: {
-        ownerId: user.userId,
+        ownerId: userId,
         ownerType: 'INDIVIDUAL', // Default to individual
         title,
         description,
@@ -357,9 +364,15 @@ export async function POST(request: NextRequest) {
 // PUT /api/properties - Update an existing property (requires authentication)
 export async function PUT(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = getUserFromRequest(request);
-    if (!user) {
+    // Try Clerk authentication first
+    const { userId: clerkUserId } = await auth();
+
+    // Fall back to JWT authentication if no Clerk session
+    const jwtUser = getUserFromRequest(request);
+
+    const userId = clerkUserId || jwtUser?.userId;
+
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -390,7 +403,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (existingProperty.ownerId !== user.userId) {
+    if (existingProperty.ownerId !== userId) {
       return NextResponse.json(
         { success: false, error: 'You do not have permission to update this property' },
         { status: 403 }
@@ -437,9 +450,15 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/properties - Delete a property (requires authentication)
 export async function DELETE(request: NextRequest) {
   try {
-    // Authenticate user
-    const user = getUserFromRequest(request);
-    if (!user) {
+    // Try Clerk authentication first
+    const { userId: clerkUserId } = await auth();
+
+    // Fall back to JWT authentication if no Clerk session
+    const jwtUser = getUserFromRequest(request);
+
+    const userId = clerkUserId || jwtUser?.userId;
+
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -470,7 +489,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (existingProperty.ownerId !== user.userId) {
+    if (existingProperty.ownerId !== userId) {
       return NextResponse.json(
         { success: false, error: 'You do not have permission to delete this property' },
         { status: 403 }
