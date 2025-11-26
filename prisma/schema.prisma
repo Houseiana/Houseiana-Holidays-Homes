@@ -576,6 +576,39 @@ model Property {
   publishedAt     DateTime?
   submittedForReviewAt DateTime?
 
+  // Administration Backend duplicate fields (required for unified schema)
+  // These are duplicates of User Backend fields with snake_case naming
+  host_id                String       @default("")          // Duplicate of ownerId
+  property_type          String       @default("villa")     // Duplicate of propertyType
+  base_price             Float        @default(0)           // Duplicate of pricePerNight
+  approval_status        String?      @default("pending")   // Admin approval status
+  suspended_at           DateTime?    // Suspension timestamp
+  suspension_reason      String?      // Reason for suspension
+  deleted_at             DateTime?    // Soft delete timestamp
+  street_address         String?      // Similar to address
+  zip_code               String?      // Duplicate of zipCode
+  max_guests             Int?         @default(1)           // Duplicate of guests
+  currency               String?      @default("USD")       // Currency code
+  cleaning_fee           Float?       @default(0)           // Duplicate of cleaningFee
+  service_fee            Float?       @default(0)           // Duplicate of serviceFee
+  weekly_discount        Float?       @default(0)           // Duplicate of weeklyDiscount
+  monthly_discount       Float?       @default(0)           // Duplicate of monthlyDiscount
+  minimum_nights         Int?         @default(1)           // Duplicate of minNights
+  maximum_nights         Int?         @default(365)         // Duplicate of maxNights
+  check_in_time          String?      @default("15:00")     // Duplicate of checkInTime
+  check_out_time         String?      @default("11:00")     // Duplicate of checkOutTime
+  allow_pets             Boolean?     @default(false)       // Duplicate of allowPets
+  allow_smoking          Boolean?     @default(false)       // Duplicate of allowSmoking
+  allow_parties          Boolean?     @default(false)       // Duplicate of allowEvents
+  quiet_hours_start      String?      @default("22:00")
+  quiet_hours_end        String?      @default("08:00")
+  minimum_advance_notice Int?         @default(1)
+  preparation_time       Int?         @default(1)
+  total_bookings         Int?         @default(0)           // Duplicate of bookingCount
+  total_reviews          Int?         @default(0)
+  total_earnings         Float?       @default(0)
+  views_count            Int?         @default(0)           // Duplicate of viewCount
+
   // RELATIONS
   owner           User             @relation("HostProperties", fields: [ownerId], references: [id])
   organization    Organization?    @relation("OrgProperties", fields: [organizationId], references: [id])
