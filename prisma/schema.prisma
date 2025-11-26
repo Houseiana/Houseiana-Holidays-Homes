@@ -578,9 +578,9 @@ model Property {
 
   // Administration Backend duplicate fields (required for unified schema)
   // These are duplicates of User Backend fields with snake_case naming
-  host_id                String       @default("")          // Duplicate of ownerId
-  property_type          String       @default("villa")     // Duplicate of propertyType
-  base_price             Float        @default(0)           // Duplicate of pricePerNight
+  host_id                String                             // Duplicate of ownerId (VARCHAR, accepts Clerk user IDs)
+  property_type          String                             // Duplicate of propertyType
+  base_price             Float                              // Duplicate of pricePerNight
   approval_status        String?      @default("pending")   // Admin approval status
   suspended_at           DateTime?    // Suspension timestamp
   suspension_reason      String?      // Reason for suspension
