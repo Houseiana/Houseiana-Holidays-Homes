@@ -111,7 +111,7 @@ export default function AddListingPage() {
   });
 
   // Google Maps
-  const { isLoaded } = useLoadScript({
+  const { isLoaded: isMapLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     libraries,
   });
@@ -121,7 +121,7 @@ export default function AddListingPage() {
 
   // Initialize Google Places Autocomplete
   useEffect(() => {
-    if (isLoaded && addressInputRef.current && !autocompleteRef.current) {
+    if (isMapLoaded && addressInputRef.current && !autocompleteRef.current) {
       const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
         types: ['address'],
         fields: ['address_components', 'formatted_address', 'geometry'],
@@ -179,7 +179,7 @@ export default function AddListingPage() {
 
       autocompleteRef.current = autocomplete;
     }
-  }, [isLoaded]);
+  }, [isMapLoaded]);
 
   const mapCenter = {
     lat: listing.latitude,
@@ -720,7 +720,7 @@ export default function AddListingPage() {
                       Confirm your address on the map
                     </label>
                     <div className="h-80 bg-gray-100 rounded-2xl overflow-hidden border-2 border-gray-200">
-                      {isLoaded ? (
+                      {isMapLoaded ? (
                         <GoogleMap
                           mapContainerStyle={{ width: '100%', height: '100%' }}
                           center={mapCenter}
