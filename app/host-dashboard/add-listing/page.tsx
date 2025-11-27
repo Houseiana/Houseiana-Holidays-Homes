@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
+import { useLoadScript, GoogleMap, Marker } from '@react-google-maps/api';
 import {
   Home, ChevronLeft, ChevronRight, X, Upload, Plus, Minus, Wifi, Tv, Car, Utensils, Wind, Waves, Dumbbell, PawPrint, Coffee, Flame, Shirt, Snowflake, MapPin, Camera, DollarSign, Calendar, Check, Building, Castle, TreePine, Tent, Ship, Warehouse, Hotel, Home as HomeIcon, Users, Bed, Bath, Star, Shield, Clock, AlertCircle, Mountain, Palmtree, Building2, Landmark, Briefcase, Droplets, Fan, Lock, Sun, Cigarette, PartyPopper, Info
 } from 'lucide-react';
+
+const libraries: ("places")[] = ["places"];
 
 interface PropertyFormData {
   // Step 0: Property Type
@@ -22,6 +25,8 @@ interface PropertyFormData {
   city: string;
   state: string;
   postalCode: string;
+  latitude: number;
+  longitude: number;
 
   // Step 3: Basics
   guests: number;
@@ -79,6 +84,8 @@ export default function AddListingPage() {
     city: '',
     state: '',
     postalCode: '',
+    latitude: 25.2854, // Default: Doha, Qatar
+    longitude: 51.5310,
     guests: 4,
     bedrooms: 2,
     beds: 2,
@@ -102,6 +109,90 @@ export default function AddListingPage() {
     checkInTime: '3:00 PM',
     checkOutTime: '11:00 AM',
   });
+
+  // Google Maps
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries,
+  });
+
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+  // Initialize Google Places Autocomplete
+  useEffect(() => {
+    if (isLoaded && addressInputRef.current && !autocompleteRef.current) {
+      const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
+        types: ['address'],
+        fields: ['address_components', 'formatted_address', 'geometry'],
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+
+        if (place.geometry && place.geometry.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+
+          // Parse address components
+          let street = '';
+          let city = '';
+          let state = '';
+          let postalCode = '';
+          let country = '';
+
+          place.address_components?.forEach((component) => {
+            const types = component.types;
+
+            if (types.includes('street_number')) {
+              street = component.long_name + ' ';
+            }
+            if (types.includes('route')) {
+              street += component.long_name;
+            }
+            if (types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (types.includes('postal_code')) {
+              postalCode = component.long_name;
+            }
+            if (types.includes('country')) {
+              country = component.long_name;
+            }
+          });
+
+          setListing(prev => ({
+            ...prev,
+            street: street.trim(),
+            city,
+            state,
+            postalCode,
+            country: country || prev.country,
+            latitude: lat,
+            longitude: lng,
+          }));
+        }
+      });
+
+      autocompleteRef.current = autocomplete;
+    }
+  }, [isLoaded]);
+
+  const mapCenter = {
+    lat: listing.latitude,
+    lng: listing.longitude,
+  };
+
+  const mapOptions = {
+    disableDefaultUI: false,
+    zoomControl: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+  };
 
   const steps = [
     { id: 0, phase: 1, title: 'Tell us about your place', subtitle: 'Which of these best describes your place?' },
@@ -539,73 +630,122 @@ export default function AddListingPage() {
               {currentStep === 2 && (
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Country / Region</label>
-                    <select
-                      value={listing.country}
-                      onChange={(e) => setListing({ ...listing, country: e.target.value })}
-                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
-                    >
-                      <option value="Qatar">Qatar</option>
-                      <option value="UAE">United Arab Emirates</option>
-                      <option value="Saudi Arabia">Saudi Arabia</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Street address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Search for your address
+                      <span className="text-gray-400 text-xs ml-2">(Start typing to see suggestions)</span>
+                    </label>
                     <input
+                      ref={addressInputRef}
                       type="text"
-                      value={listing.street}
-                      onChange={(e) => setListing({ ...listing, street: e.target.value })}
-                      placeholder="Enter your street address"
+                      placeholder="Start typing your address..."
                       className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
                     />
+                    <p className="text-xs text-gray-500 mt-2">
+                      <Info className="w-3 h-3 inline mr-1" />
+                      Select your address from the dropdown to auto-fill all fields
+                    </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Apt, suite, etc. (optional)</label>
-                    <input
-                      type="text"
-                      value={listing.apt}
-                      onChange={(e) => setListing({ ...listing, apt: e.target.value })}
-                      placeholder="Apt, suite, unit, etc."
-                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
-                    />
-                  </div>
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-4">Or enter manually:</h3>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                      <input
-                        type="text"
-                        value={listing.city}
-                        onChange={(e) => setListing({ ...listing, city: e.target.value })}
-                        placeholder="City"
-                        className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Postal code</label>
-                      <input
-                        type="text"
-                        value={listing.postalCode}
-                        onChange={(e) => setListing({ ...listing, postalCode: e.target.value })}
-                        placeholder="Postal code"
-                        className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Map placeholder */}
-                  <div className="mt-8 h-64 bg-gray-100 rounded-2xl flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />
-                    <div className="relative text-center">
-                      <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                        <MapPin className="w-6 h-6 text-white" />
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Country / Region</label>
+                        <select
+                          value={listing.country}
+                          onChange={(e) => setListing({ ...listing, country: e.target.value })}
+                          className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
+                        >
+                          <option value="Qatar">Qatar</option>
+                          <option value="UAE">United Arab Emirates</option>
+                          <option value="Saudi Arabia">Saudi Arabia</option>
+                          <option value="Kuwait">Kuwait</option>
+                          <option value="Bahrain">Bahrain</option>
+                          <option value="Oman">Oman</option>
+                        </select>
                       </div>
-                      <p className="text-gray-600 font-medium">Confirm your address</p>
-                      <p className="text-sm text-gray-400 mt-1">Your address will appear on the map</p>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Street address</label>
+                        <input
+                          type="text"
+                          value={listing.street}
+                          onChange={(e) => setListing({ ...listing, street: e.target.value })}
+                          placeholder="Enter your street address"
+                          className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Apt, suite, etc. (optional)</label>
+                        <input
+                          type="text"
+                          value={listing.apt}
+                          onChange={(e) => setListing({ ...listing, apt: e.target.value })}
+                          placeholder="Apt, suite, unit, etc."
+                          className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <input
+                            type="text"
+                            value={listing.city}
+                            onChange={(e) => setListing({ ...listing, city: e.target.value })}
+                            placeholder="City"
+                            className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Postal code</label>
+                          <input
+                            type="text"
+                            value={listing.postalCode}
+                            onChange={(e) => setListing({ ...listing, postalCode: e.target.value })}
+                            placeholder="Postal code"
+                            className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                          />
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Google Map */}
+                  <div className="mt-8">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <MapPin className="w-4 h-4 inline mr-1" />
+                      Confirm your address on the map
+                    </label>
+                    <div className="h-80 bg-gray-100 rounded-2xl overflow-hidden border-2 border-gray-200">
+                      {isLoaded ? (
+                        <GoogleMap
+                          mapContainerStyle={{ width: '100%', height: '100%' }}
+                          center={mapCenter}
+                          zoom={15}
+                          options={mapOptions}
+                        >
+                          <Marker position={mapCenter} />
+                        </GoogleMap>
+                      ) : (
+                        <div className="h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg animate-pulse">
+                              <MapPin className="w-6 h-6 text-white" />
+                            </div>
+                            <p className="text-gray-600 font-medium">Loading map...</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {listing.street && (
+                      <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                        <Check className="w-4 h-4 text-green-500" />
+                        <span>Location: {listing.street}, {listing.city}, {listing.country}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
