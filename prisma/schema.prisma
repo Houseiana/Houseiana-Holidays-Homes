@@ -15,6 +15,28 @@ datasource db {
 }
 
 // ============================================================================
+// LOOKUP TABLES (Replaces Enums for Flexibility)
+// ============================================================================
+
+model LookupTable {
+  id          String   @id @default(cuid())
+  category    String   // e.g., "user_status", "kyc_status", "property_type"
+  code        String   // e.g., "ACTIVE", "PENDING", "APARTMENT"
+  label       String   // Display name
+  description String?  // Optional description
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  metadata    Json?    // Additional flexible data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([category, code])
+  @@index([category])
+  @@index([category, isActive])
+  @@map("lookup_tables")
+}
+
+// ============================================================================
 // CORE USER MODEL (Unified Account System)
 // ============================================================================
 
@@ -38,7 +60,7 @@ model User {
   qidNumber                String?     @unique // Qatar ID
   passportNumber           String?     @unique
   idCopyUrl                String?
-  kycStatus                KycStatus   @default(PENDING)
+  kycStatus                String      @default("PENDING") // lookup: kyc_status
   kycVerifiedAt            DateTime?
 
   // Profile
@@ -54,8 +76,8 @@ model User {
   isAdmin                  Boolean     @default(false)
   isSuperAdmin             Boolean     @default(false)
 
-  // Account Status
-  accountStatus            UserStatus  @default(ACTIVE)
+  // Account Status (using lookup table)
+  accountStatus            String      @default("ACTIVE") // lookup: user_status
   suspendedAt              DateTime?
   suspendedReason          String?
   bannedAt                 DateTime?
@@ -123,27 +145,32 @@ model User {
   @@map("users")
 }
 
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-  BANNED
-  DEACTIVATED
-}
+// ============================================================================
+// DEPRECATED ENUMS - Replaced with LookupTable
+// All enums below are kept for reference only and are no longer used
+// Models now use String fields that reference lookup_tables by code
+// ============================================================================
 
-enum KycStatus {
-  PENDING
-  IN_REVIEW
-  APPROVED
-  REJECTED
-  REQUIRES_UPDATE
-}
+// enum UserStatus {
+//   ACTIVE
+//   SUSPENDED
+//   BANNED
+//   DEACTIVATED
+// }
 
-// Keep for backward compatibility but deprecate
-enum UserType {
-  HOST
-  GUEST
-  ADMIN
-}
+// enum KycStatus {
+//   PENDING
+//   IN_REVIEW
+//   APPROVED
+//   REJECTED
+//   REQUIRES_UPDATE
+// }
+
+// enum UserType {
+//   HOST
+//   GUEST
+//   ADMIN
+// }
 
 // ============================================================================
 // GUEST PROFILE (Separate Travel Data)
@@ -162,7 +189,7 @@ model GuestProfile {
 
   // Loyalty Program
   travelPoints      Int      @default(0)
-  loyaltyTier       LoyaltyTier @default(BRONZE)
+  loyaltyTier       String   @default("BRONZE") // lookup: loyalty_tier
   pointsEarned      Int      @default(0)
   pointsRedeemed    Int      @default(0)
 
@@ -186,12 +213,12 @@ model GuestProfile {
   @@map("guest_profiles")
 }
 
-enum LoyaltyTier {
-  BRONZE
-  SILVER
-  GOLD
-  PLATINUM
-}
+// enum LoyaltyTier {
+//   BRONZE
+//   SILVER
+//   GOLD
+//   PLATINUM
+// }
 
 // ============================================================================
 // HOST PROFILE (Separate Hosting Data)
@@ -202,7 +229,7 @@ model HostProfile {
   userId            String   @unique
 
   // Host Type
-  hostType          HostType @default(INDIVIDUAL)
+  hostType          String   @default("INDIVIDUAL") // lookup: host_type
 
   // Business Information (Optional for individuals)
   businessName      String?
@@ -210,7 +237,7 @@ model HostProfile {
 
   // Payout Information
   payoutCurrency    String   @default("QAR")
-  payoutSchedule    PayoutSchedule @default(WEEKLY)
+  payoutSchedule    String   @default("WEEKLY") // lookup: payout_schedule
   minimumPayout     Float    @default(100)
 
   // Tax Information
@@ -222,7 +249,7 @@ model HostProfile {
   // Verification
   isVerifiedHost    Boolean  @default(false)
   verifiedAt        DateTime?
-  verificationLevel VerificationLevel @default(BASIC)
+  verificationLevel String   @default("BASIC") // lookup: verification_level
 
   // Host Stats
   totalProperties   Int      @default(0)
@@ -252,24 +279,24 @@ model HostProfile {
   @@map("host_profiles")
 }
 
-enum HostType {
-  INDIVIDUAL       // Single person, 1-3 properties
-  PROFESSIONAL     // Professional host, 4-10 properties
-  COMPANY          // Company account (managed via Organization)
-}
+// enum HostType {
+//   INDIVIDUAL
+//   PROFESSIONAL
+//   COMPANY
+// }
 
-enum PayoutSchedule {
-  DAILY
-  WEEKLY
-  BIWEEKLY
-  MONTHLY
-}
+// enum PayoutSchedule {
+//   DAILY
+//   WEEKLY
+//   BIWEEKLY
+//   MONTHLY
+// }
 
-enum VerificationLevel {
-  BASIC           // ID verified
-  ENHANCED        // ID + Address verified
-  PREMIUM         // ID + Address + Business verified
-}
+// enum VerificationLevel {
+//   BASIC
+//   ENHANCED
+//   PREMIUM
+// }
 
 // ============================================================================
 // HOST SETTINGS (Notifications & Payout Preferences)
@@ -332,9 +359,9 @@ model Organization {
   zoneNo            String?  // Qatar specific
 
   // Business Classification
-  businessType      BusinessType
-  industryType      IndustryType?
-  companySize       CompanySize?
+  businessType      String   // lookup: business_type
+  industryType      String?  // lookup: industry_type
+  companySize       String?  // lookup: company_size
 
   // Verification & Compliance
   isVerified        Boolean  @default(false)
@@ -379,7 +406,7 @@ model Organization {
   averageRating     Float?
 
   // Status
-  status            OrgStatus @default(PENDING_VERIFICATION)
+  status            String   @default("PENDING_VERIFICATION") // lookup: org_status
   suspendedAt       DateTime?
   suspendedReason   String?
 
@@ -399,39 +426,39 @@ model Organization {
   @@map("organizations")
 }
 
-enum BusinessType {
-  REAL_ESTATE_COMPANY
-  PROPERTY_MANAGEMENT
-  HOTEL_GROUP
-  SERVICED_APARTMENTS
-  VACATION_RENTAL_AGENCY
-  REAL_ESTATE_DEVELOPER
-  HOSPITALITY_GROUP
-  OTHER
-}
+// enum BusinessType {
+//   REAL_ESTATE_COMPANY
+//   PROPERTY_MANAGEMENT
+//   HOTEL_GROUP
+//   SERVICED_APARTMENTS
+//   VACATION_RENTAL_AGENCY
+//   REAL_ESTATE_DEVELOPER
+//   HOSPITALITY_GROUP
+//   OTHER
+// }
 
-enum IndustryType {
-  REAL_ESTATE
-  HOSPITALITY
-  TOURISM
-  PROPERTY_SERVICES
-  OTHER
-}
+// enum IndustryType {
+//   REAL_ESTATE
+//   HOSPITALITY
+//   TOURISM
+//   PROPERTY_SERVICES
+//   OTHER
+// }
 
-enum CompanySize {
-  SMALL           // 1-10 employees
-  MEDIUM          // 11-50 employees
-  LARGE           // 51-200 employees
-  ENTERPRISE      // 200+ employees
-}
+// enum CompanySize {
+//   SMALL
+//   MEDIUM
+//   LARGE
+//   ENTERPRISE
+// }
 
-enum OrgStatus {
-  PENDING_VERIFICATION
-  VERIFIED
-  ACTIVE
-  SUSPENDED
-  DEACTIVATED
-}
+// enum OrgStatus {
+//   PENDING_VERIFICATION
+//   VERIFIED
+//   ACTIVE
+//   SUSPENDED
+//   DEACTIVATED
+// }
 
 // ============================================================================
 // ORGANIZATION MEMBER (Team Management for B2B)
@@ -444,7 +471,7 @@ model OrganizationMember {
   organizationId  String
 
   // Role & Permissions
-  role            OrgRole
+  role            String   // lookup: org_role
   customPermissions Json? // Override default role permissions
 
   // Department & Title
@@ -452,8 +479,8 @@ model OrganizationMember {
   jobTitle        String?
 
   // Status
-  status          MemberStatus @default(PENDING)
-  invitedAt       DateTime     @default(now())
+  status          String   @default("PENDING") // lookup: member_status
+  invitedAt       DateTime @default(now())
   joinedAt        DateTime?
   leftAt          DateTime?
 
@@ -476,22 +503,22 @@ model OrganizationMember {
   @@map("organization_members")
 }
 
-enum OrgRole {
-  OWNER           // Full control, can delete org, manage billing
-  ADMIN           // Can manage team, properties, settings
-  MANAGER         // Can manage properties, bookings, reports
-  AGENT           // Can edit listings, respond to bookings
-  ACCOUNTANT      // View-only for financials
-  VIEWER          // Read-only access
-}
+// enum OrgRole {
+//   OWNER
+//   ADMIN
+//   MANAGER
+//   AGENT
+//   ACCOUNTANT
+//   VIEWER
+// }
 
-enum MemberStatus {
-  PENDING         // Invitation sent, not accepted
-  ACTIVE          // Active member
-  SUSPENDED       // Temporarily suspended
-  LEFT            // Voluntarily left
-  REMOVED         // Removed by admin
-}
+// enum MemberStatus {
+//   PENDING
+//   ACTIVE
+//   SUSPENDED
+//   LEFT
+//   REMOVED
+// }
 
 // ============================================================================
 // UPDATED PROPERTY MODEL (Support Individual & Organization Ownership)
@@ -502,14 +529,14 @@ model Property {
 
   // OWNERSHIP (Updated)
   ownerId         String           // User ID (individual or org member)
-  ownerType       OwnerType
+  ownerType       String           // lookup: owner_type
   organizationId  String?          // If owned by organization
 
   // Basic Information
   title           String
   description     String           @db.Text
-  propertyType    PropertyType
-  roomType        RoomType
+  propertyType    String           // lookup: property_type
+  roomType        String           // lookup: room_type
 
   // Location
   country         String
@@ -556,7 +583,7 @@ model Property {
   approvalWindowHours Int?         @default(24) // Hours host has to approve request
 
   // Status
-  status          PropertyStatus   @default(DRAFT)
+  status          String           @default("DRAFT") // lookup: property_status
   isActive        Boolean          @default(true)
 
   // Admin Review
@@ -627,39 +654,65 @@ model Property {
   @@map("properties")
 }
 
-enum OwnerType {
-  INDIVIDUAL      // Owned by a person
-  ORGANIZATION    // Owned by a company
-}
+// enum OwnerType {
+//   INDIVIDUAL
+//   ORGANIZATION
+// }
 
-enum PropertyType {
-  HOUSE
-  APARTMENT
-  VILLA
-  CONDO
-  TOWNHOUSE
-  GUESTHOUSE
-  HOTEL
-  CABIN
-  BUNGALOW
-  STUDIO
-  LOFT
-  OTHER
-}
+// enum PropertyType {
+//   APARTMENT
+//   BARN
+//   BED_AND_BREAKFAST
+//   BOAT
+//   BUNGALOW
+//   CABIN
+//   CAMPER_RV
+//   CASA_PARTICULAR
+//   CASTLE
+//   CAVE
+//   CONDO
+//   CONTAINER
+//   CYCLADIC_HOME
+//   DAMMUSO
+//   DOME
+//   EARTH_HOME
+//   FARM
+//   GUESTHOUSE
+//   HOTEL
+//   HOUSE
+//   HOUSEBOAT
+//   KEZHAN
+//   LOFT
+//   MINSU
+//   RIAD
+//   RYOKAN
+//   SHEPHERDS_HUT
+//   STUDIO
+//   TENT
+//   TINY_HOME
+//   TOWER
+//   TOWNHOUSE
+//   TREEHOUSE
+//   TRULLO
+//   VILLA
+//   WINDMILL
+//   YURT
+//   OTHER
+// }
 
-enum RoomType {
-  ENTIRE_PLACE
-  PRIVATE_ROOM
-  SHARED_ROOM
-}
+// enum RoomType {
+//   ENTIRE_PLACE
+//   PRIVATE_ROOM
+//   SHARED_ROOM
+// }
 
-enum PropertyStatus {
-  DRAFT
-  PENDING_REVIEW
-  PUBLISHED
-  UNLISTED
-  SUSPENDED
-}
+// enum PropertyStatus {
+//   DRAFT
+//   PENDING_REVIEW
+//   PUBLISHED
+//   UNLISTED
+//   SUSPENDED
+// }
 
 // ============================================================================
 // BOOKING MODEL
@@ -695,8 +748,8 @@ model Booking {
   hostEarnings    Float
 
   // Status
-  status          BookingStatus  @default(PENDING)
-  paymentStatus   PaymentStatus  @default(PENDING)
+  status          String         @default("PENDING") // lookup: booking_status
+  paymentStatus   String         @default("PENDING") // lookup: payment_status
   paymentMethod   String?
   transactionId   String?
 
@@ -745,25 +798,25 @@ model Booking {
   @@map("bookings")
 }
 
-enum BookingStatus {
-  PENDING           // Legacy - keep for backwards compatibility
-  REQUESTED         // Initial booking request (new flow)
-  APPROVED          // Host approved, awaiting payment
-  CONFIRMED         // Payment successful, booking confirmed
-  CANCELLED         // Cancelled by guest or host
-  COMPLETED         // Trip completed
-  REJECTED          // Declined by host
-  EXPIRED           // Payment not received within timeframe
-  CHECKED_IN        // Guest checked in
-}
+// enum BookingStatus {
+//   PENDING
+//   REQUESTED
+//   APPROVED
+//   CONFIRMED
+//   CANCELLED
+//   COMPLETED
+//   REJECTED
+//   EXPIRED
+//   CHECKED_IN
+// }
 
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  REFUNDED
-  PARTIALLY_REFUNDED
-}
+// enum PaymentStatus {
+//   PENDING
+//   PAID
+//   FAILED
+//   REFUNDED
+//   PARTIALLY_REFUNDED
+// }
 
 // ============================================================================
 // PAYOUT METHOD (For Hosts & Organizations)
@@ -774,7 +827,7 @@ model PayoutMethod {
   userId          String
 
   // Payout Type
-  type            PayoutType
+  type            String   // lookup: payout_type
 
   // Bank Transfer Details
   bankName        String?
@@ -809,14 +862,14 @@ model PayoutMethod {
   @@map("payout_methods")
 }
 
-enum PayoutType {
-  BANK_TRANSFER
-  MOBILE_PAYMENT
-  PAYPAL
-  STRIPE_CONNECT
-  WISE
-  OTHER
-}
+// enum PayoutType {
+//   BANK_TRANSFER
+//   MOBILE_PAYMENT
+//   PAYPAL
+//   STRIPE_CONNECT
+//   WISE
+//   OTHER
+// }
 
 // ============================================================================
 // CONTRACT MODEL (B2B Service Level Agreements)
@@ -829,14 +882,14 @@ model Contract {
 
   // Contract Details
   contractNumber  String   @unique
-  contractType    ContractType
+  contractType    String   // lookup: contract_type
   title           String
   description     String?  @db.Text
 
   // Duration
   startDate       DateTime
   endDate         DateTime?
-  renewalType     RenewalType @default(MANUAL)
+  renewalType     String   @default("MANUAL") // lookup: renewal_type
 
   // Commercial Terms
   customCommissionRate Float?  // Override platform default
@@ -845,7 +898,7 @@ model Contract {
   volumeDiscount     Boolean  @default(false)
 
   // Service Level Agreement
-  slaLevel        SlaLevel @default(STANDARD)
+  slaLevel        String   @default("STANDARD") // lookup: sla_level
   responseTime    Int?     // Hours
   dedicatedSupport Boolean  @default(false)
   accountManager  String?  // Admin user ID
@@ -855,7 +908,7 @@ model Contract {
   termsDocumentUrl  String?
 
   // Signatures
-  status          ContractStatus @default(DRAFT)
+  status          String   @default("DRAFT") // lookup: contract_status
   orgSignedAt     DateTime?
   orgSignedBy     String?  // User ID from org
   platformSignedAt DateTime?
@@ -872,34 +925,34 @@ model Contract {
   @@map("contracts")
 }
 
-enum ContractType {
-  STANDARD
-  PREFERRED_PARTNER
-  ENTERPRISE
-  CUSTOM
-}
+// enum ContractType {
+//   STANDARD
+//   PREFERRED_PARTNER
+//   ENTERPRISE
+//   CUSTOM
+// }
 
-enum RenewalType {
-  AUTO_RENEW
-  MANUAL
-  ONE_TIME
-}
+// enum RenewalType {
+//   AUTO_RENEW
+//   MANUAL
+//   ONE_TIME
+// }
 
-enum SlaLevel {
-  STANDARD
-  PREMIUM
-  ENTERPRISE
-}
+// enum SlaLevel {
+//   STANDARD
+//   PREMIUM
+//   ENTERPRISE
+// }
 
-enum ContractStatus {
-  DRAFT
-  PENDING_ORG_SIGNATURE
-  PENDING_PLATFORM_SIGNATURE
-  ACTIVE
-  EXPIRED
-  TERMINATED
-  SUSPENDED
-}
+// enum ContractStatus {
+//   DRAFT
+//   PENDING_ORG_SIGNATURE
+//   PENDING_PLATFORM_SIGNATURE
+//   ACTIVE
+//   EXPIRED
+//   TERMINATED
+//   SUSPENDED
+// }
 
 // ============================================================================
 // INVOICE MODEL (B2B Billing)
@@ -925,7 +978,7 @@ model Invoice {
   lineItems       Json     // Array of items
 
   // Payment
-  status          InvoiceStatus @default(PENDING)
+  status          String   @default("PENDING") // lookup: invoice_status
   paidAt          DateTime?
   paymentMethod   String?
   paymentReference String?
@@ -944,14 +997,14 @@ model Invoice {
   @@map("invoices")
 }
 
-enum InvoiceStatus {
-  DRAFT
-  PENDING
-  PAID
-  OVERDUE
-  CANCELLED
-  REFUNDED
-}
+// enum InvoiceStatus {
+//   DRAFT
+//   PENDING
+//   PAID
+//   OVERDUE
+//   CANCELLED
+//   REFUNDED
+// }
 
 // ============================================================================
 // KEEP EXISTING MODELS (Review, Favorite, etc.)
@@ -1031,7 +1084,7 @@ model OtpCode {
   phone     String?
   email     String?
   code      String
-  type      OtpType
+  type      String   // lookup: otp_type
   expiresAt DateTime
   verified  Boolean  @default(false)
   attempts  Int      @default(0)
@@ -1040,6 +1093,13 @@ model OtpCode {
 
   @@map("otp_codes")
 }
+
+// enum OtpType {
+//   PHONE_VERIFICATION
+//   EMAIL_VERIFICATION
+//   LOGIN
+//   PASSWORD_RESET
+// }
 
 model Account {
   id                String  @id @default(cuid())
@@ -1058,13 +1118,6 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
-}
-
-enum OtpType {
-  PHONE_VERIFICATION
-  EMAIL_VERIFICATION
-  LOGIN
-  PASSWORD_RESET
 }
 
 model Referral {
@@ -1088,7 +1141,7 @@ model Admin {
   password  String
   email     String   @unique
   fullName  String
-  role      AdminRole @default(SUPPORT)
+  role      String   @default("SUPPORT") // lookup: admin_role
   isActive  Boolean  @default(true)
 
   createdAt DateTime @default(now())
@@ -1105,12 +1158,12 @@ model Admin {
   @@map("admins")
 }
 
-enum AdminRole {
-  SUPER_ADMIN
-  ADMIN
-  SUPPORT
-  MODERATOR
-}
+// enum AdminRole {
+//   SUPER_ADMIN
+//   ADMIN
+//   SUPPORT
+//   MODERATOR
+// }
 
 model AdminActivityLog {
   id          String   @id @default(cuid())
@@ -1132,7 +1185,7 @@ model AccountAction {
   id          String   @id @default(cuid())
   userId      String
   adminId     String
-  action      AccountActionType
+  action      String   // lookup: account_action_type
   reason      String
   notes       String?
   metadata    Json?
@@ -1146,22 +1199,22 @@ model AccountAction {
   @@map("account_actions")
 }
 
-enum AccountActionType {
-  SUSPEND
-  UNSUSPEND
-  BAN
-  UNBAN
-  VERIFY
-  WARN
-  KYC_APPROVE
-  KYC_REJECT
-}
+// enum AccountActionType {
+//   SUSPEND
+//   UNSUSPEND
+//   BAN
+//   UNBAN
+//   VERIFY
+//   WARN
+//   KYC_APPROVE
+//   KYC_REJECT
+// }
 
 model PropertyApproval {
   id          String   @id @default(cuid())
   propertyId  String
   adminId     String
-  status      ApprovalStatus
+  status      String   // lookup: approval_status
   comments    String?
   changes     Json?
 
@@ -1173,12 +1226,12 @@ model PropertyApproval {
   @@map("property_approvals")
 }
 
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  REQUIRES_CHANGES
-}
+// enum ApprovalStatus {
+//   PENDING
+//   APPROVED
+//   REJECTED
+//   REQUIRES_CHANGES
+// }
 
 // ============================================================================
 // SUPPORT & COMPLAINTS
@@ -1188,12 +1241,12 @@ model Complaint {
   id          String   @id @default(cuid())
   userId      String
   subject     String
-  category    ComplaintCategory
-  priority    Priority @default(NORMAL)
+  category    String   // lookup: complaint_category
+  priority    String   @default("NORMAL") // lookup: priority
   description String
   attachments String[]
 
-  status      ComplaintStatus @default(OPEN)
+  status      String   @default("OPEN") // lookup: complaint_status
   assignedToId String?
   resolvedById String?
   resolution  String?
@@ -1212,40 +1265,40 @@ model Complaint {
   @@map("complaints")
 }
 
-enum ComplaintCategory {
-  BOOKING_ISSUE
-  PAYMENT_PROBLEM
-  PROPERTY_ISSUE
-  HOST_BEHAVIOR
-  GUEST_BEHAVIOR
-  ACCOUNT_ISSUE
-  TECHNICAL_ISSUE
-  REFUND_REQUEST
-  OTHER
-}
+// enum ComplaintCategory {
+//   BOOKING_ISSUE
+//   PAYMENT_PROBLEM
+//   PROPERTY_ISSUE
+//   HOST_BEHAVIOR
+//   GUEST_BEHAVIOR
+//   ACCOUNT_ISSUE
+//   TECHNICAL_ISSUE
+//   REFUND_REQUEST
+//   OTHER
+// }
 
-enum ComplaintStatus {
-  OPEN
-  IN_PROGRESS
-  WAITING_USER
-  WAITING_ADMIN
-  RESOLVED
-  CLOSED
-  ESCALATED
-}
+// enum ComplaintStatus {
+//   OPEN
+//   IN_PROGRESS
+//   WAITING_USER
+//   WAITING_ADMIN
+//   RESOLVED
+//   CLOSED
+//   ESCALATED
+// }
 
-enum Priority {
-  LOW
-  NORMAL
-  HIGH
-  URGENT
-}
+// enum Priority {
+//   LOW
+//   NORMAL
+//   HIGH
+//   URGENT
+// }
 
 model ComplaintMessage {
   id          String   @id @default(cuid())
   complaintId String
   senderId    String
-  senderType  SenderType
+  senderType  String   // lookup: sender_type
   message     String
   attachments String[]
   isInternal  Boolean  @default(false)
@@ -1257,10 +1310,10 @@ model ComplaintMessage {
   @@map("complaint_messages")
 }
 
-enum SenderType {
-  USER
-  ADMIN
-}
+// enum SenderType {
+//   USER
+//   ADMIN
+// }
 
 // ============================================================================
 // CHAT SYSTEM
@@ -1269,7 +1322,7 @@ enum SenderType {
 model ChatConversation {
   id          String   @id @default(cuid())
   userId      String
-  status      ChatStatus @default(ACTIVE)
+  status      String   @default("ACTIVE") // lookup: chat_status
 
   lastMessageAt DateTime?
   metadata    Json?
@@ -1284,17 +1337,17 @@ model ChatConversation {
   @@map("chat_conversations")
 }
 
-enum ChatStatus {
-  ACTIVE
-  CLOSED
-  ARCHIVED
-}
+// enum ChatStatus {
+//   ACTIVE
+//   CLOSED
+//   ARCHIVED
+// }
 
 model ChatMessage {
   id             String   @id @default(cuid())
   conversationId String
   senderId       String
-  senderType     SenderType
+  senderType     String   // lookup: sender_type
   message        String
   attachments    String[]
   isRead         Boolean  @default(false)
@@ -1336,8 +1389,8 @@ model Transaction {
 
   description   String
   amount        Float
-  status        TransactionStatus @default(PAID)
-  type          TransactionType
+  status        String         @default("PAID") // lookup: transaction_status
+  type          String         // lookup: transaction_type
 
   paymentMethod String
 
@@ -1353,17 +1406,17 @@ model Transaction {
   @@map("transactions")
 }
 
-enum TransactionStatus {
-  PAID
-  PENDING
-  REFUNDED
-  FAILED
-}
+// enum TransactionStatus {
+//   PAID
+//   PENDING
+//   REFUNDED
+//   FAILED
+// }
 
-enum TransactionType {
-  PAYMENT
-  REFUND
-}
+// enum TransactionType {
+//   PAYMENT
+//   REFUND
+// }
 
 model SystemMetric {
   id          String   @id @default(cuid())
@@ -1383,10 +1436,10 @@ model SystemMetric {
 model SupportTicket {
   id              String        @id @default(cuid())
   userId          String
-  category        TicketCategory
+  category        String        // lookup: ticket_category
   subject         String
-  priority        TicketPriority @default(MEDIUM)
-  status          TicketStatus   @default(OPEN)
+  priority        String        @default("MEDIUM") // lookup: ticket_priority
+  status          String        @default("OPEN") // lookup: ticket_status
 
   bookingId       String?
 
@@ -1400,11 +1453,34 @@ model SupportTicket {
   @@map("support_tickets")
 }
 
+// enum TicketCategory {
+//   BOOKING_ISSUE
+//   PAYMENT
+//   ACCOUNT
+//   TECHNICAL
+//   GENERAL
+// }
+
+// enum TicketPriority {
+//   LOW
+//   MEDIUM
+//   HIGH
+//   URGENT
+// }
+
+// enum TicketStatus {
+//   OPEN
+//   IN_PROGRESS
+//   WAITING_USER
+//   RESOLVED
+//   CLOSED
+// }
+
 model SupportMessage {
   id              String   @id @default(cuid())
   ticketId        String
   senderId        String
-  senderRole      MessageSenderRole
+  senderRole      String   // lookup: message_sender_role
   content         String
   attachments     String[]
 
@@ -1415,34 +1491,11 @@ model SupportMessage {
   @@map("support_messages")
 }
 
-enum TicketCategory {
-  BOOKING_ISSUE
-  PAYMENT
-  ACCOUNT
-  TECHNICAL
-  GENERAL
-}
-
-enum TicketPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum TicketStatus {
-  OPEN
-  IN_PROGRESS
-  WAITING_USER
-  RESOLVED
-  CLOSED
-}
-
-enum MessageSenderRole {
-  USER
-  SUPPORT
-  SYSTEM
-}
+// enum MessageSenderRole {
+//   USER
+//   SUPPORT
+//   SYSTEM
+// }
 
 // ============================================================================
 // PROPERTY KYC VERIFICATION (Host Console UI)
@@ -1470,7 +1523,7 @@ model PropertyKYC {
   utilityDocument String?  // Utility bill
 
   // Verification Status
-  verificationStatus KycStatus @default(PENDING)
+  verificationStatus String   @default("PENDING") // lookup: kyc_status
   verifiedAt      DateTime?
   verifiedBy      String?  // Admin ID
   rejectionReason String?  @db.Text
@@ -1496,7 +1549,7 @@ model Payout {
   // Payout Details
   amount          Float
   currency        String   @default("QAR")
-  status          PayoutStatus @default(SCHEDULED)
+  status          String   @default("SCHEDULED") // lookup: payout_status
   method          String?  // Bank Transfer, Mobile Payment, etc.
 
   // Period
@@ -1527,10 +1580,10 @@ model Payout {
   @@map("payouts")
 }
 
-enum PayoutStatus {
-  SCHEDULED
-  PROCESSING
-  PAID
-  FAILED
-  CANCELLED
-}
+// enum PayoutStatus {
+//   SCHEDULED
+//   PROCESSING
+//   PAID
+//   FAILED
+//   CANCELLED
+// }

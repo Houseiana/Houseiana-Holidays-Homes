@@ -297,6 +297,7 @@ export async function POST(request: NextRequest) {
     // Create property in database with KYC only if there's actual data
     const property = await (prisma as any).property.create({
       data: {
+        // User Backend fields
         ownerId: userId,
         ownerType: 'INDIVIDUAL', // Default to individual
         title,
@@ -331,6 +332,27 @@ export async function POST(request: NextRequest) {
         allowSmoking: allowSmoking || false,
         allowEvents: allowEvents || false,
         status: status || 'DRAFT',
+
+        // Administration Backend duplicate fields (required for unified schema)
+        host_id: userId, // Same as ownerId
+        property_type: propertyType?.toLowerCase() || 'villa',
+        base_price: pricePerNight,
+        approval_status: 'pending',
+        street_address: address,
+        zip_code: zipCode || null,
+        max_guests: guests || 1,
+        currency: 'USD',
+        cleaning_fee: cleaningFee || 0,
+        service_fee: serviceFee || 0,
+        weekly_discount: weeklyDiscount || 0,
+        monthly_discount: monthlyDiscount || 0,
+        minimum_nights: minNights || 1,
+        maximum_nights: maxNights || 365,
+        check_in_time: checkInTime || '15:00',
+        check_out_time: checkOutTime || '11:00',
+        allow_pets: allowPets || false,
+        allow_smoking: allowSmoking || false,
+        allow_parties: allowEvents || false,
         ...(hasKycData && {
           kyc: {
             create: {

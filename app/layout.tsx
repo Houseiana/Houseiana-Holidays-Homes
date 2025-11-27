@@ -33,7 +33,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      clerkJSUrl={process.env.NEXT_PUBLIC_CLERK_JS_URL}
+    >
       <html lang="en">
         <body className={`${inter.variable} font-sans antialiased`}>
           {children}
