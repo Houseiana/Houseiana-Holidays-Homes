@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useUser, SignOutButton } from '@clerk/nextjs';
 import {
   Search, Globe, Menu, User, Heart, Star, ChevronLeft, ChevronRight,
   Home, Building, Palmtree, Waves, Castle, Tent, Ship,
@@ -381,26 +381,44 @@ export default function HouseianaHome() {
                   className="flex items-center gap-3 border border-gray-300 rounded-full p-1 pl-3 hover:shadow-md transition-shadow"
                 >
                   <Menu className="w-4 h-4 text-gray-600" />
-                  <div className="bg-gray-500 rounded-full p-1.5">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
+                  {isSignedIn && user ? (
+                    <div className="bg-teal-500 rounded-full w-8 h-8 flex items-center justify-center">
+                      <span className="text-white text-sm font-semibold">
+                        {user.firstName?.charAt(0).toUpperCase() || user.emailAddresses[0]?.emailAddress.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-500 rounded-full p-1.5">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                  )}
                 </button>
 
                 {showUserMenu && (
                   <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-50 py-2">
                     {isSignedIn ? (
                       <>
-                        <Link href="/client-dashboard">
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">Dashboard</button>
-                        </Link>
-                        <Link href="/saved-properties">
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50">Wishlists</button>
-                        </Link>
-                        <div className="border-t border-gray-200 my-2"></div>
-                        <Link href="/host-dashboard/add-listing">
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50">List your home</button>
-                        </Link>
-                        <button className="w-full text-left px-4 py-3 hover:bg-gray-50">Help Center</button>
+                        <div className="border-b border-gray-200 pb-2">
+                          <Link href="/client-dashboard">
+                            <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">Dashboard</button>
+                          </Link>
+                          <Link href="/saved-properties">
+                            <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">Wishlists</button>
+                          </Link>
+                        </div>
+                        <div className="border-b border-gray-200 py-2">
+                          <Link href="/host-dashboard/add-listing">
+                            <button className="w-full text-left px-4 py-3 hover:bg-gray-50">List your home</button>
+                          </Link>
+                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50">Help Center</button>
+                        </div>
+                        <div className="pt-2">
+                          <SignOutButton>
+                            <button className="w-full text-left px-4 py-3 hover:bg-gray-50 text-gray-600">
+                              Log out
+                            </button>
+                          </SignOutButton>
+                        </div>
                       </>
                     ) : (
                       <>
@@ -840,7 +858,15 @@ export default function HouseianaHome() {
             onClick={() => router.push(isSignedIn ? '/client-dashboard' : '/sign-in')}
             className="flex flex-col items-center gap-1 text-gray-500"
           >
-            <User className="w-6 h-6" />
+            {isSignedIn && user ? (
+              <div className="w-6 h-6 bg-teal-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-semibold">
+                  {user.firstName?.charAt(0).toUpperCase() || user.emailAddresses[0]?.emailAddress.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
+            ) : (
+              <User className="w-6 h-6" />
+            )}
             <span className="text-xs">{isSignedIn ? 'Profile' : 'Log in'}</span>
           </button>
         </div>
