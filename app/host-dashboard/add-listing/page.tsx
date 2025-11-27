@@ -3,443 +3,332 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useAuthStore } from '@/lib/stores/auth-store';
-import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import {
-  ArrowLeft,
-  Upload,
-  MapPin,
-  Users,
-  DollarSign,
-  CheckCircle,
-  Plus,
-  Minus,
-  X,
-  Camera
+  Home, ChevronLeft, ChevronRight, X, Upload, Plus, Minus, Wifi, Tv, Car, Utensils, Wind, Waves, Dumbbell, PawPrint, Coffee, Flame, Shirt, Snowflake, MapPin, Camera, DollarSign, Calendar, Check, Building, Castle, TreePine, Tent, Ship, Warehouse, Hotel, Home as HomeIcon, Users, Bed, Bath, Star, Shield, Clock, AlertCircle, Mountain, Palmtree, Building2, Landmark, Briefcase, Droplets, Fan, Lock, Sun, Cigarette, PartyPopper, Info
 } from 'lucide-react';
 
-// Dynamically import GoogleMapsPicker to avoid SSR issues
-const GoogleMapsPicker = dynamic(() => import('@/components/GoogleMapsPicker'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-[300px] sm:h-[400px] lg:h-[450px] bg-gray-50 border-2 border-gray-200 rounded-xl flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-indigo-600 mx-auto mb-2 sm:mb-4"></div>
-        <p className="text-gray-600 font-medium text-sm sm:text-base">Loading map...</p>
-      </div>
-    </div>
-  ),
-});
-
 interface PropertyFormData {
-  // Basic Information
-  title: string;
-  description: string;
+  // Step 0: Property Type
   propertyType: string;
 
-  // Location
-  address: {
-    building: string;
-    streetNumber: string;
-    street: string;
-    zone: string;
-    district: string;
-    city: string;
-    state: string;
-    country: string;
-    zipCode: string;
-  };
-  latitude?: number;
-  longitude?: number;
+  // Step 1: Place Type
+  placeType: string;
 
-  // Property Details
+  // Step 2: Location
+  country: string;
+  street: string;
+  apt: string;
+  city: string;
+  state: string;
+  postalCode: string;
+
+  // Step 3: Basics
+  guests: number;
   bedrooms: number;
+  beds: number;
   bathrooms: number;
-  maxGuests: number;
 
-  // Pricing
-  basePrice: number;
-  cleaningFee: number;
-  serviceFee: number;
-
-  // Amenities
+  // Step 4: Amenities
   amenities: string[];
 
-  // Photos
+  // Step 5: Photos
   photos: File[];
 
-  // House Rules
-  checkIn: string;
-  checkOut: string;
+  // Step 6: Title
+  title: string;
+
+  // Step 7: Description
+  description: string;
+  highlights: string[];
+
+  // Step 8: Pricing
+  basePrice: number;
+
+  // Step 9: Discounts
+  weeklyDiscount: number;
+  monthlyDiscount: number;
+  newListingDiscount: number;
+
+  // Step 10: Legal
+  instantBook: boolean;
+  securityCamera: boolean;
+  noiseMonitor: boolean;
+  weapons: boolean;
+
+  // Step 11: House Rules
   allowPets: boolean;
   allowSmoking: boolean;
   allowParties: boolean;
-
-  // KYC
-  kyc: {
-    hostName: string;
-    hostIdType: string;
-    hostIdNumber: string;
-    hostIdExpiry: string;
-    hostDob: string;
-    companyName: string;
-    crNumber: string;
-    crExpiry: string;
-    deedDocument?: File;
-    idDocument?: File;
-    utilityDocument?: File;
-    verificationStatus: 'pending' | 'submitted' | 'verified';
-  };
+  checkInTime: string;
+  checkOutTime: string;
 }
-
-const STEPS = [
-  { id: 1, title: 'Property Type', description: 'Tell us about your place' },
-  { id: 2, title: 'Location', description: 'Where is your property located?' },
-  { id: 3, title: 'Property Details', description: 'Basic info about your space' },
-  { id: 4, title: 'Amenities', description: 'What does your place offer?' },
-  { id: 5, title: 'Photos', description: 'Show off your space' },
-  { id: 6, title: 'Pricing', description: 'Set your nightly rate' },
-  { id: 7, title: 'House Rules', description: 'Set expectations for guests' },
-  { id: 8, title: 'KYC & Ownership', description: 'Verify host and property' },
-  { id: 9, title: 'Review', description: 'Review and publish' }
-];
 
 export default function AddListingPage() {
   const router = useRouter();
   const { getToken, userId, isLoaded, isSignedIn } = useAuth();
   const { user: clerkUser } = useUser();
-  const { user } = useAuthStore();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [formData, setFormData] = useState<PropertyFormData>({
-    title: '',
-    description: '',
+
+  const [currentStep, setCurrentStep] = useState(0);
+  const [listing, setListing] = useState<PropertyFormData>({
     propertyType: '',
-    address: {
-      building: '',
-      streetNumber: '',
-      street: '',
-      zone: '',
-      district: '',
-      city: '',
-      state: '',
-      country: 'Qatar',
-      zipCode: ''
-    },
-    bedrooms: 1,
+    placeType: '',
+    country: 'Qatar',
+    street: '',
+    apt: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    guests: 4,
+    bedrooms: 2,
+    beds: 2,
     bathrooms: 1,
-    maxGuests: 2,
-    basePrice: 100,
-    cleaningFee: 25,
-    serviceFee: 15,
     amenities: [],
     photos: [],
-    checkIn: '15:00',
-    checkOut: '11:00',
+    title: '',
+    description: '',
+    highlights: [],
+    basePrice: 100,
+    weeklyDiscount: 10,
+    monthlyDiscount: 20,
+    newListingDiscount: 20,
+    instantBook: true,
+    securityCamera: false,
+    noiseMonitor: false,
+    weapons: false,
     allowPets: false,
     allowSmoking: false,
     allowParties: false,
-    kyc: {
-      hostName: '',
-      hostIdType: '',
-      hostIdNumber: '',
-      hostIdExpiry: '',
-      hostDob: '',
-      companyName: '',
-      crNumber: '',
-      crExpiry: '',
-      verificationStatus: 'pending'
-    }
+    checkInTime: '3:00 PM',
+    checkOutTime: '11:00 AM',
   });
 
+  const steps = [
+    { id: 0, phase: 1, title: 'Tell us about your place', subtitle: 'Which of these best describes your place?' },
+    { id: 1, phase: 1, title: 'What type of place will guests have?', subtitle: 'Choose the type of space guests will have access to' },
+    { id: 2, phase: 1, title: "Where's your place located?", subtitle: 'Your address is only shared with guests after they book' },
+    { id: 3, phase: 1, title: 'Share some basics about your place', subtitle: 'You\'ll add more details later, like bed types' },
+    { id: 4, phase: 2, title: 'Tell guests what your place has to offer', subtitle: 'You can add more amenities after you publish' },
+    { id: 5, phase: 2, title: 'Add some photos of your place', subtitle: 'You\'ll need 5 photos to get started. You can add more or make changes later' },
+    { id: 6, phase: 3, title: "Now, let's give your place a title", subtitle: 'Short titles work best. Have fun with it—you can always change it later' },
+    { id: 7, phase: 3, title: 'Create your description', subtitle: 'Share what makes your place special' },
+    { id: 8, phase: 3, title: 'Now, set your price', subtitle: 'You can change it anytime' },
+    { id: 9, phase: 3, title: 'Add discounts', subtitle: 'Help your place stand out to get booked faster and earn your first reviews' },
+    { id: 10, phase: 3, title: 'Just a few last questions...', subtitle: 'These help us personalize your hosting experience' },
+    { id: 11, phase: 3, title: 'Set your house rules', subtitle: 'Guests must agree to your rules before they book' },
+    { id: 12, phase: 3, title: 'Review your listing', subtitle: 'Here\'s what we\'ll show to guests. Make sure everything looks good' },
+  ];
+
+  const phases = [
+    { id: 1, title: 'Tell us about your place', steps: [0, 1, 2, 3] },
+    { id: 2, title: 'Make it stand out', steps: [4, 5] },
+    { id: 3, title: 'Finish up and publish', steps: [6, 7, 8, 9, 10, 11, 12] },
+  ];
+
   const propertyTypes = [
-    { id: 'house', name: 'House', icon: '🏠', description: 'Entire place' },
-    { id: 'apartment', name: 'Apartment', icon: '🏢', description: 'Entire place' },
-    { id: 'villa', name: 'Villa', icon: '🏡', description: 'Luxury property' },
-    { id: 'condo', name: 'Condo', icon: '🏘️', description: 'Condominium' },
-    { id: 'townhouse', name: 'Townhouse', icon: '🏘️', description: 'Multi-story home' },
-    { id: 'studio', name: 'Studio', icon: '🏠', description: 'Open floor plan' },
-    { id: 'loft', name: 'Loft', icon: '🏢', description: 'Industrial style' },
-    { id: 'cabin', name: 'Cabin', icon: '🏕️', description: 'Rustic retreat' },
-    { id: 'cottage', name: 'Cottage', icon: '🏡', description: 'Cozy getaway' },
-    { id: 'hotel_room', name: 'Hotel Room', icon: '🏨', description: 'Private room' }
+    { id: 'house', icon: HomeIcon, label: 'House' },
+    { id: 'apartment', icon: Building, label: 'Apartment' },
+    { id: 'barn', icon: Warehouse, label: 'Barn' },
+    { id: 'bnb', icon: Coffee, label: 'Bed & breakfast' },
+    { id: 'boat', icon: Ship, label: 'Boat' },
+    { id: 'cabin', icon: TreePine, label: 'Cabin' },
+    { id: 'camper', icon: Car, label: 'Camper/RV' },
+    { id: 'casa', icon: Castle, label: 'Casa particular' },
+    { id: 'castle', icon: Castle, label: 'Castle' },
+    { id: 'cave', icon: Mountain, label: 'Cave' },
+    { id: 'container', icon: Building2, label: 'Container' },
+    { id: 'cycladic', icon: Home, label: 'Cycladic home' },
+    { id: 'dammuso', icon: Home, label: 'Dammuso' },
+    { id: 'dome', icon: Home, label: 'Dome' },
+    { id: 'farm', icon: TreePine, label: 'Farm' },
+    { id: 'guesthouse', icon: Home, label: 'Guesthouse' },
+    { id: 'hotel', icon: Hotel, label: 'Hotel' },
+    { id: 'houseboat', icon: Ship, label: 'Houseboat' },
+    { id: 'kezhan', icon: Landmark, label: 'Kezhan' },
+    { id: 'minsu', icon: Home, label: 'Minsu' },
+    { id: 'riad', icon: Castle, label: 'Riad' },
+    { id: 'ryokan', icon: Home, label: 'Ryokan' },
+    { id: 'tent', icon: Tent, label: 'Tent' },
+    { id: 'tiny', icon: Home, label: 'Tiny home' },
+    { id: 'tower', icon: Building, label: 'Tower' },
+    { id: 'treehouse', icon: TreePine, label: 'Treehouse' },
+    { id: 'trullo', icon: Home, label: 'Trullo' },
+    { id: 'villa', icon: Castle, label: 'Villa' },
+    { id: 'windmill', icon: Fan, label: 'Windmill' },
+    { id: 'yurt', icon: Tent, label: 'Yurt' },
   ];
 
-  const qatarZonesDistricts: Record<string, { city: string; districts: string[] }> = {
-    '1': { city: 'Doha', districts: ['Al Jasrah'] },
-    '2': { city: 'Doha', districts: ['Al Bidda'] },
-    '3': { city: 'Doha', districts: ['Fereej Mohamed Bin Jasim', 'Mushayrib'] },
-    '4': { city: 'Doha', districts: ['Mushayrib'] },
-    '5': { city: 'Doha', districts: ['Al Najada', 'Barahat Al Jufairi', 'Fereej Al Asmakh'] },
-    '6': { city: 'Doha', districts: ['Old Al Ghanim'] },
-    '7': { city: 'Doha', districts: ['Al Souq'] },
-    '10': { city: 'Doha', districts: ['Wadi Al Sail'] },
-    '11': { city: 'Doha', districts: ['Rumeilah'] },
-    '12': { city: 'Doha', districts: ['Al Bidda'] },
-    '13': { city: 'Doha', districts: ['Mushayrib'] },
-    '14': { city: 'Doha', districts: ['Fereej Abdel Aziz'] },
-    '15': { city: 'Doha', districts: ['Ad Dawhah al Jadidah'] },
-    '16': { city: 'Doha', districts: ['Old Al Ghanim'] },
-    '17': { city: 'Doha', districts: ['Al Rufaa', 'Old Al Hitmi'] },
-    '18': { city: 'Doha', districts: ['As Salatah', 'Al Mirqab'] },
-    '19': { city: 'Doha', districts: ['Doha Port'] },
-    '20': { city: 'Doha', districts: ['Wadi Al Sail'] },
-    '21': { city: 'Doha', districts: ['Rumeilah'] },
-    '22': { city: 'Doha', districts: ['Fereej Bin Mahmoud'] },
-    '23': { city: 'Doha', districts: ['Fereej Bin Mahmoud'] },
-    '24': { city: 'Doha', districts: ['Rawdat Al Khail'] },
-    '25': { city: 'Doha', districts: ['Fereej Bin Durham', 'Al Mansoura'] },
-    '26': { city: 'Doha', districts: ['Najma'] },
-    '27': { city: 'Doha', districts: ['Umm Ghuwailina'] },
-    '28': { city: 'Doha', districts: ['Al Khulaifat', 'Ras Abu Aboud'] },
-    '30': { city: 'Doha', districts: ['Duhail'] },
-    '31': { city: 'Doha', districts: ['Umm Lekhba'] },
-    '32': { city: 'Doha', districts: ['Madinat Khalifa North', 'Dahl Al Hamam'] },
-    '33': { city: 'Doha', districts: ['Al Markhiya'] },
-    '34': { city: 'Doha', districts: ['Madinat Khalifa South'] },
-    '35': { city: 'Doha', districts: ['Fereej Kulaib'] },
-    '36': { city: 'Doha', districts: ['Al Messila'] },
-    '37': { city: 'Doha', districts: ['Fereej Bin Omran', 'New Al Hitmi', 'Hamad Medical City'] },
-    '38': { city: 'Doha', districts: ['Al Sadd'] },
-    '39': { city: 'Doha', districts: ['Al Sadd', 'New Al Mirqab', 'Fereej Al Nasr'] },
-    '40': { city: 'Doha', districts: ['New Salatah'] },
-    '41': { city: 'Doha', districts: ['Nuaija'] },
-    '42': { city: 'Doha', districts: ['Al Hilal'] },
-    '43': { city: 'Doha', districts: ['Nuaija'] },
-    '44': { city: 'Doha', districts: ['Nuaija'] },
-    '45': { city: 'Doha', districts: ['Old Airport'] },
-    '46': { city: 'Doha', districts: ['Al Thumama'] },
-    '47': { city: 'Doha', districts: ['Al Thumama'] },
-    '48': { city: 'Doha', districts: ['Doha International Airport'] },
-    '49': { city: 'Doha', districts: ['Doha International Airport'] },
-    '50': { city: 'Doha', districts: ['Zone 50'] },
-    '57': { city: 'Doha', districts: ['Industrial Area'] },
-    '58': { city: 'Doha', districts: ['Zone 58'] },
-    '61': { city: 'Doha', districts: ['Al Dafna', 'Al Qassar'] },
-    '63': { city: 'Doha', districts: ['Onaiza'] },
-    '64': { city: 'Doha', districts: ['Lejbailat'] },
-    '65': { city: 'Doha', districts: ['Onaiza'] },
-    '66': { city: 'Doha', districts: ['Onaiza', 'Leqtaifiya', 'Al Qassar'] },
-    '67': { city: 'Doha', districts: ['Hazm Al Markhiya'] },
-    '68': { city: 'Doha', districts: ['Jelaiah', 'Al Tarfa', 'Jeryan Nejaima'] },
-    '51': { city: 'Al Rayyan', districts: ['Al Gharrafa', 'Gharrafat Al Rayyan', 'Izghawa', 'Bani Hajer', 'Al Seej', 'Rawdat Egdaim', 'Al Themaid'] },
-    '52': { city: 'Al Rayyan', districts: ['Al Luqta', 'Lebday', 'Old Al Rayyan', 'Al Shagub', 'Fereej Al Zaeem'] },
-    '53': { city: 'Al Rayyan', districts: ['New Al Rayyan', 'Al Wajbah', 'Muaither'] },
-    '54': { city: 'Al Rayyan', districts: ['Fereej Al Amir', 'Luaib', 'Muraikh', 'Baaya', 'Mehairja', 'Fereej Al Soudan'] },
-    '55': { city: 'Al Rayyan', districts: ['Fereej Al Soudan', 'Al Waab', 'Al Aziziya', 'New Fereej Al Ghanim', 'Fereej Al Murra', 'Fereej Al Manaseer', 'Bu Sidra', 'Muaither', 'Al Sailiya', 'Al Mearad'] },
-    '56': { city: 'Al Rayyan', districts: ['Fereej Al Asiri', 'New Fereej Al Khulaifat', 'Bu Samra', 'Al Mamoura', 'Abu Hamour', 'Mesaimeer', 'Ain Khaled', 'Umm Al Seneem'] },
-    '81': { city: 'Al Rayyan', districts: ['Mebaireek'] },
-    '83': { city: 'Al Rayyan', districts: ['Al Karaana'] },
-    '96': { city: 'Al Rayyan', districts: ['Abu Samra'] },
-    '97': { city: 'Al Rayyan', districts: ['Sawda Natheel'] },
-    '69': { city: 'Al Daayen', districts: ['Jabal Thuaileb', 'Al Kharayej', 'Lusail', 'Al Egla', 'Wadi Al Banat'] },
-    '70': { city: 'Al Daayen', districts: ['Leabaib', 'Al Ebb', 'Jeryan Jenaihat', 'Al Kheesa', 'Rawdat Al Hamama', 'Wadi Al Wasaah', 'Al Sakhama', 'Al Masrouhiya', 'Wadi Lusail', 'Lusail', 'Umm Qarn', 'Al Daayen'] },
-    '71': { city: 'Umm Salal', districts: ['Bu Fasseela', 'Izghawa', 'Al Kharaitiyat', 'Umm Salal Ali', 'Umm Salal Mohammed', 'Saina Al-Humaidi', 'Umm Al Amad', 'Umm Ebairiya'] },
-    '74': { city: 'Al Khor', districts: ['Simaisma', 'Al Jeryan', 'Al Khor City'] },
-    '75': { city: 'Al Khor', districts: ['Al Thakhira', 'Ras Laffan', 'Umm Birka'] },
-    '76': { city: 'Al Khor', districts: ['Al Ghuwariyah'] },
-    '77': { city: 'Al Shamal', districts: ['Ain Sinan', 'Madinat Al Kaaban', 'Fuwayrit'] },
-    '78': { city: 'Al Shamal', districts: ['Abu Dhalouf', 'Zubarah'] },
-    '79': { city: 'Al Shamal', districts: ['Madinat ash Shamal', 'Ar Ru\'ays'] },
-    '72': { city: 'Al Shahaniya', districts: ['Al Utouriya'] },
-    '73': { city: 'Al Shahaniya', districts: ['Al Jemailiya'] },
-    '80': { city: 'Al Shahaniya', districts: ['Al-Shahaniya City'] },
-    '82': { city: 'Al Shahaniya', districts: ['Rawdat Rashed'] },
-    '84': { city: 'Al Shahaniya', districts: ['Umm Bab'] },
-    '85': { city: 'Al Shahaniya', districts: ['Al Nasraniya'] },
-    '86': { city: 'Al Shahaniya', districts: ['Dukhan'] },
-    '90': { city: 'Al Wakrah', districts: ['Al Wakrah'] },
-    '91': { city: 'Al Wakrah', districts: ['Al Thumama', 'Al Wukair', 'Al Mashaf'] },
-    '92': { city: 'Al Wakrah', districts: ['Mesaieed'] },
-    '93': { city: 'Al Wakrah', districts: ['Mesaieed Industrial Area'] },
-    '94': { city: 'Al Wakrah', districts: ['Shagra'] },
-    '95': { city: 'Al Wakrah', districts: ['Al Kharrara'] },
-    '98': { city: 'Al Wakrah', districts: ['Khor Al Adaid'] }
-  };
-
-  const amenities = [
-    { id: 'wifi', name: 'WiFi', icon: '📶' },
-    { id: 'kitchen', name: 'Kitchen', icon: '🍳' },
-    { id: 'washer', name: 'Washer', icon: '🧺' },
-    { id: 'dryer', name: 'Dryer', icon: '🌪️' },
-    { id: 'air_conditioning', name: 'Air conditioning', icon: '❄️' },
-    { id: 'heating', name: 'Heating', icon: '🔥' },
-    { id: 'workspace', name: 'Workspace', icon: '💻' },
-    { id: 'tv', name: 'TV', icon: '📺' },
-    { id: 'parking', name: 'Free parking', icon: '🅿️' },
-    { id: 'pool', name: 'Pool', icon: '🏊' },
-    { id: 'gym', name: 'Gym', icon: '🏋️' },
-    { id: 'hot_tub', name: 'Hot tub', icon: '🛁' },
-    { id: 'security', name: 'Security', icon: '🚪' },
-    { id: 'bbq', name: 'BBQ grill', icon: '🔥' },
-    { id: 'jacuzzi', name: 'Jacuzzi', icon: '🛀' },
-    { id: 'private_garden', name: 'Private Garden', icon: '🌿' },
-    { id: 'rooftop', name: 'RoofTop', icon: '🏢' },
-    { id: 'swing', name: 'Swing', icon: '🪢' },
-    { id: 'coffee_maker', name: 'Coffee Maker', icon: '☕' },
-    { id: 'microwave', name: 'Microwave', icon: '🔳' }
+  const placeTypes = [
+    {
+      id: 'entire',
+      icon: HomeIcon,
+      title: 'An entire place',
+      description: 'Guests have the whole place to themselves.'
+    },
+    {
+      id: 'room',
+      icon: Bed,
+      title: 'A room',
+      description: 'Guests have their own room in a home, plus access to shared spaces.'
+    },
+    {
+      id: 'shared',
+      icon: Users,
+      title: 'A shared room',
+      description: 'Guests sleep in a room or common area that may be shared with you or others.'
+    },
   ];
 
-  const updateFormData = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const amenitiesList = {
+    favorites: [
+      { id: 'wifi', icon: Wifi, label: 'Wifi' },
+      { id: 'tv', icon: Tv, label: 'TV' },
+      { id: 'kitchen', icon: Utensils, label: 'Kitchen' },
+      { id: 'washer', icon: Shirt, label: 'Washer' },
+      { id: 'parking', icon: Car, label: 'Free parking on premises' },
+      { id: 'ac', icon: Snowflake, label: 'Air conditioning' },
+      { id: 'workspace', icon: Briefcase, label: 'Dedicated workspace' },
+      { id: 'pool', icon: Waves, label: 'Pool' },
+    ],
+    standout: [
+      { id: 'hottub', icon: Waves, label: 'Hot tub' },
+      { id: 'patio', icon: Sun, label: 'Patio or balcony' },
+      { id: 'bbq', icon: Flame, label: 'BBQ grill' },
+      { id: 'firepit', icon: Flame, label: 'Fire pit' },
+      { id: 'pooltable', icon: Star, label: 'Pool table' },
+      { id: 'fireplace', icon: Flame, label: 'Indoor fireplace' },
+      { id: 'piano', icon: Star, label: 'Piano' },
+      { id: 'gym', icon: Dumbbell, label: 'Exercise equipment' },
+      { id: 'lake', icon: Waves, label: 'Lake access' },
+      { id: 'beach', icon: Palmtree, label: 'Beach access' },
+      { id: 'ski', icon: Mountain, label: 'Ski-in/Ski-out' },
+      { id: 'shower', icon: Droplets, label: 'Outdoor shower' },
+    ],
+    safety: [
+      { id: 'smoke_alarm', icon: AlertCircle, label: 'Smoke alarm' },
+      { id: 'first_aid', icon: Shield, label: 'First aid kit' },
+      { id: 'fire_extinguisher', icon: Shield, label: 'Fire extinguisher' },
+      { id: 'co_alarm', icon: AlertCircle, label: 'Carbon monoxide alarm' },
+    ],
   };
 
-  const updateNestedFormData = (parent: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [parent]: { ...(prev[parent as keyof PropertyFormData] as any), [field]: value }
-    }));
+  const highlights = [
+    { id: 'peaceful', label: 'Peaceful' },
+    { id: 'unique', label: 'Unique' },
+    { id: 'familyfriendly', label: 'Family-friendly' },
+    { id: 'stylish', label: 'Stylish' },
+    { id: 'central', label: 'Central' },
+    { id: 'spacious', label: 'Spacious' },
+  ];
+
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
   };
 
-  const toggleAmenity = (amenityId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      amenities: prev.amenities.includes(amenityId)
-        ? prev.amenities.filter(id => id !== amenityId)
-        : [...prev.amenities, amenityId]
-    }));
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const toggleAmenity = (id: string) => {
+    setListing({
+      ...listing,
+      amenities: listing.amenities.includes(id)
+        ? listing.amenities.filter(a => a !== id)
+        : [...listing.amenities, id]
+    });
+  };
+
+  const toggleHighlight = (id: string) => {
+    if (listing.highlights.includes(id)) {
+      setListing({ ...listing, highlights: listing.highlights.filter(h => h !== id) });
+    } else if (listing.highlights.length < 2) {
+      setListing({ ...listing, highlights: [...listing.highlights, id] });
+    }
+  };
+
+  const updateCounter = (field: keyof PropertyFormData, delta: number) => {
+    const min = field === 'bathrooms' ? 0.5 : 1;
+    const currentValue = listing[field] as number;
+    const newValue = Math.max(min, currentValue + delta);
+    setListing({ ...listing, [field]: newValue });
   };
 
   const handlePhotoUpload = (files: FileList | null) => {
     if (files) {
       const newPhotos = Array.from(files);
-      setFormData(prev => ({
+      setListing(prev => ({
         ...prev,
         photos: [...prev.photos, ...newPhotos].slice(0, 20) // Max 20 photos
       }));
     }
   };
 
-  const removePhoto = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
-    }));
-  };
-
-  const nextStep = () => {
-    if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleLoginSuccess = () => {
-    setShowLoginModal(false);
-    // After successful login, try to submit the property again
-    // We'll need to wait a moment for the auth state to update
-    setTimeout(() => {
-      handleSubmit();
-    }, 1000);
-  };
-
   const handleSubmit = async () => {
-    console.log('🔍 DEBUG: handleSubmit called');
-    console.log('🔍 DEBUG: isLoaded=', isLoaded, 'isSignedIn=', isSignedIn, 'userId=', userId);
-
-    // Check Clerk authentication
     if (!isLoaded || !isSignedIn || !userId) {
-      console.log('❌ DEBUG: Authentication check failed');
       alert('Please sign in to create a listing');
       router.push('/sign-in');
       return;
     }
 
-    console.log('🏠 Submitting property listing...');
-    console.log('🔍 DEBUG: Form data:', { title: formData.title, description: formData.description, propertyType: formData.propertyType });
+    // Validation
+    if (!listing.title || !listing.description) {
+      alert('Please provide a title and description for your property');
+      setCurrentStep(6);
+      return;
+    }
+
+    if (!listing.propertyType) {
+      alert('Please select a property type');
+      setCurrentStep(0);
+      return;
+    }
+
+    if (!listing.city || !listing.country) {
+      alert('Please provide complete location information');
+      setCurrentStep(2);
+      return;
+    }
 
     try {
-      // Validate required fields
-      if (!formData.title || !formData.description) {
-        console.log('❌ DEBUG: Title/Description validation failed');
-        alert('Please provide a title and description for your property');
-        setCurrentStep(3);
-        return;
-      }
-
-      if (!formData.propertyType) {
-        alert('Please select a property type');
-        setCurrentStep(1);
-        return;
-      }
-
-      if (!formData.address.city || !formData.address.country) {
-        alert('Please provide complete location information');
-        setCurrentStep(2);
-        return;
-      }
-
-      // Transform form data to match new Prisma schema
       const propertyData = {
-        title: formData.title,
-        description: formData.description,
-        propertyType: formData.propertyType.toUpperCase(), // HOUSE, APARTMENT, etc.
-        roomType: 'ENTIRE_PLACE', // Default to entire place
-
-        // Location
-        country: formData.address.country,
-        city: formData.address.city,
-        state: formData.address.state || formData.address.district,
-        address: `${formData.address.building ? formData.address.building + ', ' : ''}${formData.address.streetNumber} ${formData.address.street}, Zone ${formData.address.zone}, ${formData.address.district}`.trim(),
-        zipCode: formData.address.zipCode || null,
-        latitude: formData.latitude || null,
-        longitude: formData.longitude || null,
-
-        // Capacity
-        guests: formData.maxGuests,
-        bedrooms: formData.bedrooms,
-        beds: formData.bedrooms, // Assume 1 bed per bedroom
-        bathrooms: formData.bathrooms,
-
-        // Pricing
-        pricePerNight: formData.basePrice,
-        cleaningFee: formData.cleaningFee || 0,
-        serviceFee: formData.serviceFee || 0,
-        weeklyDiscount: 0,
-        monthlyDiscount: 0,
-
-        // Amenities (array of strings)
-        amenities: formData.amenities,
-
-        // Photos will be handled separately
+        title: listing.title,
+        description: listing.description,
+        propertyType: listing.propertyType.toUpperCase(),
+        roomType: listing.placeType === 'entire' ? 'ENTIRE_PLACE' : listing.placeType === 'room' ? 'PRIVATE_ROOM' : 'SHARED_ROOM',
+        country: listing.country,
+        city: listing.city,
+        state: listing.state || '',
+        address: `${listing.street}, ${listing.apt}`.trim(),
+        zipCode: listing.postalCode || null,
+        latitude: null,
+        longitude: null,
+        guests: listing.guests,
+        bedrooms: listing.bedrooms,
+        beds: listing.beds,
+        bathrooms: listing.bathrooms,
+        pricePerNight: listing.basePrice,
+        cleaningFee: 0,
+        serviceFee: 0,
+        weeklyDiscount: listing.weeklyDiscount,
+        monthlyDiscount: listing.monthlyDiscount,
+        amenities: listing.amenities,
         photos: [],
         coverPhoto: null,
-
-        // House Rules
-        checkInTime: formData.checkIn || '15:00',
-        checkOutTime: formData.checkOut || '11:00',
+        checkInTime: listing.checkInTime,
+        checkOutTime: listing.checkOutTime,
         minNights: 1,
         maxNights: null,
-        instantBook: false,
-        allowPets: formData.allowPets,
-        allowSmoking: formData.allowSmoking,
-        allowEvents: formData.allowParties,
-
-        // Status
-        status: 'DRAFT', // Save as draft initially
-
-        // KYC payload (to forward to backend/provider)
-        kyc: {
-          hostName: formData.kyc.hostName,
-          hostIdType: formData.kyc.hostIdType,
-          hostIdNumber: formData.kyc.hostIdNumber,
-          hostIdExpiry: formData.kyc.hostIdExpiry,
-          hostDob: formData.kyc.hostDob,
-          companyName: formData.kyc.companyName,
-          crNumber: formData.kyc.crNumber,
-          crExpiry: formData.kyc.crExpiry,
-          verificationStatus: formData.kyc.verificationStatus
-        }
+        instantBook: listing.instantBook,
+        allowPets: listing.allowPets,
+        allowSmoking: listing.allowSmoking,
+        allowEvents: listing.allowParties,
+        status: 'DRAFT',
       };
 
-      console.log('📤 Sending property data:', propertyData);
-
-      // Get Clerk session token for API request
       const clerkToken = await getToken();
       if (!clerkToken) {
         alert('Authentication failed. Please sign in again.');
@@ -448,916 +337,760 @@ export default function AddListingPage() {
       }
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-      const apiEndpoint = `${API_URL}/api/properties`;
+      const response = await fetch(`${API_URL}/api/properties`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${clerkToken}`
+        },
+        credentials: 'include',
+        body: JSON.stringify(propertyData),
+      });
 
-      console.log('🔍 DEBUG: API Endpoint:', apiEndpoint);
-      console.log('🔍 DEBUG: Has Clerk Token:', !!clerkToken);
-
-      let response;
-      try {
-        response = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${clerkToken}`
-          },
-          credentials: 'include',
-          body: JSON.stringify(propertyData),
-        });
-
-        console.log('🔍 DEBUG: Response status:', response.status);
-        console.log('🔍 DEBUG: Response ok:', response.ok);
-
-      } catch (fetchError: any) {
-        console.error('❌ FETCH ERROR:', fetchError);
-        throw new Error(`Network error: ${fetchError.message}. Please check your internet connection.`);
-      }
-
-      let result;
-      try {
-        result = await response.json();
-        console.log('📥 API Response:', result);
-      } catch (jsonError) {
-        console.error('❌ JSON Parse Error:', jsonError);
-        const responseText = await response.text();
-        console.error('Response text:', responseText);
-        throw new Error(`Server returned invalid JSON. Status: ${response.status}`);
-      }
+      const result = await response.json();
 
       if (response.ok && result.success) {
-        alert(`✅ Property "${formData.title}" created successfully!\n\nYou can now add photos and publish it from your dashboard.`);
+        alert(`✅ Property "${listing.title}" created successfully!`);
         router.push('/host-dashboard');
       } else {
-        throw new Error(result.error || `Failed to add property (Status: ${response.status})`);
+        throw new Error(result.error || 'Failed to add property');
       }
     } catch (error: any) {
-      console.error('❌ Error submitting property:', error);
-      console.error('❌ Error stack:', error.stack);
-      alert(`Failed to add property:\n${error.message}\n\nPlease check the console for details and try again.`);
+      console.error('Error submitting property:', error);
+      alert(`Failed to add property: ${error.message}`);
     }
   };
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {propertyTypes.map((type) => {
-              const isSelected = formData.propertyType === type.id;
+  const Counter = ({ label, sublabel, value, field, min = 1, step = 1 }: any) => (
+    <div className="flex items-center justify-between py-6 border-b border-gray-200 last:border-b-0">
+      <div>
+        <span className="text-lg text-gray-900">{label}</span>
+        {sublabel && <p className="text-sm text-gray-500">{sublabel}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => updateCounter(field, -step)}
+          disabled={value <= min}
+          className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
+            value <= min
+              ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+              : 'border-gray-400 text-gray-600 hover:border-gray-900 hover:text-gray-900'
+          }`}
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <span className="w-8 text-center text-lg">{value}</span>
+        <button
+          onClick={() => updateCounter(field, step)}
+          className="w-8 h-8 rounded-full border border-gray-400 text-gray-600 hover:border-gray-900 hover:text-gray-900 flex items-center justify-center transition-all"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
 
-              return (
-                <button
-                  key={type.id}
-                  onClick={() => updateFormData('propertyType', type.id)}
-                  className={`p-5 border-2 rounded-xl text-center transition-all hover:scale-105 ${
-                    isSelected
-                      ? 'border-indigo-500 bg-indigo-50 shadow-lg ring-2 ring-indigo-500 ring-opacity-50'
-                      : 'border-gray-200 hover:border-indigo-300 hover:shadow-md'
-                  }`}
-                >
-                  <span className="text-5xl mb-3 block">{type.icon}</span>
-                  <h3 className="font-bold text-gray-900 mb-1 text-base">{type.name}</h3>
-                  <p className="text-xs text-gray-500">{type.description}</p>
-                </button>
-              );
-            })}
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-5">
-            {/* Building and Street Number */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <MapPin className="w-5 h-5 text-indigo-600" />
-                  Building Name/Number
-                </label>
-                <input
-                  type="text"
-                  value={formData.address.building}
-                  onChange={(e) => updateNestedFormData('address', 'building', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  placeholder="e.g., Al Fardan Tower, Building 12"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Street Number</label>
-                <input
-                  type="text"
-                  value={formData.address.streetNumber}
-                  onChange={(e) => updateNestedFormData('address', 'streetNumber', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  placeholder="e.g., 123"
-                />
-              </div>
-            </div>
-
-            {/* Street Name */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Street Name</label>
-              <input
-                type="text"
-                value={formData.address.street}
-                onChange={(e) => updateNestedFormData('address', 'street', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                placeholder="e.g., Al Sadd Street, Corniche Road"
-              />
-            </div>
-
-            {/* Zone and District */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Zone</label>
-                <select
-                  value={formData.address.zone}
-                  onChange={(e) => {
-                    const selectedZone = e.target.value;
-                    updateNestedFormData('address', 'zone', selectedZone);
-                    updateNestedFormData('address', 'district', ''); // Reset district when zone changes
-                    // Auto-populate city based on zone
-                    if (selectedZone && qatarZonesDistricts[selectedZone]) {
-                      updateNestedFormData('address', 'city', qatarZonesDistricts[selectedZone].city);
-                    }
-                  }}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                >
-                  <option value="">Select a zone</option>
-                  {Object.keys(qatarZonesDistricts).sort((a, b) => Number(a) - Number(b)).map((zone) => (
-                    <option key={zone} value={zone}>Zone {zone} - {qatarZonesDistricts[zone].city}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">District</label>
-                <select
-                  value={formData.address.district}
-                  onChange={(e) => updateNestedFormData('address', 'district', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  disabled={!formData.address.zone}
-                >
-                  <option value="">Select a district</option>
-                  {formData.address.zone && qatarZonesDistricts[formData.address.zone]?.districts.map((district) => (
-                    <option key={district} value={district}>{district}</option>
-                  ))}
-                </select>
-                {!formData.address.zone && (
-                  <p className="text-xs text-gray-500 mt-1">Please select a zone first</p>
-                )}
-              </div>
-            </div>
-
-            {/* City (Auto-populated based on zone) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">City</label>
-              <select
-                value={formData.address.city}
-                onChange={(e) => updateNestedFormData('address', 'city', e.target.value)}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all ${
-                  formData.address.zone &&
-                  formData.address.city &&
-                  qatarZonesDistricts[formData.address.zone]?.city !== formData.address.city
-                    ? 'border-red-500 focus:border-red-500 bg-red-50'
-                    : 'border-gray-300 focus:border-indigo-500'
-                }`}
-              >
-                <option value="">Select a city</option>
-                <option value="Doha">Doha</option>
-                <option value="Al Rayyan">Al Rayyan</option>
-                <option value="Al Wakrah">Al Wakrah</option>
-                <option value="Al Khor">Al Khor</option>
-                <option value="Al Daayen">Al Daayen</option>
-                <option value="Umm Salal">Umm Salal</option>
-                <option value="Al Shahaniya">Al Shahaniya</option>
-                <option value="Al Shamal">Al Shamal</option>
-              </select>
-              {formData.address.zone &&
-               formData.address.city &&
-               qatarZonesDistricts[formData.address.zone]?.city !== formData.address.city ? (
-                <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                  <span>⚠️</span>
-                  <span>Error: Zone {formData.address.zone} belongs to {qatarZonesDistricts[formData.address.zone]?.city}, not {formData.address.city}. Please select the correct city.</span>
-                </p>
-              ) : formData.address.zone && formData.address.city ? (
-                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                  <span>✓</span>
-                  <span>City matches Zone {formData.address.zone}</span>
-                </p>
-              ) : formData.address.zone ? (
-                <p className="text-xs text-indigo-600 mt-1">Auto-selected based on Zone {formData.address.zone}</p>
-              ) : null}
-            </div>
-
-            {/* Country (Read-only) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Country</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.address.country}
-                  readOnly
-                  className="w-full px-4 py-3 border-2 border-indigo-200 rounded-lg bg-indigo-50 text-indigo-900 font-semibold cursor-not-allowed"
-                  placeholder="Country"
-                />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <span className="text-2xl">🇶🇦</span>
-                </div>
-              </div>
-              <p className="text-xs text-indigo-600 mt-1">Properties are only available in Qatar</p>
-            </div>
-
-            {/* Google Maps Location Picker */}
-            <div className="mt-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">Set Property Location on Map</h3>
-              <GoogleMapsPicker
-                initialAddress={
-                  formData.address.building || formData.address.street
-                    ? `${formData.address.building ? formData.address.building + ', ' : ''}${formData.address.streetNumber} ${formData.address.street}, ${formData.address.district}, ${formData.address.city}, Qatar`
-                    : undefined
-                }
-                initialCoordinates={
-                  formData.latitude && formData.longitude
-                    ? { lat: formData.latitude, lng: formData.longitude }
-                    : undefined
-                }
-                onLocationSelect={(location) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    latitude: location.lat,
-                    longitude: location.lng
-                  }));
-                }}
-              />
-            </div>
-
-            <div className="p-4 border-2 border-dashed border-indigo-200 rounded-xl bg-indigo-50/60">
-              <h4 className="text-sm font-bold text-indigo-900 mb-2">Set your exact pin</h4>
-              <p className="text-xs text-indigo-800">
-                Drop the exact location on the map so guests can find the entrance easily. For privacy, we'll show an approximate area until booking.
-              </p>
-              <div className="mt-3 flex gap-2 flex-wrap text-xs text-gray-700">
-                <span className="px-3 py-1 rounded-full bg-white border border-indigo-100 font-semibold">Pin entrance</span>
-                <span className="px-3 py-1 rounded-full bg-white border border-indigo-100 font-semibold">Add building/flat details</span>
-                <span className="px-3 py-1 rounded-full bg-white border border-indigo-100 font-semibold">Share access notes</span>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Property Title</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => updateFormData('title', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                placeholder="Give your place a catchy title"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => updateFormData('description', e.target.value)}
-                rows={4}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                placeholder="Describe your space, what makes it special, and what guests can expect"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="flex items-center gap-1 text-xs font-semibold text-gray-700 mb-2">
-                  <Users className="w-4 h-4 text-indigo-600" />
-                  Bedrooms
-                </label>
-                <div className="flex items-center justify-between p-3 border-2 border-gray-300 rounded-lg bg-gray-50">
-                  <span className="font-bold text-lg text-gray-900 min-w-[30px]">{formData.bedrooms}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateFormData('bedrooms', Math.max(1, formData.bedrooms - 1))}
-                      className="w-8 h-8 rounded-full border-2 border-indigo-500 bg-white flex items-center justify-center hover:bg-indigo-50 transition-all flex-shrink-0"
-                    >
-                      <Minus className="w-4 h-4 text-indigo-600" />
-                    </button>
-                    <button
-                      onClick={() => updateFormData('bedrooms', formData.bedrooms + 1)}
-                      className="w-8 h-8 rounded-full border-2 border-indigo-500 bg-indigo-600 flex items-center justify-center hover:bg-indigo-700 transition-all flex-shrink-0"
-                    >
-                      <Plus className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-1 text-xs font-semibold text-gray-700 mb-2">
-                  <Users className="w-4 h-4 text-indigo-600" />
-                  Bathrooms
-                </label>
-                <div className="flex items-center justify-between p-3 border-2 border-gray-300 rounded-lg bg-gray-50">
-                  <span className="font-bold text-lg text-gray-900 min-w-[30px]">{formData.bathrooms}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateFormData('bathrooms', Math.max(1, formData.bathrooms - 1))}
-                      className="w-8 h-8 rounded-full border-2 border-indigo-500 bg-white flex items-center justify-center hover:bg-indigo-50 transition-all flex-shrink-0"
-                    >
-                      <Minus className="w-4 h-4 text-indigo-600" />
-                    </button>
-                    <button
-                      onClick={() => updateFormData('bathrooms', formData.bathrooms + 1)}
-                      className="w-8 h-8 rounded-full border-2 border-indigo-500 bg-indigo-600 flex items-center justify-center hover:bg-indigo-700 transition-all flex-shrink-0"
-                    >
-                      <Plus className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-1 text-xs font-semibold text-gray-700 mb-2">
-                  <Users className="w-4 h-4 text-indigo-600" />
-                  Max Guests
-                </label>
-                <div className="flex items-center justify-between p-3 border-2 border-gray-300 rounded-lg bg-gray-50">
-                  <span className="font-bold text-lg text-gray-900 min-w-[30px]">{formData.maxGuests}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateFormData('maxGuests', Math.max(1, formData.maxGuests - 1))}
-                      className="w-8 h-8 rounded-full border-2 border-indigo-500 bg-white flex items-center justify-center hover:bg-indigo-50 transition-all flex-shrink-0"
-                    >
-                      <Minus className="w-4 h-4 text-indigo-600" />
-                    </button>
-                    <button
-                      onClick={() => updateFormData('maxGuests', formData.maxGuests + 1)}
-                      className="w-8 h-8 rounded-full border-2 border-indigo-500 bg-indigo-600 flex items-center justify-center hover:bg-indigo-700 transition-all flex-shrink-0"
-                    >
-                      <Plus className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {amenities.map((amenity) => {
-              const isSelected = formData.amenities.includes(amenity.id);
-
-              return (
-                <button
-                  key={amenity.id}
-                  onClick={() => toggleAmenity(amenity.id)}
-                  className={`p-5 border-2 rounded-xl text-center transition-all hover:scale-105 ${
-                    isSelected
-                      ? 'border-indigo-500 bg-indigo-50 shadow-lg ring-2 ring-indigo-500 ring-opacity-50'
-                      : 'border-gray-200 hover:border-indigo-300 hover:shadow-md'
-                  }`}
-                >
-                  <span className="text-4xl mx-auto mb-2 block">{amenity.icon}</span>
-                  <span className="text-sm font-semibold text-gray-900 leading-tight">{amenity.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div className="border-2 border-dashed border-indigo-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-all bg-indigo-50/50">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => handlePhotoUpload(e.target.files)}
-                className="hidden"
-                id="photo-upload"
-              />
-              <label
-                htmlFor="photo-upload"
-                className="cursor-pointer flex flex-col items-center"
-              >
-                <Camera className="w-16 h-16 text-indigo-600 mb-4" />
-                <span className="text-lg font-bold text-gray-900 mb-2">
-                  Click to upload photos
-                </span>
-                <span className="text-sm text-gray-600">
-                  Or drag and drop (Max 20 photos)
-                </span>
-              </label>
-            </div>
-
-            {formData.photos.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {formData.photos.map((photo, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={URL.createObjectURL(photo)}
-                      alt={`Upload ${index + 1}`}
-                      className="w-full h-40 object-cover rounded-xl border-2 border-gray-200"
-                    />
-                    <button
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center group-hover:scale-110 transition-all shadow-lg"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
-      case 6:
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <DollarSign className="w-5 h-5 text-indigo-600" />
-                Base price per night
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-xl font-bold">$</span>
-                <input
-                  type="number"
-                  value={formData.basePrice}
-                  onChange={(e) => updateFormData('basePrice', parseInt(e.target.value) || 0)}
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xl font-bold transition-all"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Cleaning fee</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">$</span>
-                  <input
-                    type="number"
-                    value={formData.cleaningFee}
-                    onChange={(e) => updateFormData('cleaningFee', parseInt(e.target.value) || 0)}
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg transition-all"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Service fee</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">$</span>
-                  <input
-                    type="number"
-                    value={formData.serviceFee}
-                    onChange={(e) => updateFormData('serviceFee', parseInt(e.target.value) || 0)}
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg transition-all"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border-2 border-indigo-200">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-bold text-gray-900">Total per night:</span>
-                <span className="text-3xl font-bold text-indigo-600">${formData.basePrice + formData.cleaningFee + formData.serviceFee}</span>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 7:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Check-in time</label>
-                <input
-                  type="time"
-                  value={formData.checkIn}
-                  onChange={(e) => updateFormData('checkIn', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Check-out time</label>
-                <input
-                  type="time"
-                  value={formData.checkOut}
-                  onChange={(e) => updateFormData('checkOut', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-5 border-2 border-gray-300 rounded-xl hover:border-indigo-300 transition-all">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="text-3xl">🐾</div>
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">Allow pets</h3>
-                    <p className="text-sm text-gray-500">Guests can bring pets</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => updateFormData('allowPets', !formData.allowPets)}
-                  className={`relative inline-flex items-center h-8 w-14 rounded-full transition-colors ${
-                    formData.allowPets ? 'bg-indigo-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block w-6 h-6 transform bg-white rounded-full shadow-lg transition-transform ${
-                      formData.allowPets ? 'translate-x-7' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-5 border-2 border-gray-300 rounded-xl hover:border-indigo-300 transition-all">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="text-3xl">🚭</div>
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">Allow smoking</h3>
-                    <p className="text-sm text-gray-500">Guests can smoke inside</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => updateFormData('allowSmoking', !formData.allowSmoking)}
-                  className={`relative inline-flex items-center h-8 w-14 rounded-full transition-colors ${
-                    formData.allowSmoking ? 'bg-indigo-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block w-6 h-6 transform bg-white rounded-full shadow-lg transition-transform ${
-                      formData.allowSmoking ? 'translate-x-7' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-5 border-2 border-gray-300 rounded-xl hover:border-indigo-300 transition-all">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="text-3xl">🎉</div>
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">Allow parties/events</h3>
-                    <p className="text-sm text-gray-500">Guests can host events</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => updateFormData('allowParties', !formData.allowParties)}
-                  className={`relative inline-flex items-center h-8 w-14 rounded-full transition-colors ${
-                    formData.allowParties ? 'bg-indigo-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block w-6 h-6 transform bg-white rounded-full shadow-lg transition-transform ${
-                      formData.allowParties ? 'translate-x-7' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 8:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-bold text-gray-900">KYC & Ownership</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 border-2 border-gray-100 rounded-xl bg-white shadow-sm space-y-3">
-                <p className="text-sm font-semibold text-gray-900">Host identity</p>
-                <input
-                  type="text"
-                  placeholder="Full name on ID"
-                  value={formData.kyc.hostName}
-                  onChange={(e) => updateNestedFormData('kyc', 'hostName', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <select
-                    value={formData.kyc.hostIdType}
-                    onChange={(e) => updateNestedFormData('kyc', 'hostIdType', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  >
-                    <option value="">Select ID type</option>
-                    <option value="passport">Passport</option>
-                    <option value="nid">National ID</option>
-                    <option value="residence">Residence ID</option>
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="ID number"
-                    value={formData.kyc.hostIdNumber}
-                    onChange={(e) => updateNestedFormData('kyc', 'hostIdNumber', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="date"
-                    value={formData.kyc.hostDob}
-                    onChange={(e) => updateNestedFormData('kyc', 'hostDob', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  />
-                  <input
-                    type="date"
-                    value={formData.kyc.hostIdExpiry}
-                    onChange={(e) => updateNestedFormData('kyc', 'hostIdExpiry', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 border-2 border-gray-100 rounded-xl bg-white shadow-sm space-y-3">
-                <p className="text-sm font-semibold text-gray-900">Ownership</p>
-                <input
-                  type="text"
-                  placeholder="Company name (if applicable)"
-                  value={formData.kyc.companyName}
-                  onChange={(e) => updateNestedFormData('kyc', 'companyName', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="CR number"
-                    value={formData.kyc.crNumber}
-                    onChange={(e) => updateNestedFormData('kyc', 'crNumber', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  />
-                  <input
-                    type="date"
-                    value={formData.kyc.crExpiry}
-                    onChange={(e) => updateNestedFormData('kyc', 'crExpiry', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { key: 'idDocument', label: 'Host ID (passport or NID)', hint: 'JPEG, PNG, or PDF' },
-                { key: 'deedDocument', label: 'Proof of ownership (title/deed)', hint: 'PDF or image upload' },
-                { key: 'utilityDocument', label: 'Recent utility bill', hint: 'Last 3 months' }
-              ].map((doc) => (
-                <label key={doc.key} className="p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-indigo-400 cursor-pointer transition-all flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-gray-900">{doc.label}</span>
-                  <span className="text-xs text-gray-500">{doc.hint}</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,image/*"
-                    onChange={(e) => updateNestedFormData('kyc', doc.key, e.target.files?.[0] || null)}
-                  />
-                  <div className="flex items-center gap-2 text-indigo-600 text-sm font-bold">
-                    <Upload size={16} /> Upload
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
-              <CheckCircle className="text-indigo-600" size={20} />
-              <div>
-                <p className="font-bold text-indigo-900">How it works</p>
-                <p className="text-sm text-indigo-800">We collect these documents, then submit to our KYC provider for verification. Your listing stays in draft until approved.</p>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 9:
-        return (
-          <div className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 rounded-2xl overflow-hidden shadow-xl">
-            <div className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="bg-gray-100 h-64 lg:h-80 flex items-center justify-center">
-                {formData.photos.length > 0 ? (
-                  <img
-                    src={URL.createObjectURL(formData.photos[0])}
-                    alt="Property preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-gray-400 text-center p-4">
-                    <Camera className="w-16 h-16 mx-auto mb-3" />
-                    <span className="text-base">No photos uploaded</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-6 lg:p-8 space-y-4">
-                <h3 className="text-2xl font-bold text-gray-900 mb-1 line-clamp-2">
-                  {formData.title || 'Untitled Property'}
-                </h3>
-                <p className="text-base text-gray-600 mb-3 line-clamp-3">
-                  {formData.description || 'No description provided'}
-                </p>
-
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600 font-semibold">Type:</span>
-                    <span className="capitalize text-gray-900 font-bold">{formData.propertyType || 'Not selected'}</span>
-                  </div>
-
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MapPin className="w-4 h-4 text-indigo-600" />
-                      <span className="text-gray-600 font-semibold">Location:</span>
-                    </div>
-                    <div className="text-gray-900 text-xs space-y-1">
-                      {formData.address.building && (
-                        <div><span className="font-semibold">Building:</span> {formData.address.building}</div>
-                      )}
-                      {formData.address.streetNumber && formData.address.street && (
-                        <div><span className="font-semibold">Address:</span> {formData.address.streetNumber} {formData.address.street}</div>
-                      )}
-                      {formData.address.zone && (
-                        <div><span className="font-semibold">Zone:</span> {formData.address.zone}</div>
-                      )}
-                      {formData.address.district && (
-                        <div><span className="font-semibold">District:</span> {formData.address.district}</div>
-                      )}
-                      {formData.address.city && (
-                        <div><span className="font-semibold">City:</span> {formData.address.city}, Qatar 🇶🇦</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-3 bg-gray-50 rounded-lg text-center">
-                      <div className="text-gray-600 text-xs font-semibold mb-1">Guests</div>
-                      <div className="text-gray-900 font-bold text-lg">{formData.maxGuests}</div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg text-center">
-                      <div className="text-gray-600 text-xs font-semibold mb-1">Bedrooms</div>
-                      <div className="text-gray-900 font-bold text-lg">{formData.bedrooms}</div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg text-center">
-                      <div className="text-gray-600 text-xs font-semibold mb-1">Bathrooms</div>
-                      <div className="text-gray-900 font-bold text-lg">{formData.bathrooms}</div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600 font-semibold">Amenities:</span>
-                    <span className="text-gray-900 font-bold">{formData.amenities.length} selected</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600 font-semibold">KYC Status:</span>
-                    <span className="text-gray-900 font-bold capitalize">{formData.kyc.verificationStatus}</span>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-700 space-y-1">
-                    <p><span className="font-semibold">Host:</span> {formData.kyc.hostName || 'Not set'} ({formData.kyc.hostIdType || 'ID type not set'})</p>
-                    <p><span className="font-semibold">Company:</span> {formData.kyc.companyName || 'Not set'} • CR: {formData.kyc.crNumber || '—'}</p>
-                  </div>
-                </div>
-
-                <div className="mt-2 pt-4 border-t-2 border-gray-200">
-                  <div className="flex justify-between items-center p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
-                    <span className="text-lg font-bold text-gray-900">Price per night:</span>
-                    <span className="text-2xl font-bold text-indigo-600">
-                      ${formData.basePrice + formData.cleaningFee + formData.serviceFee}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  const currentPhase = phases.find(p => p.steps.includes(currentStep));
+  const phaseProgress = currentPhase ? ((currentPhase.steps.indexOf(currentStep) + 1) / currentPhase.steps.length) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-20">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
-            >
-              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-              <span className="font-medium">Back to Dashboard</span>
-            </button>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <div className="flex items-center justify-between h-16 lg:h-20">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+                <Home className="w-5 h-5 lg:w-6 lg:h-6 text-white" strokeWidth={2.5} />
+              </div>
+              <span className="hidden sm:block text-xl font-bold bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">houseiana</span>
+            </Link>
 
             <div className="flex items-center gap-3">
-              <div className="text-sm font-medium text-gray-500">
-                Step {currentStep} of {STEPS.length}
-              </div>
-              <div className="hidden sm:block w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-600 rounded-full transition-all duration-300"
-                  style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
-                ></div>
-              </div>
+              <button className="text-sm font-medium text-gray-600 hover:text-gray-900 underline underline-offset-2">
+                Questions?
+              </button>
+              <button onClick={() => router.push('/host-dashboard')} className="px-4 py-2 text-sm font-medium text-gray-900 border border-gray-900 rounded-full hover:bg-gray-100 transition-colors">
+                Save & exit
+              </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Progress Steps - Compact */}
-      <div className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between overflow-x-auto scrollbar-hide gap-2">
-            {STEPS.map((step, index) => (
-              <div key={step.id} className="flex items-center flex-shrink-0">
-                <div className="flex flex-col items-center min-w-[60px]">
-                  <div
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-                      currentStep > step.id
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg'
-                        : currentStep === step.id
-                        ? 'border-indigo-600 text-indigo-600 bg-indigo-50 shadow-md'
-                        : 'border-gray-300 text-gray-400 bg-white'
-                    }`}
-                  >
-                    {currentStep > step.id ? (
-                      <CheckCircle className="w-6 h-6" />
-                    ) : (
-                      <span className="text-sm font-bold">{step.id}</span>
-                    )}
-                  </div>
-                  <span className={`text-xs mt-1 font-medium text-center ${currentStep === step.id ? 'text-indigo-600' : 'text-gray-500'}`}>
-                    {step.title.split(' ')[0]}
-                  </span>
-                </div>
-                {index < STEPS.length - 1 && (
-                  <div
-                    className={`w-8 h-1 mx-2 rounded-full transition-all ${
-                      currentStep > step.id ? 'bg-indigo-600' : 'bg-gray-300'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-32 sm:pb-36">
-        <div className="mb-6">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{STEPS[currentStep - 1].title}</h1>
-          <p className="text-sm sm:text-base text-gray-600">{STEPS[currentStep - 1].description}</p>
-        </div>
+      <main className="flex-1 pt-16 lg:pt-20 pb-24">
+        <div className="h-full flex flex-col lg:flex-row">
+          {/* Left Side - Visual/Title (Desktop only) */}
+          <div className="hidden lg:flex lg:w-1/2 bg-black text-white sticky top-20 h-[calc(100vh-5rem-6rem)] items-center justify-center p-12">
+            <div className="max-w-md">
+              {/* Phase indicator */}
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-sm text-gray-400">Step {currentStep + 1}</span>
+                <div className="flex gap-1">
+                  {phases.map((phase) => (
+                    <div
+                      key={phase.id}
+                      className={`h-1 w-8 rounded-full ${
+                        phase.id < (currentPhase?.id || 0) ? 'bg-white' :
+                        phase.id === currentPhase?.id ? 'bg-white' : 'bg-gray-700'
+                      }`}
+                    >
+                      {phase.id === currentPhase?.id && (
+                        <div
+                          className="h-full bg-teal-400 rounded-full transition-all duration-300"
+                          style={{ width: `${phaseProgress}%` }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
-          {renderStepContent()}
-        </div>
-      </div>
+              <h1 className="text-4xl lg:text-5xl font-semibold leading-tight">
+                {steps[currentStep].title}
+              </h1>
 
-      {/* Footer Navigation */}
-      <div className="bg-white border-t shadow-lg fixed bottom-0 left-0 right-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-3 sm:py-4 gap-2 sm:gap-4">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-sm sm:text-base hover:border-gray-400 hover:shadow-md disabled:hover:shadow-none"
-            >
-              Previous
-            </button>
+              {/* Decorative element */}
+              <div className="mt-16 opacity-20">
+                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" className="text-white">
+                  <circle cx="60" cy="60" r="50" stroke="currentColor" strokeWidth="2" strokeDasharray="8 8" />
+                  <circle cx="60" cy="60" r="30" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </div>
+            </div>
+          </div>
 
-            {currentStep === STEPS.length ? (
-              <button
-                onClick={handleSubmit}
-                className="px-4 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg sm:rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl"
-              >
-                Publish Listing
-              </button>
-            ) : (
-              <button
-                onClick={nextStep}
-                className="px-4 sm:px-8 py-2.5 sm:py-3 bg-indigo-600 text-white rounded-lg sm:rounded-xl hover:bg-indigo-700 transition-all font-semibold text-sm sm:text-base shadow-lg hover:shadow-xl"
-              >
-                Continue
-              </button>
-            )}
+          {/* Right Side - Form */}
+          <div className="flex-1 lg:w-1/2 overflow-y-auto">
+            <div className="max-w-xl mx-auto px-6 py-8 lg:py-12">
+              {/* Mobile Step Title */}
+              <div className="lg:hidden mb-8">
+                <div className="flex gap-1 mb-4">
+                  {phases.map((phase) => (
+                    <div
+                      key={phase.id}
+                      className={`h-1 flex-1 rounded-full ${
+                        phase.id < (currentPhase?.id || 0) ? 'bg-gray-900' :
+                        phase.id === currentPhase?.id ? 'bg-gray-300' : 'bg-gray-200'
+                      }`}
+                    >
+                      {phase.id === currentPhase?.id && (
+                        <div
+                          className="h-full bg-gray-900 rounded-full transition-all duration-300"
+                          style={{ width: `${phaseProgress}%` }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <h1 className="text-2xl font-semibold text-gray-900">{steps[currentStep].title}</h1>
+                <p className="text-gray-500 mt-2">{steps[currentStep].subtitle}</p>
+              </div>
+
+              {/* Desktop subtitle */}
+              <p className="hidden lg:block text-gray-500 mb-8">{steps[currentStep].subtitle}</p>
+
+              {/* Step Content */}
+              {/* Step 0: Property Type */}
+              {currentStep === 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {propertyTypes.map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => setListing({ ...listing, propertyType: type.id })}
+                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-start gap-2 hover:border-gray-900 ${
+                        listing.propertyType === type.id
+                          ? 'border-gray-900 bg-gray-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <type.icon className="w-8 h-8 text-gray-900" strokeWidth={1.5} />
+                      <span className="text-sm font-medium text-gray-900">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Step 1: Place Type */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  {placeTypes.map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => setListing({ ...listing, placeType: type.id })}
+                      className={`w-full p-6 rounded-xl border-2 transition-all text-left flex items-center gap-4 hover:border-gray-900 ${
+                        listing.placeType === type.id
+                          ? 'border-gray-900 bg-gray-50'
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <type.icon className="w-8 h-8 text-gray-900 flex-shrink-0" strokeWidth={1.5} />
+                      <div>
+                        <h4 className="font-medium text-gray-900 text-lg">{type.title}</h4>
+                        <p className="text-gray-500 mt-1">{type.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Step 2: Location */}
+              {currentStep === 2 && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Country / Region</label>
+                    <select
+                      value={listing.country}
+                      onChange={(e) => setListing({ ...listing, country: e.target.value })}
+                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
+                    >
+                      <option value="Qatar">Qatar</option>
+                      <option value="UAE">United Arab Emirates</option>
+                      <option value="Saudi Arabia">Saudi Arabia</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Street address</label>
+                    <input
+                      type="text"
+                      value={listing.street}
+                      onChange={(e) => setListing({ ...listing, street: e.target.value })}
+                      placeholder="Enter your street address"
+                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Apt, suite, etc. (optional)</label>
+                    <input
+                      type="text"
+                      value={listing.apt}
+                      onChange={(e) => setListing({ ...listing, apt: e.target.value })}
+                      placeholder="Apt, suite, unit, etc."
+                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                      <input
+                        type="text"
+                        value={listing.city}
+                        onChange={(e) => setListing({ ...listing, city: e.target.value })}
+                        placeholder="City"
+                        className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Postal code</label>
+                      <input
+                        type="text"
+                        value={listing.postalCode}
+                        onChange={(e) => setListing({ ...listing, postalCode: e.target.value })}
+                        placeholder="Postal code"
+                        className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Map placeholder */}
+                  <div className="mt-8 h-64 bg-gray-100 rounded-2xl flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />
+                    <div className="relative text-center">
+                      <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                        <MapPin className="w-6 h-6 text-white" />
+                      </div>
+                      <p className="text-gray-600 font-medium">Confirm your address</p>
+                      <p className="text-sm text-gray-400 mt-1">Your address will appear on the map</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Basics */}
+              {currentStep === 3 && (
+                <div>
+                  <Counter label="Guests" value={listing.guests} field="guests" />
+                  <Counter label="Bedrooms" value={listing.bedrooms} field="bedrooms" />
+                  <Counter label="Beds" value={listing.beds} field="beds" />
+                  <Counter label="Bathrooms" value={listing.bathrooms} field="bathrooms" min={0.5} step={0.5} />
+                </div>
+              )}
+
+              {/* Step 4: Amenities */}
+              {currentStep === 4 && (
+                <div className="space-y-10">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">What about these guest favorites?</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {amenitiesList.favorites.map((amenity) => (
+                        <button
+                          key={amenity.id}
+                          onClick={() => toggleAmenity(amenity.id)}
+                          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-start gap-2 hover:border-gray-900 ${
+                            listing.amenities.includes(amenity.id)
+                              ? 'border-gray-900 bg-gray-50'
+                              : 'border-gray-200'
+                          }`}
+                        >
+                          <amenity.icon className="w-6 h-6 text-gray-900" strokeWidth={1.5} />
+                          <span className="text-sm font-medium text-gray-900">{amenity.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Do you have any standout amenities?</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {amenitiesList.standout.map((amenity) => (
+                        <button
+                          key={amenity.id}
+                          onClick={() => toggleAmenity(amenity.id)}
+                          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-start gap-2 hover:border-gray-900 ${
+                            listing.amenities.includes(amenity.id)
+                              ? 'border-gray-900 bg-gray-50'
+                              : 'border-gray-200'
+                          }`}
+                        >
+                          <amenity.icon className="w-6 h-6 text-gray-900" strokeWidth={1.5} />
+                          <span className="text-sm font-medium text-gray-900">{amenity.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Do you have any of these safety items?</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {amenitiesList.safety.map((amenity) => (
+                        <button
+                          key={amenity.id}
+                          onClick={() => toggleAmenity(amenity.id)}
+                          className={`p-4 rounded-xl border-2 transition-all flex flex-col items-start gap-2 hover:border-gray-900 ${
+                            listing.amenities.includes(amenity.id)
+                              ? 'border-gray-900 bg-gray-50'
+                              : 'border-gray-200'
+                          }`}
+                        >
+                          <amenity.icon className="w-6 h-6 text-gray-900" strokeWidth={1.5} />
+                          <span className="text-sm font-medium text-gray-900">{amenity.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Photos */}
+              {currentStep === 5 && (
+                <div className="space-y-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-gray-400 transition-colors cursor-pointer group">
+                    <div className="flex flex-col items-center">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => handlePhotoUpload(e.target.files)}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <label htmlFor="photo-upload" className="cursor-pointer flex flex-col items-center">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-gray-200 transition-colors">
+                          <Camera className="w-10 h-10 text-gray-500" strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Drag your photos here</h3>
+                        <p className="text-gray-500 mb-6">Add at least 5 photos</p>
+                        <span className="px-6 py-3 border-2 border-gray-900 text-gray-900 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+                          Upload from your device
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Photo grid */}
+                  {listing.photos.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {listing.photos.map((photo, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={URL.createObjectURL(photo)}
+                            alt={`Photo ${index + 1}`}
+                            className="w-full aspect-square object-cover rounded-xl"
+                          />
+                          <button
+                            onClick={() => setListing({ ...listing, photos: listing.photos.filter((_, i) => i !== index) })}
+                            className="absolute top-2 right-2 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center transition-colors"
+                          >
+                            <X className="w-5 h-5 text-gray-900" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 6: Title */}
+              {currentStep === 6 && (
+                <div>
+                  <textarea
+                    value={listing.title}
+                    onChange={(e) => setListing({ ...listing, title: e.target.value.slice(0, 32) })}
+                    placeholder="Lovely 2-bedroom flat in Doha"
+                    maxLength={32}
+                    rows={3}
+                    className="w-full px-0 py-0 border-0 focus:ring-0 outline-none text-3xl lg:text-4xl font-semibold placeholder-gray-300 resize-none"
+                  />
+                  <p className="text-sm text-gray-500 mt-4">{listing.title.length}/32</p>
+                </div>
+              )}
+
+              {/* Step 7: Description */}
+              {currentStep === 7 && (
+                <div className="space-y-8">
+                  <div>
+                    <textarea
+                      value={listing.description}
+                      onChange={(e) => setListing({ ...listing, description: e.target.value.slice(0, 500) })}
+                      placeholder="You'll always remember your time at this unique place."
+                      rows={6}
+                      maxLength={500}
+                      className="w-full px-4 py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none text-lg resize-none"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">{listing.description.length}/500</p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Highlight what makes your place special</h3>
+                    <p className="text-gray-500 mb-4">Choose up to 2 highlights</p>
+                    <div className="flex flex-wrap gap-3">
+                      {highlights.map((h) => (
+                        <button
+                          key={h.id}
+                          onClick={() => toggleHighlight(h.id)}
+                          className={`px-4 py-2 rounded-full border-2 font-medium transition-all ${
+                            listing.highlights.includes(h.id)
+                              ? 'border-gray-900 bg-gray-900 text-white'
+                              : 'border-gray-300 text-gray-700 hover:border-gray-900'
+                          }`}
+                        >
+                          {h.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 8: Pricing */}
+              {currentStep === 8 && (
+                <div className="space-y-8">
+                  <div className="text-center py-8">
+                    <div className="inline-flex items-center border-b-4 border-gray-900 pb-2">
+                      <span className="text-5xl lg:text-6xl font-semibold">$</span>
+                      <input
+                        type="number"
+                        value={listing.basePrice}
+                        onChange={(e) => setListing({ ...listing, basePrice: parseInt(e.target.value) || 0 })}
+                        className="text-5xl lg:text-6xl font-semibold w-32 text-center border-0 focus:ring-0 outline-none bg-transparent"
+                      />
+                    </div>
+                    <p className="text-gray-500 mt-4">per night</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-700">Base price</span>
+                      <span className="font-medium">${listing.basePrice}</span>
+                    </div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-700">Guest service fee</span>
+                      <span className="font-medium">${Math.round(listing.basePrice * 0.14)}</span>
+                    </div>
+                    <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
+                      <span className="text-gray-900 font-medium">Guest price before taxes</span>
+                      <span className="font-semibold text-lg">${listing.basePrice + Math.round(listing.basePrice * 0.14)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-gray-500">
+                    <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm">Places like yours in your area usually range from $50 to $150</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 9: Discounts */}
+              {currentStep === 9 && (
+                <div className="space-y-4">
+                  <div className="p-6 border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900">New listing promotion</h4>
+                        <p className="text-gray-500 text-sm mt-1">Offer 20% off your first 3 bookings</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-semibold">{listing.newListingDiscount}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900">Weekly discount</h4>
+                        <p className="text-gray-500 text-sm mt-1">For stays of 7 nights or more</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={listing.weeklyDiscount}
+                          onChange={(e) => setListing({ ...listing, weeklyDiscount: parseInt(e.target.value) || 0 })}
+                          className="w-16 text-right text-2xl font-semibold border-0 focus:ring-0 outline-none bg-transparent"
+                        />
+                        <span className="text-2xl font-semibold">%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900">Monthly discount</h4>
+                        <p className="text-gray-500 text-sm mt-1">For stays of 28 nights or more</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          value={listing.monthlyDiscount}
+                          onChange={(e) => setListing({ ...listing, monthlyDiscount: parseInt(e.target.value) || 0 })}
+                          className="w-16 text-right text-2xl font-semibold border-0 focus:ring-0 outline-none bg-transparent"
+                        />
+                        <span className="text-2xl font-semibold">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 10: Legal/Safety */}
+              {currentStep === 10 && (
+                <div className="space-y-6">
+                  <div className="p-6 border border-gray-200 rounded-xl">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900">Use Instant Book</h4>
+                        <p className="text-gray-500 text-sm mt-1">Let guests book instantly without waiting for approval</p>
+                      </div>
+                      <button
+                        onClick={() => setListing({ ...listing, instantBook: !listing.instantBook })}
+                        className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
+                          listing.instantBook ? 'bg-gray-900' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                          listing.instantBook ? 'translate-x-5' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="font-medium text-gray-900 mb-4">Does your place have any of these?</h3>
+
+                    {[
+                      { key: 'securityCamera', label: 'Security camera(s)', desc: 'Required to disclose and must never monitor indoor private spaces' },
+                      { key: 'noiseMonitor', label: 'Noise decibel monitor(s)', desc: 'Required to disclose' },
+                      { key: 'weapons', label: 'Weapons', desc: 'Must be properly secured' },
+                    ].map((item) => (
+                      <div key={item.key} className="py-4 border-b border-gray-100 last:border-b-0">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-gray-900">{item.label}</h4>
+                            <p className="text-gray-500 text-sm mt-1">{item.desc}</p>
+                          </div>
+                          <button
+                            onClick={() => setListing({ ...listing, [item.key]: !listing[item.key as keyof PropertyFormData] })}
+                            className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
+                              listing[item.key as keyof PropertyFormData] ? 'bg-gray-900' : 'bg-gray-300'
+                            }`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                              listing[item.key as keyof PropertyFormData] ? 'translate-x-5' : 'translate-x-0'
+                            }`} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 11: House Rules */}
+              {currentStep === 11 && (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    {[
+                      { key: 'allowPets', icon: PawPrint, label: 'Pets allowed' },
+                      { key: 'allowSmoking', icon: Cigarette, label: 'Smoking, vaping, e-cigarettes allowed' },
+                      { key: 'allowParties', icon: PartyPopper, label: 'Events allowed' },
+                    ].map((rule) => (
+                      <div key={rule.key} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <rule.icon className="w-6 h-6 text-gray-600" />
+                          <span className="text-gray-900">{rule.label}</span>
+                        </div>
+                        <button
+                          onClick={() => setListing({ ...listing, [rule.key]: !listing[rule.key as keyof PropertyFormData] })}
+                          className={`relative w-12 h-7 rounded-full transition-colors ${
+                            listing[rule.key as keyof PropertyFormData] ? 'bg-gray-900' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                            listing[rule.key as keyof PropertyFormData] ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="font-medium text-gray-900 mb-4">Check-in and checkout times</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-500 mb-2">Check-in after</label>
+                        <select
+                          value={listing.checkInTime}
+                          onChange={(e) => setListing({ ...listing, checkInTime: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                        >
+                          {['12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'].map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                          <option value="Flexible">Flexible</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-500 mb-2">Checkout before</label>
+                        <select
+                          value={listing.checkOutTime}
+                          onChange={(e) => setListing({ ...listing, checkOutTime: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                        >
+                          {['10:00 AM', '11:00 AM', '12:00 PM'].map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                          <option value="Flexible">Flexible</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 12: Review */}
+              {currentStep === 12 && (
+                <div className="space-y-8">
+                  {/* Preview Card */}
+                  <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-lg">
+                    <div className="aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                      {listing.photos.length > 0 ? (
+                        <img
+                          src={URL.createObjectURL(listing.photos[0])}
+                          alt="Cover"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Camera className="w-12 h-12 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-gray-900">{listing.title || 'Your listing title'}</h3>
+                        <span className="text-sm text-gray-500">New</span>
+                      </div>
+                      <p className="text-gray-500 text-sm">{listing.city || 'City'}, {listing.country}</p>
+                      <p className="font-semibold mt-2">${listing.basePrice} <span className="font-normal text-gray-500">night</span></p>
+                    </div>
+                  </div>
+
+                  {/* What's next */}
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">What&apos;s next?</h3>
+                    <div className="space-y-4">
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Check className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Confirm a few details and publish</h4>
+                          <p className="text-gray-500 text-sm">We&apos;ll let you know if you need to verify your identity or register with the local government.</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Calendar className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Set up your calendar</h4>
+                          <p className="text-gray-500 text-sm">Choose which dates your listing is available. It will be visible 24 hours after you publish.</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Star className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">Adjust your settings</h4>
+                          <p className="text-gray-500 text-sm">Set house rules, select a cancellation policy, choose how guests book, and more.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer Navigation */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        {/* Progress bar */}
+        <div className="h-1 bg-gray-100">
+          <div
+            className="h-full bg-gray-900 transition-all duration-500"
+            style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+          />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleBack}
+              disabled={currentStep === 0}
+              className={`text-sm font-semibold underline underline-offset-2 transition-colors ${
+                currentStep === 0
+                  ? 'text-gray-300 cursor-not-allowed no-underline'
+                  : 'text-gray-900 hover:text-gray-600'
+              }`}
+            >
+              Back
+            </button>
+
+            <button
+              onClick={currentStep === steps.length - 1 ? handleSubmit : handleNext}
+              className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white font-semibold rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all shadow-lg"
+            >
+              {currentStep === steps.length - 1 ? 'Publish' : 'Next'}
+            </button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
