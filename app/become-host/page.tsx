@@ -1,481 +1,419 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import {
-  ArrowRight,
-  Check,
-  Home,
-  Calendar,
-  Users,
-  DollarSign,
-  Shield,
-  HelpCircle,
-  Star,
-  Banknote,
-  Clock,
-  UserCheck,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
-
-interface Step {
-  number: number;
-  icon: string;
-  title: string;
-  description: string;
-}
-
-interface Benefit {
-  icon: string;
-  title: string;
-  description: string;
-}
-
-interface Testimonial {
-  name: string;
-  location: string;
-  image: string;
-  rating: number;
-  earnings: string;
-  quote: string;
-}
-
-interface FAQ {
-  question: string;
-  answer: string;
-  isOpen: boolean;
-}
+import { Home, Globe, Menu, User, ChevronDown, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function BecomeHost() {
-  const router = useRouter();
-  const [nightlyRate, setNightlyRate] = useState(150);
-  const [nightsPerMonth, setNightsPerMonth] = useState(15);
-  const [faqs, setFaqs] = useState<FAQ[]>([
-    {
-      question: 'How much does it cost to list my property?',
-      answer: 'Listing your property on Houseiana is completely free. We only charge a small service fee when you receive a booking.',
-      isOpen: false
-    },
-    {
-      question: 'How do I get paid?',
-      answer: 'Payments are processed securely and transferred directly to your bank account. You typically receive payment 24 hours after a guest checks in.',
-      isOpen: false
-    },
-    {
-      question: 'What if a guest damages my property?',
-      answer: 'All hosts are covered by our $1M Host Protection Insurance at no additional cost. We also verify all guests before they book.',
-      isOpen: false
-    },
-    {
-      question: 'Can I choose who stays at my property?',
-      answer: 'Yes! You have complete control over accepting or declining booking requests. You can also set specific requirements for guests.',
-      isOpen: false
-    },
-    {
-      question: 'How long does it take to list my property?',
-      answer: 'Most hosts complete their listing in under 10 minutes. You can save your progress and come back anytime.',
-      isOpen: false
-    },
-    {
-      question: 'What support do you provide to hosts?',
-      answer: 'We offer 24/7 customer support, a comprehensive Host Resource Center, and a community forum where you can connect with other hosts.',
-      isOpen: false
-    }
-  ]);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [openFaq, setOpenFaq] = useState<string | null>(null);
+  const [address, setAddress] = useState('');
 
-  // How it works steps
-  const steps: Step[] = [
-    {
-      number: 1,
-      icon: 'home',
-      title: 'List your space',
-      description: 'Create a free listing with photos, details, and pricing in just 10 minutes'
+  const faqCategories = {
+    top: {
+      title: 'Top questions',
+      items: [
+        {
+          question: 'Is my place right for Houseiana?',
+          answer: 'Houseiana guests are interested in all kinds of places—spare rooms, apartments, houses, vacation homes, and unique stays. Whether you have a cozy room or a luxury villa, there\'s a guest looking for exactly what you offer.'
+        },
+        {
+          question: 'Do I have to host all the time?',
+          answer: 'Not at all—you control your calendar. You can host once a year, a few nights a month, or more often. It\'s completely up to you when you want to welcome guests.'
+        },
+        {
+          question: 'What are Houseiana\'s fees?',
+          answer: 'It\'s free to create a listing, and Houseiana typically collects a service fee of 3% of the reservation subtotal once you get paid. In many areas, we automatically collect and pay sales and tourism taxes on your behalf.'
+        },
+      ]
     },
-    {
-      number: 2,
-      icon: 'calendar',
-      title: 'Set your schedule',
-      description: 'Choose when your property is available and set your own house rules'
+    basics: {
+      title: 'Hosting basics',
+      items: [
+        {
+          question: 'How do I get started?',
+          answer: 'You can create a listing in just a few steps, all at your own pace. Start by telling us about your home, take some photos, and add details about what makes it unique.'
+        },
+        {
+          question: 'How do I get my home ready for guests?',
+          answer: 'Make sure your home is clean, clutter-free, and that everything is working properly. Items like fresh linens and stocked toiletries help create a comfortable and inviting place to stay.'
+        },
+        {
+          question: 'How am I protected when I host?',
+          answer: 'Houseiana provides secure payment processing and guest verification to help protect hosts. We also offer 24/7 customer support to assist with any issues that may arise during a stay.'
+        },
+        {
+          question: 'Any tips on being a great host?',
+          answer: 'From sharing a list of your favorite local places to responding quickly to guest messages, there are lots of ways to be an excellent host. Quick responses and personal touches go a long way!'
+        },
+      ]
     },
-    {
-      number: 3,
-      icon: 'users',
-      title: 'Welcome guests',
-      description: 'Connect with verified guests and provide them with an amazing experience'
-    },
-    {
-      number: 4,
-      icon: 'dollar',
-      title: 'Get paid securely',
-      description: 'Receive payments directly to your account with our secure payment system'
-    }
-  ];
-
-  // Benefits
-  const benefits: Benefit[] = [
-    {
-      icon: 'shield',
-      title: 'Host Protection',
-      description: 'Up to $1M in property damage protection at no cost to you'
-    },
-    {
-      icon: 'support',
-      title: '24/7 Support',
-      description: 'Our dedicated team is always here to help you and your guests'
-    },
-    {
-      icon: 'star',
-      title: 'Top Visibility',
-      description: 'Get featured on our platform and reach millions of travelers'
-    },
-    {
-      icon: 'money',
-      title: 'Easy Earnings',
-      description: 'Set your own prices and get paid fast with secure transactions'
-    },
-    {
-      icon: 'flexible',
-      title: 'Full Control',
-      description: 'You decide when to host, who to accept, and how to run your space'
-    },
-    {
-      icon: 'community',
-      title: 'Host Community',
-      description: 'Join thousands of hosts and access exclusive tips and resources'
-    }
-  ];
-
-  // Host testimonials
-  const testimonials: Testimonial[] = [
-    {
-      name: 'Sarah Johnson',
-      location: 'Dubai, UAE',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80',
-      rating: 5,
-      earnings: '$3,200/month',
-      quote: 'Hosting on Houseiana has been incredible. The platform is easy to use, and I love meeting guests from around the world!'
-    },
-    {
-      name: 'Michael Chen',
-      location: 'Doha, Qatar',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&q=80',
-      rating: 5,
-      earnings: '$2,800/month',
-      quote: 'The best decision I made was listing my property here. Great support team and consistent bookings.'
-    },
-    {
-      name: 'Emma Williams',
-      location: 'Abu Dhabi, UAE',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&q=80',
-      rating: 5,
-      earnings: '$4,100/month',
-      quote: 'I love the flexibility and earning potential. The host protection gives me peace of mind.'
-    }
-  ];
-
-  const calculateEarnings = (): number => {
-    return nightlyRate * nightsPerMonth;
-  };
-
-  const calculateYearlyEarnings = (): number => {
-    return calculateEarnings() * 12;
-  };
-
-  const toggleFaq = (index: number): void => {
-    setFaqs(prev => prev.map((faq, i) =>
-      i === index ? { ...faq, isOpen: !faq.isOpen } : faq
-    ));
-  };
-
-  const onGetStarted = (): void => {
-    router.push('/register');
-  };
-
-  const getStepIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'home': return <Home className="w-6 h-6" />;
-      case 'calendar': return <Calendar className="w-6 h-6" />;
-      case 'users': return <Users className="w-6 h-6" />;
-      case 'dollar': return <DollarSign className="w-6 h-6" />;
-      default: return <Home className="w-6 h-6" />;
+    policy: {
+      title: 'Policy & regulations',
+      items: [
+        {
+          question: 'Are there any regulations that apply in my area?',
+          answer: 'Some areas have laws and regulations for hosting your home. It\'s important to familiarize yourself with any laws that may apply to your location. Also, depending on where you live, you may need to check with your HOA, read your lease agreement, or notify your landlord.'
+        },
+        {
+          question: 'What if I have other questions?',
+          answer: 'Local hosts are a great source for information and insights. We can connect you with an experienced Houseiana host in your area who may be able to answer additional questions.'
+        },
+      ]
     }
   };
 
-  const getBenefitIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'shield': return <Shield className="w-8 h-8" />;
-      case 'support': return <HelpCircle className="w-8 h-8" />;
-      case 'star': return <Star className="w-8 h-8" />;
-      case 'money': return <Banknote className="w-8 h-8" />;
-      case 'flexible': return <Clock className="w-8 h-8" />;
-      case 'community': return <UserCheck className="w-8 h-8" />;
-      default: return <Shield className="w-8 h-8" />;
-    }
-  };
+  const FaqItem = ({ question, answer, isOpen, onClick }: {
+    question: string;
+    answer: string;
+    isOpen: boolean;
+    onClick: () => void;
+  }) => (
+    <div className="border-b border-gray-200 last:border-0">
+      <button
+        onClick={onClick}
+        className="w-full py-6 flex items-start justify-between text-left"
+      >
+        <span className="text-lg font-medium text-gray-900 pr-4">{question}</span>
+        <ChevronDown className={`w-6 h-6 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="pb-6 pr-12">
+          <p className="text-gray-600 leading-relaxed">{answer}</p>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-16 lg:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left">
-              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
-                Earn extra income by hosting on{' '}
-                <span className="text-indigo-600">Houseiana</span>
-              </h1>
-              <p className="text-xl text-gray-600 mb-8">
-                Share your space with travelers from around the world and turn your property into a source of income
-              </p>
-
-              <div className="grid grid-cols-3 gap-6 mb-8">
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">$2,500+</h3>
-                  <p className="text-sm text-gray-600">Average monthly earnings</p>
-                </div>
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">1M+</h3>
-                  <p className="text-sm text-gray-600">Active hosts worldwide</p>
-                </div>
-                <div className="text-center">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">4.8★</h3>
-                  <p className="text-sm text-gray-600">Average host rating</p>
-                </div>
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <Home className="w-6 h-6 text-white" strokeWidth={2.5} />
               </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">houseiana</span>
+            </a>
 
-              <button
-                onClick={onGetStarted}
-                className="inline-flex items-center px-8 py-4 bg-indigo-600 text-white text-lg font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg"
-              >
-                Get Started
-                <ArrowRight className="w-5 h-5 ml-2" />
+            {/* Right Menu */}
+            <div className="flex items-center gap-2">
+              <button className="p-3 hover:bg-gray-100 rounded-full transition-colors">
+                <Globe className="w-5 h-5" />
               </button>
 
-              <p className="text-sm text-gray-500 mt-4">Free to list • No upfront costs • Cancel anytime</p>
-            </div>
-
-            <div className="relative">
-              <img
-                src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80"
-                alt="Beautiful home interior"
-                className="rounded-2xl shadow-2xl"
-              />
-              <div className="absolute top-4 right-4 bg-white rounded-lg px-3 py-2 shadow-lg">
-                <div className="flex items-center space-x-2">
-                  <Check className="w-4 h-4 text-green-500" />
-                  <span className="text-sm font-medium text-gray-900">Verified & Trusted</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Earnings Calculator */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Estimate your earnings</h2>
-            <p className="text-lg text-gray-600">See how much you could earn by hosting your property</p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <label htmlFor="nightlyRate" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nightly rate
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      id="nightlyRate"
-                      value={nightlyRate}
-                      onChange={(e) => setNightlyRate(Number(e.target.value))}
-                      min="50"
-                      max="1000"
-                      className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="nightsPerMonth" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nights per month
-                  </label>
-                  <input
-                    type="number"
-                    id="nightsPerMonth"
-                    value={nightsPerMonth}
-                    onChange={(e) => setNightsPerMonth(Number(e.target.value))}
-                    min="1"
-                    max="30"
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Monthly earnings</span>
-                    <span className="text-2xl font-bold text-gray-900">${calculateEarnings().toLocaleString()}</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Yearly potential</span>
-                      <span className="text-3xl font-bold text-indigo-600">${calculateYearlyEarnings().toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-sm text-gray-500 mt-6 text-center">
-              * Earnings are estimates and may vary based on location, season, and property type
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">How it works</h2>
-            <p className="text-lg text-gray-600">Get started in 4 simple steps</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((step) => (
-              <div key={step.number} className="text-center">
-                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl font-bold text-indigo-600">{step.number}</span>
-                </div>
-                <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white">
-                  {getStepIcon(step.icon)}
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{step.title}</h3>
-                <p className="text-gray-600">{step.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Why host with Houseiana</h2>
-            <p className="text-lg text-gray-600">Everything you need to succeed as a host</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {benefits.map((benefit, index) => (
-              <div key={index} className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center mb-4 text-indigo-600">
-                  {getBenefitIcon(benefit.icon)}
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{benefit.title}</h3>
-                <p className="text-gray-600">{benefit.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Host Testimonials */}
-      <section className="py-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Hear from our hosts</h2>
-            <p className="text-lg text-gray-600">See what successful hosts are saying</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center mb-4">
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div className="ml-4 flex-1">
-                    <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-sm text-gray-600">{testimonial.location}</p>
-                    <div className="flex items-center mt-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className="w-4 h-4 text-yellow-400 fill-current"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-green-600">{testimonial.earnings}</div>
-                  </div>
-                </div>
-                <p className="text-gray-600 italic">"{testimonial.quote}"</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Frequently asked questions</h2>
-            <p className="text-lg text-gray-600">Everything you need to know about hosting</p>
-          </div>
-
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-sm">
+              <div className="relative">
                 <button
-                  onClick={() => toggleFaq(index)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-3 border border-gray-300 rounded-full p-1 pl-3 hover:shadow-md transition-shadow"
                 >
-                  <span className="font-medium text-gray-900">{faq.question}</span>
-                  {faq.isOpen ? (
-                    <ChevronUp className="w-5 h-5 text-gray-500" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-500" />
-                  )}
+                  <Menu className="w-4 h-4 text-gray-600" />
+                  <div className="bg-gray-500 rounded-full p-1.5">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
                 </button>
-                {faq.isOpen && (
-                  <div className="px-6 pb-4">
-                    <p className="text-gray-600">{faq.answer}</p>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-50 py-2">
+                    <div className="border-b border-gray-200 pb-2">
+                      <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">Sign up</button>
+                      <button className="w-full text-left px-4 py-3 hover:bg-gray-50">Log in</button>
+                    </div>
+                    <div className="pt-2">
+                      <button className="w-full text-left px-4 py-3 hover:bg-gray-50">Help Center</button>
+                    </div>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <img
+            src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&h=1080&fit=crop"
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-6 py-24 md:py-32">
+          <div className="max-w-2xl">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+              Your home could make money on Houseiana
+            </h1>
+            <p className="text-xl text-gray-300 mb-8">
+              Join over 50,000 hosts in the Middle East earning extra income by sharing their space
+            </p>
+
+            {/* Earnings Calculator */}
+            <div className="bg-white rounded-2xl p-6 text-gray-900 shadow-2xl max-w-md">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Enter your address to see your earning potential
+              </label>
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter your address"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500">Estimated earnings</p>
+                  <p className="text-3xl font-bold text-teal-600">$1,200<span className="text-lg font-normal text-gray-500">/month</span></p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">7 nights at</p>
+                  <p className="text-lg font-semibold">$171/night</p>
+                </div>
+              </div>
+              <button className="w-full bg-gradient-to-r from-teal-500 to-teal-600 text-white py-3 rounded-xl font-semibold hover:from-teal-600 hover:to-teal-700 transition-all">
+                Get started
+              </button>
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Estimates based on similar listings in your area
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Easy to List Section */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                It's easy to list your home on Houseiana
+              </h2>
+              <ul className="space-y-6">
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Create a listing for your place in just a few steps</h3>
+                    <p className="text-gray-600">Add photos, details, and set your price in under 10 minutes</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Go at your own pace, and make changes whenever</h3>
+                    <p className="text-gray-600">Update your calendar, pricing, and details anytime</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Get 1:1 support from experienced hosts at any time</h3>
+                    <p className="text-gray-600">Our Superhost community is here to help you succeed</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div className="relative">
+              <img
+                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=600&fit=crop"
+                alt="Beautiful home interior"
+                className="rounded-3xl shadow-2xl"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tools Section */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              All the tools you need to host, all in one app
+            </h2>
+            <p className="text-xl text-gray-600">
+              Manage everything from your phone with our easy-to-use host dashboard
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-6">
+            {[
+              {
+                icon: '📝',
+                title: 'Set up your listing',
+                description: 'Take photos, set prices, and create an arrival guide'
+              },
+              {
+                icon: '🏠',
+                title: 'Get your home ready',
+                description: 'Prepare, clean, and maintain your home'
+              },
+              {
+                icon: '📅',
+                title: 'Manage reservations',
+                description: 'Stay on top of your bookings and guest messages'
+              },
+              {
+                icon: '🤝',
+                title: 'Assist your guests',
+                description: 'Handle check-ins, checkouts, and onsite requests'
+              },
+            ].map((item, index) => (
+              <div key={index} className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
+                <span className="text-4xl mb-4 block">{item.icon}</span>
+                <h3 className="font-semibold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-600">{item.description}</p>
+              </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Not Only for Homeowners */}
+      <section className="py-20 md:py-28 bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                Hosting isn't only for homeowners
+              </h2>
+              <p className="text-xl text-gray-300 mb-8">
+                Whether you're renting an apartment or have a spare room, you can earn extra income by hosting when you're away or have space to share.
+              </p>
+              <button className="inline-flex items-center gap-2 bg-white text-gray-900 px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors">
+                Learn more
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+            <div>
+              <img
+                src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop"
+                alt="Modern apartment"
+                className="rounded-3xl"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-center">
+            Your questions, answered
+          </h2>
+
+          {Object.entries(faqCategories).map(([key, category]) => (
+            <div key={key} className="mb-12">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+                {category.title}
+              </h3>
+              <div className="border-t border-gray-200">
+                {category.items.map((item, index) => (
+                  <FaqItem
+                    key={index}
+                    question={item.question}
+                    answer={item.answer}
+                    isOpen={openFaq === `${key}-${index}`}
+                    onClick={() => setOpenFaq(openFaq === `${key}-${index}` ? null : `${key}-${index}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-indigo-600 to-purple-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to start hosting?</h2>
-          <p className="text-xl text-indigo-100 mb-8">Join thousands of hosts earning extra income on Houseiana</p>
-          <button
-            onClick={onGetStarted}
-            className="inline-flex items-center px-8 py-4 bg-white text-indigo-600 text-lg font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
-          >
-            Start Hosting Today
-            <ArrowRight className="w-5 h-5 ml-2" />
+      <section className="py-20 md:py-28 bg-gradient-to-r from-teal-500 to-teal-600">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+            Ready to become a host?
+          </h2>
+          <p className="text-xl text-teal-100 mb-8">
+            Join thousands of hosts earning extra income on Houseiana
+          </p>
+          <button className="bg-white text-teal-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg">
+            Get started
           </button>
-          <p className="text-sm text-indigo-200 mt-4">Takes less than 10 minutes to get started</p>
+          <p className="text-teal-200 mt-4 text-sm">
+            Takes less than 10 minutes to create your listing
+          </p>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-3 text-sm text-gray-600">
+                <li><a href="#" className="hover:underline">Help Center</a></li>
+                <li><a href="#" className="hover:underline">Safety information</a></li>
+                <li><a href="#" className="hover:underline">Cancellation options</a></li>
+                <li><a href="#" className="hover:underline">Report a concern</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Hosting</h4>
+              <ul className="space-y-3 text-sm text-gray-600">
+                <li><a href="#" className="hover:underline">List your home</a></li>
+                <li><a href="#" className="hover:underline">Host resources</a></li>
+                <li><a href="#" className="hover:underline">Responsible hosting</a></li>
+                <li><a href="#" className="hover:underline">Community forum</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Houseiana</h4>
+              <ul className="space-y-3 text-sm text-gray-600">
+                <li><a href="#" className="hover:underline">About us</a></li>
+                <li><a href="#" className="hover:underline">Careers</a></li>
+                <li><a href="#" className="hover:underline">Press</a></li>
+                <li><a href="#" className="hover:underline">Investors</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Travel Services</h4>
+              <ul className="space-y-3 text-sm text-gray-600">
+                <li><a href="#" className="hover:underline">Meet & Assist</a></li>
+                <li><a href="#" className="hover:underline">VIP Lounge Access</a></li>
+                <li><a href="#" className="hover:underline">Airport Transfers</a></li>
+                <li><a href="#" className="hover:underline">Local Experiences</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <span>© 2024 Houseiana, Inc.</span>
+              <span>·</span>
+              <a href="#" className="hover:underline">Privacy</a>
+              <span>·</span>
+              <a href="#" className="hover:underline">Terms</a>
+              <span>·</span>
+              <a href="#" className="hover:underline">Sitemap</a>
+            </div>
+            <div className="flex items-center gap-6">
+              <button className="flex items-center gap-2 text-sm font-medium hover:underline">
+                <Globe className="w-4 h-4" />
+                English (US)
+              </button>
+              <span className="text-sm font-medium">$ USD</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
