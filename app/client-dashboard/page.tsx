@@ -50,6 +50,17 @@ export default function ClientDashboard() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 
+  // Check URL params for initial tab selection
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab && ['trips', 'wishlists', 'messages', 'account'].includes(tab)) {
+        setActiveTab(tab as 'trips' | 'wishlists' | 'messages' | 'account');
+      }
+    }
+  }, []);
+
   // Mock data - replace with real API calls
   const [trips, setTrips] = useState<Trip[]>([
     {
