@@ -194,6 +194,73 @@ export default function AddListingPage() {
     fullscreenControl: false,
   };
 
+  // Handle marker drag and map click to update coordinates
+  const updateLocationFromCoordinates = (lat: number, lng: number) => {
+    setListing(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+    }));
+
+    // Reverse geocode to update address fields
+    if (isMapLoaded) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === 'OK' && results && results[0]) {
+          let street = '';
+          let city = '';
+          let state = '';
+          let postalCode = '';
+          let country = '';
+
+          results[0].address_components?.forEach((component) => {
+            const types = component.types;
+
+            if (types.includes('street_number')) {
+              street = component.long_name + ' ';
+            }
+            if (types.includes('route')) {
+              street += component.long_name;
+            }
+            if (types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (types.includes('postal_code')) {
+              postalCode = component.long_name;
+            }
+            if (types.includes('country')) {
+              country = component.long_name;
+            }
+          });
+
+          setListing(prev => ({
+            ...prev,
+            street: street.trim() || prev.street,
+            city: city || prev.city,
+            state: state || prev.state,
+            postalCode: postalCode || prev.postalCode,
+            country: country || prev.country,
+          }));
+        }
+      });
+    }
+  };
+
+  const handleMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      updateLocationFromCoordinates(e.latLng.lat(), e.latLng.lng());
+    }
+  };
+
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      updateLocationFromCoordinates(e.latLng.lat(), e.latLng.lng());
+    }
+  };
+
   const steps = [
     { id: 0, phase: 1, title: 'Tell us about your place', subtitle: 'Which of these best describes your place?' },
     { id: 1, phase: 1, title: 'What type of place will guests have?', subtitle: 'Choose the type of space guests will have access to' },
@@ -719,6 +786,10 @@ export default function AddListingPage() {
                       <MapPin className="w-4 h-4 inline mr-1" />
                       Confirm your address on the map
                     </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      <Info className="w-3 h-3 inline mr-1" />
+                      Drag the red pin or click on the map to adjust the exact location
+                    </p>
                     <div className="h-80 bg-gray-100 rounded-2xl overflow-hidden border-2 border-gray-200">
                       {isMapLoaded ? (
                         <GoogleMap
@@ -726,8 +797,14 @@ export default function AddListingPage() {
                           center={mapCenter}
                           zoom={15}
                           options={mapOptions}
+                          onClick={handleMapClick}
                         >
-                          <Marker position={mapCenter} />
+                          <Marker
+                            position={mapCenter}
+                            draggable={true}
+                            onDragEnd={handleMarkerDragEnd}
+                            animation={google.maps.Animation.DROP}
+                          />
                         </GoogleMap>
                       ) : (
                         <div className="h-full flex items-center justify-center">
@@ -746,6 +823,9 @@ export default function AddListingPage() {
                         <span>Location: {listing.street}, {listing.city}, {listing.country}</span>
                       </p>
                     )}
+                    <p className="text-xs text-gray-400 mt-1">
+                      Coordinates: {listing.latitude.toFixed(6)}, {listing.longitude.toFixed(6)}
+                    </p>
                   </div>
                 </div>
               )}
