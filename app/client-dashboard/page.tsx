@@ -60,25 +60,72 @@ export default function ClientDashboard() {
     }
   }, []);
 
-  // TODO: Fetch from API
   const [trips, setTrips] = useState<Trip[]>([]);
-
-  // TODO: Fetch from API
   const [wishlists, setWishlists] = useState<Wishlist[]>([]);
-
-  // TODO: Fetch from API
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter trips based on active filter
-  const filteredTrips = trips.filter(trip => {
-    if (tripFilter === 'upcoming') {
-      return trip.status === 'confirmed' && new Date(trip.checkIn) > new Date();
-    } else if (tripFilter === 'past') {
-      return trip.status === 'past' || new Date(trip.checkOut) < new Date();
-    } else {
-      return trip.status === 'cancelled';
+  // Fetch trips
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        const response = await fetch(`/api/guest/trips?filter=${tripFilter}`);
+        const result = await response.json();
+        if (result.success) {
+          setTrips(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching trips:', error);
+      }
+    };
+
+    if (isSignedIn && activeTab === 'trips') {
+      fetchTrips();
     }
-  });
+  }, [tripFilter, isSignedIn, activeTab]);
+
+  // Fetch wishlists
+  useEffect(() => {
+    const fetchWishlists = async () => {
+      try {
+        const response = await fetch('/api/guest/wishlists');
+        const result = await response.json();
+        if (result.success) {
+          setWishlists(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching wishlists:', error);
+      }
+    };
+
+    if (isSignedIn && activeTab === 'wishlists') {
+      fetchWishlists();
+    }
+  }, [isSignedIn, activeTab]);
+
+  // Fetch messages/conversations
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch('/api/guest/conversations');
+        const result = await response.json();
+        if (result.success) {
+          setMessages(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isSignedIn && activeTab === 'messages') {
+      fetchMessages();
+    }
+  }, [isSignedIn, activeTab]);
+
+  // Trips are already filtered by the API based on tripFilter
+  const filteredTrips = trips;
 
   // Format date for display
   const formatDate = (dateString: string) => {
