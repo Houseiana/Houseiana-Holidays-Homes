@@ -140,6 +140,7 @@ model User {
   conversationsAsGuest     Conversation[] @relation("GuestConversations")
   conversationsAsHost      Conversation[] @relation("HostConversations")
   sentMessages             Message[]      @relation("SentMessages")
+  messageTemplates         MessageTemplate[]
 
   @@index([email])
   @@index([clerkId])
@@ -1445,6 +1446,38 @@ model Message {
   @@index([createdAt])
   @@index([status])
   @@map("messages")
+}
+
+model MessageTemplate {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // Template Info
+  title           String
+  content         String   @db.Text
+  category        String?  // e.g., 'check_in', 'wifi', 'thank_you', 'custom'
+
+  // Template Variables
+  variables       Json?    // Array of variable placeholders like {guestName}, {propertyName}
+
+  // Usage Stats
+  usageCount      Int      @default(0)
+  lastUsedAt      DateTime?
+
+  // Status
+  isActive        Boolean  @default(true)
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // RELATIONS
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([isActive])
+  @@map("message_templates")
 }
 
 // ============================================================================
