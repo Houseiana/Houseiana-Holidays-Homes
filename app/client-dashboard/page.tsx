@@ -60,80 +60,14 @@ export default function ClientDashboard() {
     }
   }, []);
 
-  // Mock data - replace with real API calls
-  const [trips, setTrips] = useState<Trip[]>([
-    {
-      id: '1',
-      propertyTitle: 'Luxury Beachfront Villa',
-      propertyCity: 'Doha',
-      propertyCountry: 'Qatar',
-      checkIn: '2024-12-15',
-      checkOut: '2024-12-22',
-      guests: 4,
-      totalPrice: 3500,
-      status: 'confirmed',
-      confirmationCode: 'HHH-2024-001',
-      coverPhoto: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800'
-    },
-    {
-      id: '2',
-      propertyTitle: 'Modern Downtown Apartment',
-      propertyCity: 'Doha',
-      propertyCountry: 'Qatar',
-      checkIn: '2024-11-01',
-      checkOut: '2024-11-05',
-      guests: 2,
-      totalPrice: 1200,
-      status: 'past',
-      confirmationCode: 'HHH-2024-002',
-      coverPhoto: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800'
-    }
-  ]);
+  // TODO: Fetch from API
+  const [trips, setTrips] = useState<Trip[]>([]);
 
-  const [wishlists, setWishlists] = useState<Wishlist[]>([
-    {
-      id: '1',
-      name: 'Qatar Getaways',
-      savedCount: 8,
-      previewImages: [
-        'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=400',
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400',
-        'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400',
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400'
-      ]
-    },
-    {
-      id: '2',
-      name: 'Beach Houses',
-      savedCount: 5,
-      previewImages: [
-        'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=400',
-        'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=400',
-        'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400'
-      ]
-    }
-  ]);
+  // TODO: Fetch from API
+  const [wishlists, setWishlists] = useState<Wishlist[]>([]);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      hostName: 'Ahmed Al-Thani',
-      hostAvatar: 'A',
-      lastMessage: 'Thanks for your interest! The property is available for your dates.',
-      lastMessageTime: '2 hours ago',
-      propertyTitle: 'Luxury Beachfront Villa',
-      unread: true
-    },
-    {
-      id: '2',
-      hostName: 'Fatima Hassan',
-      hostAvatar: 'F',
-      lastMessage: 'Check-in instructions have been sent to your email.',
-      lastMessageTime: '1 day ago',
-      propertyTitle: 'Modern Downtown Apartment',
-      unread: false
-    }
-  ]);
+  // TODO: Fetch from API
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Filter trips based on active filter
   const filteredTrips = trips.filter(trip => {

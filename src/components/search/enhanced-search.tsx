@@ -67,22 +67,13 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
     amenities: initialFilters.amenities || []
   });
 
-  // Location suggestions
-  const locationSuggestions = [
-    { id: 'qatar', name: 'Qatar', country: 'Country', type: 'country' },
-    { id: 'doha', name: 'Doha', country: 'Qatar', type: 'city' },
-    { id: 'doha-neighborhood', name: 'Doha neighborhood', country: 'Doha', type: 'neighborhood' },
-    { id: 'bali', name: 'Bali', country: 'Indonesia', type: 'destination' },
-    { id: 'canggu', name: 'Canggu', country: 'Beach', type: 'beach' },
-    { id: 'uluwatu', name: 'Uluwatu', country: 'Beach', type: 'beach' },
-    { id: 'baltimore', name: 'Baltimore', country: 'MD', type: 'city' },
-    { id: 'balian-beach', name: 'Balian Beach', country: 'Indonesia', type: 'beach' },
-    { id: 'paris', name: 'Paris', country: 'France', type: 'city' },
-    { id: 'london', name: 'London', country: 'United Kingdom', type: 'city' },
-    { id: 'tokyo', name: 'Tokyo', country: 'Japan', type: 'city' },
-    { id: 'new-york', name: 'New York', country: 'United States', type: 'city' },
-    { id: 'miami', name: 'Miami', country: 'United States', type: 'city' }
-  ];
+  // TODO: Fetch from API - location search autocomplete
+  const locationSuggestions: Array<{
+    id: string;
+    name: string;
+    country: string;
+    type: string;
+  }> = [];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

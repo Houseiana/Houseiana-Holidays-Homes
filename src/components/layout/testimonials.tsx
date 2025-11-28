@@ -1,29 +1,14 @@
 
 import { Star } from 'lucide-react';
 
-const testimonials = [
-  {
-    name: 'Sarah Chen',
-    location: 'San Francisco, CA',
-    rating: 5,
-    text: 'Amazing experience! The property was exactly as described and the host was incredibly helpful.',
-    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80'
-  },
-  {
-    name: 'Marcus Johnson',
-    location: 'London, UK',
-    rating: 5,
-    text: 'Perfect location and beautiful apartment. Would definitely book again for my next trip.',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80'
-  },
-  {
-    name: 'Elena Rodriguez',
-    location: 'Barcelona, Spain',
-    rating: 5,
-    text: 'The booking process was so easy and the property exceeded all my expectations. Highly recommend!',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80'
-  }
-];
+// TODO: Fetch from API - verified customer reviews
+const testimonials: Array<{
+  name: string;
+  location: string;
+  rating: number;
+  text: string;
+  avatar: string;
+}> = [];
 
 export function Testimonials() {
   return (

@@ -8,34 +8,20 @@ import {
 
 export default function DashboardExplore() {
   const [instantBook, setInstantBook] = useState(false);
-  
-  // Mock Properties
-  const properties = [
-    {
-      id: '1',
-      title: 'Luxury Beach Villa',
-      location: 'Miami, USA',
-      rating: 4.8,
-      guests: 6,
-      beds: 3,
-      baths: 2,
-      price: 350,
-      image: 'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2070&auto=format&fit=crop',
-      instantBook: true
-    },
-    {
-      id: '2',
-      title: 'Modern Downtown Apartment',
-      location: 'New York, USA',
-      rating: 4.5,
-      guests: 4,
-      beds: 2,
-      baths: 1,
-      price: 220,
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=2080&auto=format&fit=crop',
-      instantBook: false
-    }
-  ];
+
+  // TODO: Fetch from API based on search filters
+  const properties: Array<{
+    id: string;
+    title: string;
+    location: string;
+    rating: number;
+    guests: number;
+    beds: number;
+    baths: number;
+    price: number;
+    image: string;
+    instantBook: boolean;
+  }> = [];
 
   return (
     <div className="space-y-8 animate-fade-in">

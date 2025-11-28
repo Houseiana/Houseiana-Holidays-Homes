@@ -138,7 +138,7 @@ export default function HostDashboardContentEnhanced() {
           totalBookings,
           revenue,
           occupancyRate: Math.round(occupancyRate),
-          averageRating: 4.8, // TODO: Calculate from reviews
+          averageRating: 0, // TODO: Calculate from reviews
         });
       }
 

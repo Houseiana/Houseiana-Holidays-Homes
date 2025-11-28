@@ -31,145 +31,29 @@ function HostDashboardContent() {
     { id: 'today', label: 'Today', icon: Home },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'listings', label: 'Listings', icon: Building2 },
-    { id: 'inbox', label: 'Inbox', icon: MessageSquare, badge: 2 },
+    { id: 'inbox', label: 'Inbox', icon: MessageSquare, badge: 0 },
   ];
 
+  // TODO: Fetch from API
   const reservations = {
-    current: [
-      {
-        id: 1,
-        guest: 'Mike Rodriguez',
-        avatar: 'MR',
-        avatarBg: 'bg-teal-500',
-        property: 'Beachfront Villa',
-        dates: 'Dec 15-20',
-        checkIn: 'Dec 15',
-        checkOut: 'Dec 20',
-        guests: 4,
-        amount: 1250,
-        status: 'checked_in',
-        phone: '+1 555-0123',
-        message: 'Great place! Can you recommend restaurants?',
-      },
-    ],
-    upcoming: [
-      {
-        id: 2,
-        guest: 'Anna Johnson',
-        avatar: 'AJ',
-        avatarBg: 'bg-orange-500',
-        property: 'Mountain Cabin',
-        dates: 'Dec 22-28',
-        checkIn: 'Dec 22',
-        checkOut: 'Dec 28',
-        guests: 2,
-        amount: 2100,
-        status: 'confirmed',
-        phone: '+1 555-0456',
-      },
-      {
-        id: 3,
-        guest: 'David Chen',
-        avatar: 'DC',
-        avatarBg: 'bg-purple-500',
-        property: 'City Loft',
-        dates: 'Dec 24-27',
-        checkIn: 'Dec 24',
-        checkOut: 'Dec 27',
-        guests: 1,
-        amount: 630,
-        status: 'pending',
-        phone: '+1 555-0789',
-        message: 'Is early check-in possible?',
-      },
-    ],
+    current: [],
+    upcoming: [],
   };
 
-  const listings = [
-    {
-      id: 1,
-      name: 'Beachfront Villa',
-      location: 'The Pearl, Doha',
-      price: 320,
-      rating: 4.92,
-      reviews: 47,
-      status: 'active',
-      occupancy: 92,
-      revenue: 12400,
-      beds: 3,
-      baths: 2,
-      guests: 6,
-    },
-    {
-      id: 2,
-      name: 'Mountain Cabin',
-      location: 'Al Khor',
-      price: 250,
-      rating: 4.85,
-      reviews: 31,
-      status: 'active',
-      occupancy: 81,
-      revenue: 8900,
-      beds: 2,
-      baths: 1,
-      guests: 4,
-    },
-    {
-      id: 3,
-      name: 'City Loft',
-      location: 'West Bay, Doha',
-      price: 210,
-      rating: 4.78,
-      reviews: 23,
-      status: 'active',
-      occupancy: 74,
-      revenue: 6200,
-      beds: 1,
-      baths: 1,
-      guests: 2,
-    },
-  ];
+  // TODO: Fetch from API
+  const listings: any[] = [];
 
-  const messages = [
-    {
-      id: 1,
-      guest: 'Mike Rodriguez',
-      avatar: 'MR',
-      avatarBg: 'bg-teal-500',
-      property: 'Beachfront Villa',
-      lastMessage: 'Great place! Can you recommend restaurants nearby?',
-      time: '10 min ago',
-      unread: true,
-    },
-    {
-      id: 2,
-      guest: 'David Chen',
-      avatar: 'DC',
-      avatarBg: 'bg-purple-500',
-      property: 'City Loft',
-      lastMessage: 'Is early check-in possible on the 24th?',
-      time: '2 hours ago',
-      unread: true,
-    },
-    {
-      id: 3,
-      guest: 'Anna Johnson',
-      avatar: 'AJ',
-      avatarBg: 'bg-orange-500',
-      property: 'Mountain Cabin',
-      lastMessage: 'Looking forward to our stay!',
-      time: 'Yesterday',
-      unread: false,
-    },
-  ];
+  // TODO: Fetch from API
+  const messages: any[] = [];
 
+  // TODO: Fetch from API
   const earnings = {
-    thisMonth: 4200,
-    lastMonth: 3850,
-    projected: 5100,
-    ytd: 45600,
-    pendingPayout: 2340,
-    nextPayout: 'Dec 20',
+    thisMonth: 0,
+    lastMonth: 0,
+    projected: 0,
+    ytd: 0,
+    pendingPayout: 0,
+    nextPayout: '',
   };
 
   const ReservationCard = ({ reservation, type }: { reservation: any; type: string }) => (

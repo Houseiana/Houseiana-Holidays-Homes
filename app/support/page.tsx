@@ -537,8 +537,7 @@ export default function SupportPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Related reservation (optional)</label>
                 <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none">
                   <option>No reservation selected</option>
-                  <option>Modern Downtown Apartment - Dec 15-20</option>
-                  <option>Cozy Beach House - Jan 5-10</option>
+                  {/* TODO: Populate from user's actual reservations */}
                 </select>
               </div>
 

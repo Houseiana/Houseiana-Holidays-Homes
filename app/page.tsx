@@ -99,19 +99,11 @@ export default function HouseianaHome() {
     { id: 'boats', name: 'Houseboats', icon: Ship },
   ];
 
-  const recentSearches = [
-    { location: 'The Pearl, Qatar', type: 'recent' },
-    { location: 'West Bay, Doha', type: 'recent' },
-  ];
+  // TODO: Fetch from user's search history
+  const recentSearches: Array<{ location: string; type: string }> = [];
 
-  const suggestedDestinations = [
-    { location: 'Doha, Qatar', distance: 'Popular destination', icon: '🏙️' },
-    { location: 'The Pearl-Qatar', distance: 'Luxury waterfront', icon: '💎' },
-    { location: 'Lusail City', distance: 'Modern district', icon: '🌆' },
-    { location: 'Katara Cultural Village', distance: 'Cultural hub', icon: '🎭' },
-    { location: 'Al Wakra', distance: 'Traditional charm', icon: '🏛️' },
-    { location: 'Banana Island', distance: 'Resort getaway', icon: '🏝️' },
-  ];
+  // TODO: Fetch from API based on location and popularity
+  const suggestedDestinations: Array<{ location: string; distance: string; icon: string }> = [];
 
   // Filter properties by category
   const filteredProperties = activeCategory === 'all'
