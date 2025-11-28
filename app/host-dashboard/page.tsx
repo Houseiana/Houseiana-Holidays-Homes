@@ -10,7 +10,7 @@ import {
   Home, Calendar, Building2, MessageSquare, Menu, ChevronRight, ChevronDown, ChevronLeft,
   Star, DollarSign, TrendingUp, Clock, Check, Users, Search, Filter, MoreHorizontal,
   Phone, MapPin, Bed, Bath, Eye, Edit, Plus, ArrowUpRight,
-  CheckCircle, MessageCircle, CalendarDays, X, Send, Paperclip, Globe, User
+  CheckCircle, MessageCircle, CalendarDays, X
 } from 'lucide-react';
 import HouseianaHeader from '@/components/HouseianaHeader';
 
@@ -19,7 +19,6 @@ function HostDashboardContent() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('today');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [messageInput, setMessageInput] = useState('');
 
   const userProfile = {
     name: user?.name || `${user?.firstName || 'Host'} ${user?.lastName || ''}`.trim() || 'Host User',
@@ -35,7 +34,10 @@ function HostDashboardContent() {
   ];
 
   // TODO: Fetch from API
-  const reservations = {
+  const reservations: {
+    current: any[];
+    upcoming: any[];
+  } = {
     current: [],
     upcoming: [],
   };
@@ -476,8 +478,9 @@ function HostDashboardContent() {
               <div className="grid grid-cols-7 gap-1">
                 {[...Array(31)].map((_, i) => {
                   const day = i + 1;
-                  const isBooked = [15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27, 28].includes(day);
-                  const isToday = day === 17;
+                  // TODO: Fetch booked dates from API
+                  const isBooked = false;
+                  const isToday = new Date().getDate() === day;
 
                   return (
                     <div
@@ -600,53 +603,11 @@ function HostDashboardContent() {
               </div>
 
               {/* Chat Area */}
-              <div className="hidden md:flex flex-1 flex-col">
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center text-white font-semibold">
-                      MR
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">Mike Rodriguez</h4>
-                      <p className="text-sm text-gray-500">Beachfront Villa · Dec 15-20</p>
-                    </div>
-                  </div>
-                  <button className="p-2 hover:bg-gray-100 rounded-full">
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  <div className="flex justify-start">
-                    <div className="max-w-md bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3">
-                      <p className="text-gray-900">Great place! Can you recommend restaurants nearby?</p>
-                      <span className="text-xs text-gray-500 mt-1">10:30 AM</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="max-w-md bg-teal-500 text-white rounded-2xl rounded-tr-sm px-4 py-3">
-                      <p>Hi Mike! So glad you're enjoying your stay. For restaurants, I highly recommend Morimoto for Japanese, La Mar for seafood, or Nobu if you're feeling fancy. All within 10 min walk!</p>
-                      <span className="text-xs text-teal-100 mt-1">10:45 AM</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 border-t border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <button className="p-2 hover:bg-gray-100 rounded-full">
-                      <Paperclip className="w-5 h-5 text-gray-500" />
-                    </button>
-                    <input
-                      type="text"
-                      value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
-                      placeholder="Type a message..."
-                      className="flex-1 px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-200"
-                    />
-                    <button className="p-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 transition-colors">
-                      <Send className="w-5 h-5" />
-                    </button>
-                  </div>
+              <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">No conversation selected</h3>
+                  <p className="text-gray-500">Select a message to view the conversation</p>
                 </div>
               </div>
             </div>
