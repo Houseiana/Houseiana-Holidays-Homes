@@ -7,11 +7,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import {
-  Home, Calendar, Building2, MessageSquare, Menu, Bell, ChevronRight, ChevronDown, ChevronLeft,
+  Home, Calendar, Building2, MessageSquare, Menu, ChevronRight, ChevronDown, ChevronLeft,
   Star, DollarSign, TrendingUp, Clock, Check, Users, Search, Filter, MoreHorizontal,
-  Phone, MapPin, Bed, Bath, Eye, Edit, Settings, HelpCircle, LogOut, Plus, ArrowUpRight,
-  CheckCircle, MessageCircle, CalendarDays, Wallet, BarChart3, X, Send, Paperclip, Globe, User
+  Phone, MapPin, Bed, Bath, Eye, Edit, Plus, ArrowUpRight,
+  CheckCircle, MessageCircle, CalendarDays, X, Send, Paperclip, Globe, User
 } from 'lucide-react';
+import HouseianaHeader from '@/components/HouseianaHeader';
 
 function HostDashboardContent() {
   const router = useRouter();
@@ -316,117 +317,7 @@ function HostDashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
-                <Home className="w-6 h-6 text-white" strokeWidth={2.5} />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent hidden sm:block">houseiana</span>
-            </Link>
-
-            {/* Navigation Tabs */}
-            <nav className="hidden md:flex items-center gap-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative px-4 py-2 rounded-full font-medium transition-colors flex items-center gap-2 ${
-                    activeTab === tab.id
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <tab.icon className="w-5 h-5" />
-                  {tab.label}
-                  {tab.badge && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-xs rounded-full flex items-center justify-center">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
-
-            {/* Right side */}
-            <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors relative">
-                <Bell className="w-5 h-5 text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full" />
-              </button>
-              <div className="relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 p-1 pl-3 border border-gray-200 rounded-full hover:shadow-md transition-shadow"
-                >
-                  <Menu className="w-4 h-4 text-gray-600" />
-                  <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    {userProfile.initials}
-                  </div>
-                </button>
-
-                {/* Menu dropdown */}
-                {showUserMenu && (
-                  <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="font-semibold">{userProfile.name}</p>
-                      <p className="text-sm text-gray-500">Superhost</p>
-                    </div>
-                    <Link href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                      <Wallet className="w-5 h-5 text-gray-500" />
-                      <span>Earnings</span>
-                    </Link>
-                    <Link href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                      <BarChart3 className="w-5 h-5 text-gray-500" />
-                      <span>Insights</span>
-                    </Link>
-                    <Link href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                      <Settings className="w-5 h-5 text-gray-500" />
-                      <span>Account settings</span>
-                    </Link>
-                    <Link href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                      <HelpCircle className="w-5 h-5 text-gray-500" />
-                      <span>Help</span>
-                    </Link>
-                    <div className="border-t border-gray-100 mt-2 pt-2">
-                      <Link href="/client-dashboard" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                        <Users className="w-5 h-5 text-gray-500" />
-                        <span>Switch to traveling</span>
-                      </Link>
-                      <button className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-500 w-full text-left">
-                        <LogOut className="w-5 h-5" />
-                        <span>Log out</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile tabs */}
-        <div className="md:hidden border-t border-gray-100 px-4 overflow-x-auto">
-          <div className="flex gap-4 py-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
+      <HouseianaHeader unreadMessages={2} notifications={1} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

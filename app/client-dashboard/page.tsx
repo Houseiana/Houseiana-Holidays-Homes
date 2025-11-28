@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, SignOutButton } from '@clerk/nextjs';
 import {
-  Search, Globe, Menu, User, Heart, Star, ChevronRight,
-  MessageCircle, Settings, Calendar, MapPin, X, Home, Award,
+  Search, User, Heart, Star, ChevronRight,
+  MessageCircle, Settings, Calendar, MapPin, X, Award,
   CreditCard, Shield, Bell, HelpCircle, FileText
 } from 'lucide-react';
+import HouseianaHeader from '@/components/HouseianaHeader';
 
 // Type definitions
 interface Trip {
@@ -47,8 +48,6 @@ export default function ClientDashboard() {
   const { isSignedIn, user } = useUser();
   const [activeTab, setActiveTab] = useState<'trips' | 'wishlists' | 'messages' | 'account'>('trips');
   const [tripFilter, setTripFilter] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming');
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 
   // Check URL params for initial tab selection
   useEffect(() => {
@@ -523,180 +522,13 @@ export default function ClientDashboard() {
     }
   };
 
+  // Calculate unread messages count
+  const unreadMessagesCount = messages.filter(m => m.unread).length;
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <div className="flex items-center gap-2">
-                <Home className="w-8 h-8 text-teal-500" />
-                <span className="text-2xl font-bold bg-gradient-to-r from-teal-500 to-teal-600 bg-clip-text text-transparent">
-                  Houseiana
-                </span>
-              </div>
-            </Link>
-
-            {/* Tab Navigation - Desktop */}
-            <div className="hidden md:flex items-center gap-8">
-              <button
-                onClick={() => setActiveTab('trips')}
-                className={`text-sm font-medium transition-colors ${
-                  activeTab === 'trips'
-                    ? 'text-gray-900 border-b-2 border-gray-900 pb-1'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Trips
-              </button>
-              <button
-                onClick={() => setActiveTab('wishlists')}
-                className={`text-sm font-medium transition-colors ${
-                  activeTab === 'wishlists'
-                    ? 'text-gray-900 border-b-2 border-gray-900 pb-1'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Wishlists
-              </button>
-              <button
-                onClick={() => setActiveTab('messages')}
-                className={`text-sm font-medium transition-colors relative ${
-                  activeTab === 'messages'
-                    ? 'text-gray-900 border-b-2 border-gray-900 pb-1'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Messages
-                {messages.some(m => m.unread) && (
-                  <span className="absolute -top-1 -right-2 w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab('account')}
-                className={`text-sm font-medium transition-colors ${
-                  activeTab === 'account'
-                    ? 'text-gray-900 border-b-2 border-gray-900 pb-1'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                Account
-              </button>
-            </div>
-
-            {/* Right Side Icons */}
-            <div className="hidden md:flex items-center gap-4">
-              {/* Language Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setShowLanguageMenu(!showLanguageMenu);
-                    setShowUserMenu(false);
-                  }}
-                  className="p-3 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <Globe className="w-5 h-5 text-gray-700" />
-                </button>
-
-                {showLanguageMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowLanguageMenu(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-20">
-                      <button className="w-full text-left px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl">🇺🇸</span>
-                          <div>
-                            <p className="font-medium">English (US)</p>
-                            <p className="text-sm text-gray-500">United States</p>
-                          </div>
-                        </div>
-                      </button>
-                      <button className="w-full text-left px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl">🇶🇦</span>
-                          <div>
-                            <p className="font-medium">العربية</p>
-                            <p className="text-sm text-gray-500">Qatar</p>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* User Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => {
-                    setShowUserMenu(!showUserMenu);
-                    setShowLanguageMenu(false);
-                  }}
-                  className="flex items-center gap-3 border border-gray-300 rounded-full pl-4 pr-2 py-2 hover:shadow-md transition-shadow"
-                >
-                  <Menu className="w-4 h-4 text-gray-700" />
-                  {isSignedIn && user ? (
-                    <div className="bg-teal-500 rounded-full w-8 h-8 flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">
-                        {user.firstName?.charAt(0).toUpperCase() || user.emailAddresses[0]?.emailAddress.charAt(0).toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-500 rounded-full p-1.5">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                </button>
-
-                {showUserMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowUserMenu(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-20">
-                      <div className="border-b border-gray-200 pb-2">
-                        <Link href="/client-dashboard">
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">
-                            Dashboard
-                          </button>
-                        </Link>
-                        <Link href="/saved-properties">
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">
-                            Wishlists
-                          </button>
-                        </Link>
-                      </div>
-                      <div className="border-b border-gray-200 py-2">
-                        <Link href="/host-dashboard/add-listing">
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50">
-                            List your home
-                          </button>
-                        </Link>
-                        <button className="w-full text-left px-4 py-3 hover:bg-gray-50">
-                          Help Center
-                        </button>
-                      </div>
-                      <div className="pt-2">
-                        <SignOutButton>
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50 text-gray-600">
-                            Log out
-                          </button>
-                        </SignOutButton>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <HouseianaHeader unreadMessages={unreadMessagesCount} notifications={0} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
