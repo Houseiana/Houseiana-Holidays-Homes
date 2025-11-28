@@ -136,6 +136,11 @@ model User {
   // SUPPORT RELATIONS
   supportTickets           SupportTicket[]
 
+  // GUEST-HOST MESSAGING RELATIONS
+  conversationsAsGuest     Conversation[] @relation("GuestConversations")
+  conversationsAsHost      Conversation[] @relation("HostConversations")
+  sentMessages             Message[]      @relation("SentMessages")
+
   @@index([email])
   @@index([clerkId])
   @@index([qidNumber])
@@ -1358,6 +1363,88 @@ model ChatMessage {
   admin          Admin?   @relation(fields: [senderId], references: [id])
 
   @@map("chat_messages")
+}
+
+// ============================================================================
+// GUEST-HOST MESSAGING SYSTEM
+// ============================================================================
+
+model Conversation {
+  id              String   @id @default(cuid())
+
+  // Participants
+  guestId         String
+  hostId          String
+  propertyId      String?  // Optional: link to specific property
+  bookingId       String?  // Optional: link to specific booking
+
+  // Conversation Metadata
+  status          String   @default("ACTIVE") // ACTIVE, ARCHIVED, CLOSED
+  isPinned        Boolean  @default(false)
+  isStarredByGuest Boolean @default(false)
+  isStarredByHost  Boolean @default(false)
+
+  // Unread counts (denormalized for performance)
+  unreadCountGuest Int     @default(0)
+  unreadCountHost  Int     @default(0)
+
+  // Last message info (denormalized)
+  lastMessageText  String?
+  lastMessageAt    DateTime?
+  lastMessageFrom  String?  // 'guest' or 'host'
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // RELATIONS
+  messages        Message[]
+  guest           User     @relation("GuestConversations", fields: [guestId], references: [id], onDelete: Cascade)
+  host            User     @relation("HostConversations", fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@unique([guestId, hostId, bookingId])
+  @@index([guestId])
+  @@index([hostId])
+  @@index([bookingId])
+  @@index([propertyId])
+  @@index([status])
+  @@map("conversations")
+}
+
+model Message {
+  id              String   @id @default(cuid())
+  conversationId  String
+
+  // Sender Info
+  senderId        String
+  senderRole      String   // 'guest' or 'host'
+
+  // Message Content
+  text            String   @db.Text
+  attachments     Json?    // Array of attachment objects
+
+  // Message Status
+  status          String   @default("sent") // sent, delivered, read
+  readAt          DateTime?
+
+  // System Messages
+  isSystem        Boolean  @default(false)
+  systemType      String?  // booking_confirmed, check_in_reminder, etc.
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  // RELATIONS
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([status])
+  @@map("messages")
 }
 
 // ============================================================================
