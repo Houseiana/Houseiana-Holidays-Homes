@@ -2,38 +2,21 @@
 import Link from 'next/link';
 import { TrendingUp } from 'lucide-react';
 
-const destinations = [
-  {
-    name: 'Tokyo, Japan',
-    properties: '12,430',
-    avgPrice: '$89',
-    image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    trending: true
-  },
-  {
-    name: 'Paris, France',
-    properties: '8,920',
-    avgPrice: '$156',
-    image: 'https://images.unsplash.com/photo-1502602898536-47ad22581b52?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    trending: true
-  },
-  {
-    name: 'New York, USA',
-    properties: '15,680',
-    avgPrice: '$189',
-    image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    trending: false
-  },
-  {
-    name: 'London, UK',
-    properties: '11,250',
-    avgPrice: '$167',
-    image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    trending: false
-  }
-];
+// TODO: Fetch from API - trending destinations based on booking data
+const destinations: Array<{
+  name: string;
+  properties: string;
+  avgPrice: string;
+  image: string;
+  trending: boolean;
+}> = [];
 
 export function TrendingDestinations() {
+  // Don't render section if no destinations available
+  if (destinations.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="text-center mb-16">

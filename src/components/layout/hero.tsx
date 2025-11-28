@@ -22,6 +22,13 @@ export function Hero() {
     amenities: []
   });
 
+  // TODO: Fetch from API - platform statistics
+  const [stats, setStats] = useState({
+    totalProperties: 0,
+    totalCountries: 0,
+    averageRating: 0
+  });
+
   const heroImages = [
     'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Aurora Borealis with people
     'https://images.unsplash.com/photo-1549144511-f099e773c147?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Eiffel Tower with people visiting
@@ -215,22 +222,34 @@ export function Hero() {
           </div>
 
           {/* Quick Stats */}
-          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mt-8 sm:mt-12 text-white/80 px-4">
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold">2M+</div>
-              <div className="text-xs sm:text-sm">Properties</div>
+          {(stats.totalProperties > 0 || stats.totalCountries > 0 || stats.averageRating > 0) && (
+            <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mt-8 sm:mt-12 text-white/80 px-4">
+              {stats.totalProperties > 0 && (
+                <>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold">{stats.totalProperties >= 1000000 ? `${(stats.totalProperties / 1000000).toFixed(1)}M+` : `${stats.totalProperties}+`}</div>
+                    <div className="text-xs sm:text-sm">Properties</div>
+                  </div>
+                  <div className="w-px h-6 sm:h-8 bg-white/30" />
+                </>
+              )}
+              {stats.totalCountries > 0 && (
+                <>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold">{stats.totalCountries}+</div>
+                    <div className="text-xs sm:text-sm">Countries</div>
+                  </div>
+                  <div className="w-px h-6 sm:h-8 bg-white/30" />
+                </>
+              )}
+              {stats.averageRating > 0 && (
+                <div className="text-center">
+                  <div className="text-xl sm:text-2xl font-bold">{stats.averageRating.toFixed(1)}★</div>
+                  <div className="text-xs sm:text-sm">Rating</div>
+                </div>
+              )}
             </div>
-            <div className="w-px h-6 sm:h-8 bg-white/30" />
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold">190+</div>
-              <div className="text-xs sm:text-sm">Countries</div>
-            </div>
-            <div className="w-px h-6 sm:h-8 bg-white/30" />
-            <div className="text-center">
-              <div className="text-xl sm:text-2xl font-bold">4.8★</div>
-              <div className="text-xs sm:text-sm">Rating</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

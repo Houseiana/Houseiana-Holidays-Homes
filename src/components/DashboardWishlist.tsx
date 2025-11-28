@@ -3,27 +3,16 @@
 import { Heart, Star, MapPin, Trash2, ShoppingBag } from 'lucide-react';
 
 export default function DashboardWishlist() {
-  // Mock Data
-  const wishlist = [
-    {
-      id: '1',
-      title: 'Luxury Beach Villa',
-      location: 'Miami, USA',
-      price: 350,
-      rating: 4.9,
-      image: 'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2070&auto=format&fit=crop',
-      dates: 'Anytime'
-    },
-    {
-      id: '2',
-      title: 'Mountain Cabin Retreat',
-      location: 'Aspen, USA',
-      price: 180,
-      rating: 4.7,
-      image: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?q=80&w=2070&auto=format&fit=crop',
-      dates: 'Dec 15 - Dec 20'
-    }
-  ];
+  // TODO: Fetch from API - user's saved properties
+  const wishlist: Array<{
+    id: string;
+    title: string;
+    location: string;
+    price: number;
+    rating: number;
+    image: string;
+    dates: string;
+  }> = [];
 
   return (
     <div className="space-y-8 animate-fade-in">

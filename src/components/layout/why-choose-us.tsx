@@ -1,10 +1,11 @@
 import { Globe, CheckCircle, Star, Shield, Clock, Compass } from 'lucide-react';
 
+// TODO: Fetch statistics from API to populate dynamic descriptions
 const features = [
   {
     icon: Globe,
     title: 'Global Reach',
-    description: 'Over 2 million properties in 190+ countries worldwide'
+    description: 'Properties available in countries worldwide'
   },
   {
     icon: CheckCircle,
@@ -14,7 +15,7 @@ const features = [
   {
     icon: Star,
     title: 'Top Rated',
-    description: '4.8/5 average rating from millions of satisfied guests'
+    description: 'Highly rated by satisfied guests'
   },
   {
     icon: Shield,
