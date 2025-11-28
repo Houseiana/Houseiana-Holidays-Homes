@@ -56,6 +56,17 @@ function HostDashboardContent() {
     nextPayout: '',
   };
 
+  // TODO: Fetch from API
+  const stats = {
+    occupancy: 0,
+    activeBookings: 0,
+    rating: 0,
+    reviewCount: 0,
+  };
+
+  // TODO: Fetch from API
+  const todoItems: any[] = [];
+
   const ReservationCard = ({ reservation, type }: { reservation: any; type: string }) => (
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer">
       <div className="flex items-start justify-between mb-3">
@@ -239,8 +250,8 @@ function HostDashboardContent() {
                   <span className="text-sm text-gray-500">Occupancy</span>
                   <TrendingUp className="w-5 h-5 text-gray-400" />
                 </div>
-                <p className="text-2xl font-semibold text-gray-900">78%</p>
-                <p className="text-sm text-gray-500 mt-1">Top 10% in your area</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.occupancy > 0 ? `${stats.occupancy}%` : '0%'}</p>
+                <p className="text-sm text-gray-500 mt-1">Average across all properties</p>
               </div>
 
               <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -248,8 +259,8 @@ function HostDashboardContent() {
                   <span className="text-sm text-gray-500">Active bookings</span>
                   <CalendarDays className="w-5 h-5 text-gray-400" />
                 </div>
-                <p className="text-2xl font-semibold text-gray-900">23</p>
-                <p className="text-sm text-gray-500 mt-1">8 checking in this week</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.activeBookings}</p>
+                <p className="text-sm text-gray-500 mt-1">Confirmed reservations</p>
               </div>
 
               <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -257,8 +268,8 @@ function HostDashboardContent() {
                   <span className="text-sm text-gray-500">Rating</span>
                   <Star className="w-5 h-5 text-gray-400" />
                 </div>
-                <p className="text-2xl font-semibold text-gray-900">4.8</p>
-                <p className="text-sm text-gray-500 mt-1">Based on 124 reviews</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.rating > 0 ? stats.rating.toFixed(1) : '0.0'}</p>
+                <p className="text-sm text-gray-500 mt-1">{stats.reviewCount > 0 ? `Based on ${stats.reviewCount} reviews` : 'No reviews yet'}</p>
               </div>
             </div>
 
@@ -295,55 +306,29 @@ function HostDashboardContent() {
                 </div>
 
                 {/* Things to do */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <h3 className="font-semibold text-gray-900 mb-3">Things to do</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-yellow-600" />
+                {todoItems.length > 0 && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">Things to do</h3>
+                    <div className="space-y-3">
+                      {todoItems.map((item) => (
+                        <div key={item.id} className={`flex items-center justify-between p-3 ${item.priority === 'high' ? 'bg-yellow-50' : 'bg-gray-50'} rounded-lg`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 ${item.priority === 'high' ? 'bg-yellow-100' : 'bg-gray-200'} rounded-full flex items-center justify-center`}>
+                              {item.icon}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{item.title}</p>
+                              <p className="text-sm text-gray-500">{item.description}</p>
+                            </div>
+                          </div>
+                          <button className="px-3 py-1.5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-50">
+                            {item.action}
+                          </button>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">Pending booking request</p>
-                          <p className="text-sm text-gray-500">David Chen · City Loft</p>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1.5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-50">
-                        Review
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <Star className="w-5 h-5 text-gray-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">Write a review</p>
-                          <p className="text-sm text-gray-500">Sarah Williams stayed Dec 8-12</p>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1.5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-50">
-                        Review
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <MessageCircle className="w-5 h-5 text-gray-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">2 unread messages</p>
-                          <p className="text-sm text-gray-500">Reply to keep response rate high</p>
-                        </div>
-                      </div>
-                      <button className="px-3 py-1.5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-50">
-                        Reply
-                      </button>
+                      ))}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Right Column - Earnings & Performance */}
