@@ -108,6 +108,18 @@ export default function BookingConfirm() {
     }
   ];
 
+  // Update form when user data loads
+  useEffect(() => {
+    if (user) {
+      setGuestForm(prev => ({
+        ...prev,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
+        email: user.emailAddresses[0]?.emailAddress || prev.email,
+      }));
+    }
+  }, [user]);
+
   useEffect(() => {
     // Initialize with default payment method
     setSelectedPaymentMethod(paymentMethods.find(m => m.selected) || null);
@@ -129,7 +141,7 @@ export default function BookingConfirm() {
 
     // Fetch property details
     fetchPropertyData(propertyId, checkIn, checkOut, parseInt(guests), parseInt(adults || guests), parseInt(children || '0'), parseInt(infants || '0'));
-  }, [searchParams, user]);
+  }, [searchParams]);
 
   const fetchPropertyData = async (
     propertyId: string,
@@ -270,11 +282,17 @@ export default function BookingConfirm() {
 
   const completeBooking = async () => {
     if (!isStepCompleted(1) || !isStepCompleted(2) || !isStepCompleted(3)) {
+      setError('Please complete all steps before proceeding');
       return;
     }
 
     if (!bookingData || !user) {
-      setError('Missing required information');
+      setError('Missing required information. Please refresh the page.');
+      return;
+    }
+
+    if (!selectedPaymentMethod) {
+      setError('Please select a payment method');
       return;
     }
 
@@ -283,7 +301,13 @@ export default function BookingConfirm() {
 
     try {
       // Step 1: Create the booking
-      console.log('Creating booking...');
+      console.log('📝 Creating booking...', {
+        propertyId: bookingData.property.id,
+        checkIn: bookingData.booking.checkIn,
+        checkOut: bookingData.booking.checkOut,
+        guests: bookingData.booking.guests,
+      });
+
       const bookingResponse = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
@@ -301,19 +325,22 @@ export default function BookingConfirm() {
         }),
       });
 
+      console.log('📡 Booking response status:', bookingResponse.status);
+
       if (!bookingResponse.ok) {
         const errorData = await bookingResponse.json();
+        console.error('❌ Booking creation failed:', errorData);
         throw new Error(errorData.error || 'Failed to create booking');
       }
 
       const bookingResult = await bookingResponse.json();
       const bookingId = bookingResult.id;
 
-      console.log('Booking created:', bookingId);
+      console.log('✅ Booking created successfully:', bookingId);
 
       // Step 2: Create payment based on selected method
-      if (selectedPaymentMethod?.id === 'paypal') {
-        console.log('Creating PayPal payment...');
+      if (selectedPaymentMethod.id === 'paypal') {
+        console.log('💳 Initiating PayPal payment...');
         const paypalResponse = await fetch('/api/paypal/create-order', {
           method: 'POST',
           headers: {
@@ -322,17 +349,23 @@ export default function BookingConfirm() {
           body: JSON.stringify({ bookingId }),
         });
 
+        console.log('📡 PayPal response status:', paypalResponse.status);
+
         if (!paypalResponse.ok) {
-          throw new Error('Failed to create PayPal payment');
+          const errorData = await paypalResponse.json();
+          console.error('❌ PayPal payment creation failed:', errorData);
+          throw new Error(errorData.error || 'Failed to create PayPal payment');
         }
 
         const paypalData = await paypalResponse.json();
+        console.log('✅ PayPal order created:', paypalData.orderId);
 
         // Redirect to PayPal
-        console.log('Redirecting to PayPal...');
-        window.location.href = `https://www.paypal.com/checkoutnow?token=${paypalData.orderId}`;
-      } else if (selectedPaymentMethod?.id === 'sadad') {
-        console.log('Creating Sadad payment...');
+        const paypalUrl = `https://www.paypal.com/checkoutnow?token=${paypalData.orderId}`;
+        console.log('🔄 Redirecting to PayPal:', paypalUrl);
+        window.location.href = paypalUrl;
+      } else if (selectedPaymentMethod.id === 'sadad') {
+        console.log('💳 Initiating Sadad payment...');
         const sadadResponse = await fetch('/api/sadad/create-payment', {
           method: 'POST',
           headers: {
@@ -341,21 +374,27 @@ export default function BookingConfirm() {
           body: JSON.stringify({ bookingId }),
         });
 
+        console.log('📡 Sadad response status:', sadadResponse.status);
+
         if (!sadadResponse.ok) {
-          throw new Error('Failed to create Sadad payment');
+          const errorData = await sadadResponse.json();
+          console.error('❌ Sadad payment creation failed:', errorData);
+          throw new Error(errorData.error || 'Failed to create Sadad payment');
         }
 
         const sadadData = await sadadResponse.json();
+        console.log('✅ Sadad transaction created:', sadadData.transactionId);
+        console.log('🔗 Payment URL:', sadadData.paymentUrl);
 
         // Redirect to Sadad
-        console.log('Redirecting to Sadad...');
+        console.log('🔄 Redirecting to Sadad payment gateway...');
         window.location.href = sadadData.paymentUrl;
       } else {
-        throw new Error('Please select a payment method');
+        throw new Error('Invalid payment method selected');
       }
     } catch (err: any) {
-      console.error('Error completing booking:', err);
-      setError(err.message || 'Failed to complete booking');
+      console.error('❌ Error completing booking:', err);
+      setError(err.message || 'Failed to complete booking. Please try again.');
       setProcessing(false);
     }
   };
