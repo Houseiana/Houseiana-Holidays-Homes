@@ -1,12 +1,27 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+// Initialize S3 client lazily to ensure environment variables are available at runtime
+let s3ClientInstance: S3Client | null = null;
+
+function getS3Client(): S3Client {
+  if (!s3ClientInstance) {
+    console.log('🔧 Initializing S3 client with:', {
+      region: process.env.AWS_REGION || 'us-east-1',
+      hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+      accessKeyPrefix: process.env.AWS_ACCESS_KEY_ID?.substring(0, 4),
+    });
+
+    s3ClientInstance = new S3Client({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+  }
+  return s3ClientInstance;
+}
 
 export interface UploadResult {
   url: string;
@@ -44,6 +59,7 @@ export async function uploadToS3(
     });
 
     console.log('⏳ Sending to S3...');
+    const s3Client = getS3Client();
     await s3Client.send(command);
     console.log('✅ S3 upload complete');
 
@@ -75,6 +91,7 @@ export async function deleteFromS3(key: string): Promise<void> {
     Key: key,
   });
 
+  const s3Client = getS3Client();
   await s3Client.send(command);
 }
 
