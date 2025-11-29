@@ -452,6 +452,35 @@ export default function AddListingPage() {
     }
 
     try {
+      // Upload photos to S3 first
+      const uploadedPhotoUrls: string[] = [];
+
+      if (listing.photos.length > 0) {
+        for (const photoFile of listing.photos) {
+          try {
+            const formData = new FormData();
+            formData.append('file', photoFile);
+            formData.append('folder', 'properties');
+
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+            const uploadResponse = await fetch(`${API_URL}/api/upload-photo`, {
+              method: 'POST',
+              body: formData,
+            });
+
+            const uploadResult = await uploadResponse.json();
+
+            if (uploadResponse.ok && uploadResult.success) {
+              uploadedPhotoUrls.push(uploadResult.url);
+            } else {
+              console.error('Failed to upload photo:', uploadResult.error);
+            }
+          } catch (uploadError) {
+            console.error('Error uploading photo:', uploadError);
+          }
+        }
+      }
+
       const propertyData = {
         title: listing.title,
         description: listing.description,
@@ -474,8 +503,8 @@ export default function AddListingPage() {
         weeklyDiscount: listing.weeklyDiscount,
         monthlyDiscount: listing.monthlyDiscount,
         amenities: listing.amenities,
-        photos: [],
-        coverPhoto: null,
+        photos: uploadedPhotoUrls,
+        coverPhoto: uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls[0] : null,
         checkInTime: listing.checkInTime,
         checkOutTime: listing.checkOutTime,
         minNights: 1,
@@ -508,7 +537,7 @@ export default function AddListingPage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert(`✅ Property "${listing.title}" created successfully!`);
+        alert(`✅ Property "${listing.title}" created successfully with ${uploadedPhotoUrls.length} photo(s)!`);
         router.push('/host-dashboard');
       } else {
         throw new Error(result.error || 'Failed to add property');
