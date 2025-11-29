@@ -5,18 +5,23 @@ let s3ClientInstance: S3Client | null = null;
 
 function getS3Client(): S3Client {
   if (!s3ClientInstance) {
+    // Trim environment variables to remove any whitespace/newlines
+    const region = (process.env.AWS_REGION || 'us-east-1').trim();
+    const accessKeyId = (process.env.AWS_ACCESS_KEY_ID || '').trim();
+    const secretAccessKey = (process.env.AWS_SECRET_ACCESS_KEY || '').trim();
+
     console.log('🔧 Initializing S3 client with:', {
-      region: process.env.AWS_REGION || 'us-east-1',
-      hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
-      hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
-      accessKeyPrefix: process.env.AWS_ACCESS_KEY_ID?.substring(0, 4),
+      region,
+      hasAccessKey: !!accessKeyId,
+      hasSecretKey: !!secretAccessKey,
+      accessKeyPrefix: accessKeyId.substring(0, 4),
     });
 
     s3ClientInstance = new S3Client({
-      region: process.env.AWS_REGION || 'us-east-1',
+      region,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        accessKeyId,
+        secretAccessKey,
       },
     });
   }
@@ -40,7 +45,8 @@ export async function uploadToS3(
   folder: string,
   fileName: string
 ): Promise<UploadResult> {
-  const bucket = process.env.AWS_S3_BUCKET || 'houseiana-property-photos';
+  const bucket = (process.env.AWS_S3_BUCKET || 'houseiana-property-photos').trim();
+  const region = (process.env.AWS_REGION || 'us-east-1').trim();
   const key = `${folder}/${fileName}`;
 
   console.log('🔧 S3 Upload details:', {
@@ -63,7 +69,7 @@ export async function uploadToS3(
     await s3Client.send(command);
     console.log('✅ S3 upload complete');
 
-    const url = `https://${bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+    const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
     return { url, key };
   } catch (error: any) {
@@ -84,7 +90,7 @@ export async function uploadToS3(
  * @returns Promise
  */
 export async function deleteFromS3(key: string): Promise<void> {
-  const bucket = process.env.AWS_S3_BUCKET || 'houseiana-property-photos';
+  const bucket = (process.env.AWS_S3_BUCKET || 'houseiana-property-photos').trim();
 
   const command = new DeleteObjectCommand({
     Bucket: bucket,
