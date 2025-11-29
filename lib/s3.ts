@@ -28,18 +28,38 @@ export async function uploadToS3(
   const bucket = process.env.AWS_S3_BUCKET || 'houseiana-property-photos';
   const key = `${folder}/${fileName}`;
 
-  const command = new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: file,
-    ContentType: getContentType(fileName),
+  console.log('🔧 S3 Upload details:', {
+    bucket,
+    key,
+    fileSize: file.length,
+    contentType: getContentType(fileName),
   });
 
-  await s3Client.send(command);
+  try {
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: file,
+      ContentType: getContentType(fileName),
+    });
 
-  const url = `https://${bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+    console.log('⏳ Sending to S3...');
+    await s3Client.send(command);
+    console.log('✅ S3 upload complete');
 
-  return { url, key };
+    const url = `https://${bucket}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+
+    return { url, key };
+  } catch (error: any) {
+    console.error('❌ S3 Upload error:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.Code || error?.code,
+      statusCode: error?.$metadata?.httpStatusCode,
+      requestId: error?.$metadata?.requestId,
+    });
+    throw error;
+  }
 }
 
 /**
