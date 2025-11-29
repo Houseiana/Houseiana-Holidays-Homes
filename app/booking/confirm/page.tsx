@@ -11,8 +11,10 @@ import {
   Smartphone,
   Check,
   AlertCircle,
-  Loader2
+  Loader2,
+  Home
 } from 'lucide-react';
+import { countries } from '@/lib/countries';
 
 interface Property {
   id: string;
@@ -80,7 +82,10 @@ export default function BookingConfirm() {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.emailAddresses[0]?.emailAddress || '',
+    phoneCode: '+1',
     phone: '',
+    country: 'United States',
+    address: '',
     purpose: 'leisure',
     specialRequests: ''
   });
@@ -395,12 +400,21 @@ export default function BookingConfirm() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button
-            onClick={goBack}
-            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={goBack}
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Home className="w-5 h-5 mr-2" />
+              Return to Homepage
+            </button>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">Confirm and pay</h1>
         </div>
       </header>
@@ -636,13 +650,52 @@ export default function BookingConfirm() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <select
+                          value={guestForm.phoneCode}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, phoneCode: e.target.value }))}
+                          className="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                        >
+                          {countries.map((country) => (
+                            <option key={country.code} value={country.dialCode}>
+                              {country.dialCode} {country.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          placeholder="123456789"
+                          value={guestForm.phone}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            setGuestForm(prev => ({ ...prev, phone: value }));
+                          }}
+                          pattern="[0-9]*"
+                          inputMode="numeric"
+                          className="col-span-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                       <input
-                        type="tel"
-                        placeholder="Enter phone number"
-                        value={guestForm.phone}
-                        onChange={(e) => setGuestForm(prev => ({ ...prev, phone: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        type="text"
+                        placeholder="Enter your address"
+                        value={guestForm.address}
+                        onChange={(e) => setGuestForm(prev => ({ ...prev, address: e.target.value }))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2"
                       />
+                      <select
+                        value={guestForm.country}
+                        onChange={(e) => setGuestForm(prev => ({ ...prev, country: e.target.value }))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      >
+                        {countries.map((country) => (
+                          <option key={country.code} value={country.name}>
+                            {country.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
