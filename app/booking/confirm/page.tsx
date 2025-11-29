@@ -284,10 +284,17 @@ export default function BookingConfirm() {
   };
 
   const isGuestFormValid = (): boolean => {
+    // Validate first name (letters only)
+    const nameRegex = /^[a-zA-Z\s'-]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     return guestForm.firstName.length > 0 &&
+           nameRegex.test(guestForm.firstName) &&
            guestForm.lastName.length > 0 &&
+           nameRegex.test(guestForm.lastName) &&
            guestForm.email.length > 0 &&
-           guestForm.phone.length > 0;
+           emailRegex.test(guestForm.email) &&
+           guestForm.phone.length >= 6; // Minimum 6 digits for phone
   };
 
   const getStepStatus = (step: number): 'completed' | 'current' | 'upcoming' => {
@@ -800,9 +807,22 @@ export default function BookingConfirm() {
                           type="text"
                           placeholder="Enter first name"
                           value={guestForm.firstName}
-                          onChange={(e) => setGuestForm(prev => ({ ...prev, firstName: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          onChange={(e) => {
+                            // Only allow letters, spaces, hyphens, and apostrophes
+                            const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, '');
+                            setGuestForm(prev => ({ ...prev, firstName: value }));
+                          }}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                            guestForm.firstName && /^[a-zA-Z\s'-]+$/.test(guestForm.firstName)
+                              ? 'border-green-500'
+                              : guestForm.firstName
+                              ? 'border-red-500'
+                              : 'border-gray-300'
+                          }`}
                         />
+                        {guestForm.firstName && !/^[a-zA-Z\s'-]+$/.test(guestForm.firstName) && (
+                          <p className="text-xs text-red-600 mt-1">Only letters, spaces, hyphens, and apostrophes are allowed</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
@@ -810,9 +830,22 @@ export default function BookingConfirm() {
                           type="text"
                           placeholder="Enter last name"
                           value={guestForm.lastName}
-                          onChange={(e) => setGuestForm(prev => ({ ...prev, lastName: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          onChange={(e) => {
+                            // Only allow letters, spaces, hyphens, and apostrophes
+                            const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, '');
+                            setGuestForm(prev => ({ ...prev, lastName: value }));
+                          }}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                            guestForm.lastName && /^[a-zA-Z\s'-]+$/.test(guestForm.lastName)
+                              ? 'border-green-500'
+                              : guestForm.lastName
+                              ? 'border-red-500'
+                              : 'border-gray-300'
+                          }`}
                         />
+                        {guestForm.lastName && !/^[a-zA-Z\s'-]+$/.test(guestForm.lastName) && (
+                          <p className="text-xs text-red-600 mt-1">Only letters, spaces, hyphens, and apostrophes are allowed</p>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -822,8 +855,17 @@ export default function BookingConfirm() {
                         placeholder="Enter email address"
                         value={guestForm.email}
                         onChange={(e) => setGuestForm(prev => ({ ...prev, email: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                          guestForm.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestForm.email)
+                            ? 'border-green-500'
+                            : guestForm.email
+                            ? 'border-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {guestForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestForm.email) && (
+                        <p className="text-xs text-red-600 mt-1">Please enter a valid email address</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
@@ -849,9 +891,18 @@ export default function BookingConfirm() {
                           }}
                           pattern="[0-9]*"
                           inputMode="numeric"
-                          className="col-span-2 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          className={`col-span-2 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                            guestForm.phone && guestForm.phone.length >= 6
+                              ? 'border-green-500'
+                              : guestForm.phone
+                              ? 'border-red-500'
+                              : 'border-gray-300'
+                          }`}
                         />
                       </div>
+                      {guestForm.phone && guestForm.phone.length < 6 && (
+                        <p className="text-xs text-red-600 mt-1">Phone number must be at least 6 digits</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
