@@ -24,8 +24,9 @@ export async function GET(request: NextRequest) {
     if (propertyType) where.propertyType = propertyType;
     if (status) {
       where.status = status;
-    } else {
-      // Default to published properties only
+    } else if (!ownerId) {
+      // Default to published properties only for public queries
+      // For host dashboard (when ownerId is provided), show all statuses
       where.status = 'PUBLISHED';
       where.isActive = true;
     }

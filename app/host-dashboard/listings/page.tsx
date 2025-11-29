@@ -1,19 +1,60 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import {
   Home, Calendar, Building2, MessageSquare, ChevronDown,
   Globe, Menu, Plus, Search, Filter,
   DollarSign, Users, Edit, Clock, Star, Settings,
   CalendarDays, LayoutGrid, List, Eye, MoreHorizontal,
-  MapPin, Bed, Bath, Image,
+  MapPin, Bed, Bath, Image as ImageIcon,
   CheckCircle, XCircle, TrendingUp, TrendingDown,
   Zap, Award, Sparkles,
-  Pause, FileText, Camera, Check, AlertCircle
+  Pause as PauseIcon, FileText, Camera, Check, AlertCircle
 } from 'lucide-react';
 
+interface Listing {
+  id: string;
+  title: string;
+  location: string;
+  propertyType: string;
+  status: 'active' | 'paused' | 'draft' | 'inactive';
+  instantBook: boolean;
+  bedrooms: number;
+  bathrooms: number;
+  maxGuests: number;
+  basePrice: number;
+  currency: string;
+  images: string[];
+  imageCount: number;
+  rating: number | null;
+  reviewCount: number;
+  views: number;
+  viewsTrend: number;
+  bookings: {
+    upcoming: number;
+    total: number;
+  };
+  earnings: {
+    thisMonth: number;
+    total: number;
+  };
+  occupancy: number;
+  lastUpdated: string;
+  createdAt: string;
+  amenities: string[];
+  superhostBadge: boolean;
+  guestFavorite: boolean;
+  completionPercent?: number;
+  pauseReason?: string;
+  deactivationReason?: string;
+}
+
 export default function HouseianaHostListings() {
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const { user } = useUser();
+  const router = useRouter();
+  const [viewMode, setViewMode] = useState('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
@@ -21,216 +62,180 @@ export default function HouseianaHostListings() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedListings, setSelectedListings] = useState<string[]>([]);
   const [expandedListing, setExpandedListing] = useState<string | null>(null);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // TODO: Fetch from API
-  const listings = [
-    {
-      id: 'L001',
-      title: 'Beachfront Villa with Private Pool',
-      location: 'The Pearl, Doha',
-      propertyType: 'Villa',
-      status: 'active',
-      instantBook: true,
-      bedrooms: 3,
-      bathrooms: 2,
-      maxGuests: 6,
-      basePrice: 450,
-      currency: 'QAR',
-      images: [null, null, null, null, null],
-      imageCount: 24,
-      rating: 4.95,
-      reviewCount: 48,
-      views: 1247,
-      viewsTrend: 12,
-      bookings: {
-        upcoming: 3,
-        total: 67,
-      },
-      earnings: {
-        thisMonth: 4500,
-        total: 156780,
-      },
-      occupancy: 78,
-      lastUpdated: '2024-12-01T10:00:00Z',
-      createdAt: '2023-06-15T10:00:00Z',
-      amenities: ['wifi', 'pool', 'parking', 'ac', 'kitchen', 'tv'],
-      superhostBadge: true,
-      guestFavorite: true,
-    },
-    {
-      id: 'L002',
-      title: 'Mountain Cabin Retreat',
-      location: 'Al Khor',
-      propertyType: 'Cabin',
-      status: 'active',
-      instantBook: true,
-      bedrooms: 2,
-      bathrooms: 1,
-      maxGuests: 4,
-      basePrice: 280,
-      currency: 'QAR',
-      images: [null, null, null],
-      imageCount: 18,
-      rating: 4.88,
-      reviewCount: 32,
-      views: 856,
-      viewsTrend: 8,
-      bookings: {
-        upcoming: 2,
-        total: 45,
-      },
-      earnings: {
-        thisMonth: 2240,
-        total: 89450,
-      },
-      occupancy: 65,
-      lastUpdated: '2024-11-28T14:00:00Z',
-      createdAt: '2023-09-20T10:00:00Z',
-      amenities: ['wifi', 'fireplace', 'parking', 'kitchen', 'bbq'],
-      superhostBadge: true,
-      guestFavorite: false,
-    },
-    {
-      id: 'L003',
-      title: 'City Loft Premium',
-      location: 'West Bay, Doha',
-      propertyType: 'Apartment',
-      status: 'active',
-      instantBook: false,
-      bedrooms: 1,
-      bathrooms: 1,
-      maxGuests: 2,
-      basePrice: 320,
-      currency: 'QAR',
-      images: [null, null, null, null],
-      imageCount: 32,
-      rating: 4.92,
-      reviewCount: 76,
-      views: 2134,
-      viewsTrend: 24,
-      bookings: {
-        upcoming: 5,
-        total: 124,
-      },
-      earnings: {
-        thisMonth: 6400,
-        total: 245600,
-      },
-      occupancy: 85,
-      lastUpdated: '2024-12-02T09:00:00Z',
-      createdAt: '2022-11-10T10:00:00Z',
-      amenities: ['wifi', 'gym', 'parking', 'ac', 'kitchen', 'tv', 'washer'],
-      superhostBadge: true,
-      guestFavorite: true,
-    },
-    {
-      id: 'L004',
-      title: 'Luxury Penthouse Suite',
-      location: 'Lusail, Doha',
-      propertyType: 'Apartment',
-      status: 'paused',
-      instantBook: true,
-      bedrooms: 4,
-      bathrooms: 3,
-      maxGuests: 8,
-      basePrice: 850,
-      currency: 'QAR',
-      images: [null, null],
-      imageCount: 28,
-      rating: 4.78,
-      reviewCount: 23,
-      views: 567,
-      viewsTrend: -5,
-      bookings: {
-        upcoming: 0,
-        total: 34,
-      },
-      earnings: {
-        thisMonth: 0,
-        total: 178500,
-      },
-      occupancy: 45,
-      lastUpdated: '2024-11-15T10:00:00Z',
-      createdAt: '2023-03-05T10:00:00Z',
-      amenities: ['wifi', 'pool', 'parking', 'ac', 'kitchen', 'tv', 'gym', 'concierge'],
-      superhostBadge: false,
-      guestFavorite: false,
-      pauseReason: 'Undergoing renovation',
-    },
-    {
-      id: 'L005',
-      title: 'Cozy Studio Downtown',
-      location: 'Musheireb, Doha',
-      propertyType: 'Studio',
-      status: 'draft',
-      instantBook: false,
-      bedrooms: 0,
-      bathrooms: 1,
-      maxGuests: 2,
-      basePrice: 180,
-      currency: 'QAR',
-      images: [null],
-      imageCount: 5,
-      rating: null,
-      reviewCount: 0,
-      views: 0,
-      viewsTrend: 0,
-      bookings: {
-        upcoming: 0,
-        total: 0,
-      },
-      earnings: {
-        thisMonth: 0,
-        total: 0,
-      },
-      occupancy: 0,
-      lastUpdated: '2024-12-01T16:00:00Z',
-      createdAt: '2024-12-01T14:00:00Z',
-      amenities: ['wifi', 'ac', 'kitchen'],
-      superhostBadge: false,
-      guestFavorite: false,
-      completionPercent: 65,
-    },
-    {
-      id: 'L006',
-      title: 'Desert Oasis Villa',
-      location: 'Al Wakra',
-      propertyType: 'Villa',
-      status: 'inactive',
-      instantBook: true,
-      bedrooms: 5,
-      bathrooms: 4,
-      maxGuests: 10,
-      basePrice: 650,
-      currency: 'QAR',
-      images: [null, null, null],
-      imageCount: 22,
-      rating: 4.85,
-      reviewCount: 18,
-      views: 423,
-      viewsTrend: -12,
-      bookings: {
-        upcoming: 0,
-        total: 28,
-      },
-      earnings: {
-        thisMonth: 0,
-        total: 124500,
-      },
-      occupancy: 32,
-      lastUpdated: '2024-10-20T10:00:00Z',
-      createdAt: '2023-08-12T10:00:00Z',
-      amenities: ['wifi', 'pool', 'parking', 'ac', 'kitchen', 'bbq', 'desert_view'],
-      superhostBadge: false,
-      guestFavorite: false,
-      deactivationReason: 'Seasonal closure',
-    },
-  ];
+  // Fetch properties from API
+  useEffect(() => {
+    fetchListings();
+  }, [user?.id]);
+
+  const fetchListings = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('🔍 Fetching host properties for user:', user.id);
+
+      const response = await fetch(`/api/properties?ownerId=${user.id}`);
+      const data = await response.json();
+
+      if (data.success && data.properties) {
+        console.log(`✅ Loaded ${data.properties.length} properties`);
+        const mappedListings = mapPropertiesToListings(data.properties);
+        setListings(mappedListings);
+      } else {
+        console.error('❌ Failed to load properties:', data.error);
+        setListings([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching properties:', error);
+      setListings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to map properties to listings
+  const mapPropertiesToListings = (properties: any[]): Listing[] => {
+    return properties.map((prop: any) => {
+      const statusMap: Record<string, 'active' | 'paused' | 'draft' | 'inactive'> = {
+        'PUBLISHED': 'active',
+        'DRAFT': 'draft',
+        'PAUSED': 'paused',
+        'INACTIVE': 'inactive',
+      };
+      const uiStatus = statusMap[prop.status] || 'draft';
+
+      const photos = Array.isArray(prop.photos) ? prop.photos : [];
+      const imageCount = photos.length;
+
+      return {
+        id: prop.id,
+        title: prop.title,
+        location: `${prop.city}, ${prop.country}`,
+        propertyType: prop.propertyType || 'Property',
+        status: uiStatus,
+        instantBook: prop.instantBook || false,
+        bedrooms: prop.bedrooms || 0,
+        bathrooms: prop.bathrooms || 0,
+        maxGuests: prop.guests || prop.maxGuests || 1,
+        basePrice: prop.basePrice || prop.pricePerNight || 0,
+        currency: prop.currency || 'QAR',
+        images: photos,
+        imageCount: imageCount,
+        rating: prop.averageRating || null,
+        reviewCount: prop.totalReviews || prop._count?.reviews || 0,
+        views: 0,
+        viewsTrend: 0,
+        bookings: {
+          upcoming: 0,
+          total: prop._count?.bookings || 0,
+        },
+        earnings: {
+          thisMonth: 0,
+          total: prop.revenue || 0,
+        },
+        occupancy: prop.occupancy || 0,
+        lastUpdated: prop.updatedAt || new Date().toISOString(),
+        createdAt: prop.createdAt || new Date().toISOString(),
+        amenities: Array.isArray(prop.amenities) ? prop.amenities : [],
+        superhostBadge: false,
+        guestFavorite: (prop._count?.favorites || 0) > 10,
+        completionPercent: uiStatus === 'draft' ? 65 : undefined,
+      };
+    });
+  };
+
+  // Bulk action handlers
+  const handleBulkActivate = async () => {
+    if (selectedListings.length === 0) return;
+
+    try {
+      const updatePromises = selectedListings.map(id =>
+        fetch(`/api/properties`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: 'PUBLISHED', isActive: true }),
+        })
+      );
+
+      await Promise.all(updatePromises);
+      await fetchListings();
+      setSelectedListings([]);
+      alert(`${selectedListings.length} listing(s) activated successfully`);
+    } catch (error) {
+      console.error('Error activating listings:', error);
+      alert('Failed to activate listings');
+    }
+  };
+
+  const handleBulkPause = async () => {
+    if (selectedListings.length === 0) return;
+
+    try {
+      const updatePromises = selectedListings.map(id =>
+        fetch(`/api/properties`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: 'PAUSED', isActive: false }),
+        })
+      );
+
+      await Promise.all(updatePromises);
+      await fetchListings();
+      setSelectedListings([]);
+      alert(`${selectedListings.length} listing(s) paused successfully`);
+    } catch (error) {
+      console.error('Error pausing listings:', error);
+      alert('Failed to pause listings');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedListings.length === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${selectedListings.length} listing(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const deletePromises = selectedListings.map(id =>
+        fetch(`/api/properties?id=${id}`, {
+          method: 'DELETE',
+        })
+      );
+
+      await Promise.all(deletePromises);
+      await fetchListings();
+      setSelectedListings([]);
+      alert(`${selectedListings.length} listing(s) deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting listings:', error);
+      alert('Failed to delete listings');
+    }
+  };
+
+  // Individual action handlers
+  const handleViewListing = (id: string) => {
+    window.open(`/property/${id}`, '_blank');
+  };
+
+  const handleEditListing = (id: string) => {
+    router.push(`/host-dashboard/add-listing?id=${id}`);
+  };
+
+  const handleViewCalendar = (id: string) => {
+    router.push(`/host-dashboard/calendar?property=${id}`);
+  };
 
   // Status configurations
   const statusConfig = {
     active: { label: 'Active', color: 'bg-green-100 text-green-700', dotColor: 'bg-green-500', icon: CheckCircle },
-    paused: { label: 'Paused', color: 'bg-amber-100 text-amber-700', dotColor: 'bg-amber-500', icon: Pause },
+    paused: { label: 'Paused', color: 'bg-amber-100 text-amber-700', dotColor: 'bg-amber-500', icon: PauseIcon },
     draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', dotColor: 'bg-gray-400', icon: FileText },
     inactive: { label: 'Inactive', color: 'bg-red-100 text-red-700', dotColor: 'bg-red-500', icon: XCircle },
   };
@@ -245,7 +250,7 @@ export default function HouseianaHostListings() {
       inactive: listings.filter(l => l.status === 'inactive').length,
       totalViews: listings.reduce((sum, l) => sum + l.views, 0),
       totalBookings: listings.reduce((sum, l) => sum + l.bookings.upcoming, 0),
-      avgRating: (listings.filter(l => l.rating).reduce((sum, l) => sum + (l.rating || 0), 0) / listings.filter(l => l.rating).length).toFixed(2),
+      avgRating: listings.length > 0 ? (listings.filter(l => l.rating).reduce((sum, l) => sum + (l.rating || 0), 0) / listings.filter(l => l.rating).length || 0).toFixed(2) : '0.00',
       totalEarnings: listings.reduce((sum, l) => sum + l.earnings.thisMonth, 0),
     };
   }, [listings]);
@@ -254,12 +259,10 @@ export default function HouseianaHostListings() {
   const filteredListings = useMemo(() => {
     let result = listings;
 
-    // Filter by status
     if (selectedStatus !== 'all') {
       result = result.filter(l => l.status === selectedStatus);
     }
 
-    // Search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(l =>
@@ -269,7 +272,6 @@ export default function HouseianaHostListings() {
       );
     }
 
-    // Sort
     result = [...result].sort((a, b) => {
       switch (sortBy) {
         case 'newest':
@@ -292,7 +294,6 @@ export default function HouseianaHostListings() {
     return result;
   }, [listings, selectedStatus, searchQuery, sortBy]);
 
-  // Toggle listing selection
   const toggleListingSelection = (listingId: string) => {
     setSelectedListings(prev =>
       prev.includes(listingId)
@@ -301,7 +302,6 @@ export default function HouseianaHostListings() {
     );
   };
 
-  // Select all listings
   const selectAllListings = () => {
     if (selectedListings.length === filteredListings.length) {
       setSelectedListings([]);
@@ -310,7 +310,6 @@ export default function HouseianaHostListings() {
     }
   };
 
-  // Format date
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -328,13 +327,11 @@ export default function HouseianaHostListings() {
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
         <div className="px-6">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
             <a href="/" className="flex items-center gap-2">
               <Home className="w-8 h-8 text-teal-600" strokeWidth={2.5} />
               <span className="text-xl font-bold text-teal-600">Houseiana</span>
             </a>
 
-            {/* Center Navigation */}
             <nav className="hidden md:flex items-center gap-1">
               <a href="/host-dashboard" className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full">
                 Today
@@ -351,15 +348,8 @@ export default function HouseianaHostListings() {
                   2
                 </span>
               </a>
-              <div className="relative">
-                <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full flex items-center gap-1">
-                  Menu
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-              </div>
             </nav>
 
-            {/* Right Side */}
             <div className="flex items-center gap-2">
               <a href="/client-dashboard" className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full">
                 Switch to traveling
@@ -372,11 +362,8 @@ export default function HouseianaHostListings() {
                 className="flex items-center gap-2 p-1 pl-3 border border-gray-300 rounded-full hover:shadow-md"
               >
                 <Menu className="w-4 h-4 text-gray-600" />
-                <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white font-medium text-sm relative">
+                <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white font-medium text-sm">
                   M
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    1
-                  </span>
                 </div>
               </button>
             </div>
@@ -386,14 +373,13 @@ export default function HouseianaHostListings() {
 
       {/* Page Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Page Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-semibold text-gray-900">Your listings</h1>
             <p className="text-gray-500 mt-1">{stats.total} {stats.total === 1 ? 'property' : 'properties'}</p>
           </div>
           <a
-            href="/host-dashboard/listings/new"
+            href="/host-dashboard/add-listing"
             className="flex items-center gap-2 px-5 py-3 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700 transition-colors"
           >
             <Plus className="w-5 h-5" />
@@ -455,7 +441,6 @@ export default function HouseianaHostListings() {
         {/* Filters and Search */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center gap-4">
-            {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -467,7 +452,6 @@ export default function HouseianaHostListings() {
               />
             </div>
 
-            {/* Status Filter Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto">
               {[
                 { id: 'all', label: 'All', count: stats.total },
@@ -490,7 +474,6 @@ export default function HouseianaHostListings() {
               ))}
             </div>
 
-            {/* Sort & View */}
             <div className="flex items-center gap-2">
               <select
                 value={sortBy}
@@ -528,13 +511,22 @@ export default function HouseianaHostListings() {
               <span className="text-sm text-gray-600">
                 {selectedListings.length} selected
               </span>
-              <button className="text-sm text-gray-700 hover:text-gray-900 font-medium">
+              <button
+                onClick={handleBulkActivate}
+                className="text-sm text-gray-700 hover:text-gray-900 font-medium"
+              >
                 Activate
               </button>
-              <button className="text-sm text-gray-700 hover:text-gray-900 font-medium">
+              <button
+                onClick={handleBulkPause}
+                className="text-sm text-gray-700 hover:text-gray-900 font-medium"
+              >
                 Pause
               </button>
-              <button className="text-sm text-red-600 hover:text-red-700 font-medium">
+              <button
+                onClick={handleBulkDelete}
+                className="text-sm text-red-600 hover:text-red-700 font-medium"
+              >
                 Delete
               </button>
               <button
@@ -547,8 +539,18 @@ export default function HouseianaHostListings() {
           )}
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your listings...</p>
+            </div>
+          </div>
+        )}
+
         {/* Listings Grid */}
-        {viewMode === 'grid' && (
+        {!loading && viewMode === 'grid' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredListings.map(listing => {
               const status = statusConfig[listing.status as keyof typeof statusConfig];
@@ -560,17 +562,22 @@ export default function HouseianaHostListings() {
                 >
                   {/* Image */}
                   <div className="relative aspect-[4/3] bg-gray-200">
-                    {/* Placeholder for image */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Image className="w-12 h-12 text-gray-400" />
-                    </div>
+                    {listing.images.length > 0 ? (
+                      <img
+                        src={listing.images[0]}
+                        alt={listing.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <ImageIcon className="w-12 h-12 text-gray-400" />
+                      </div>
+                    )}
 
-                    {/* Status Badge */}
                     <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
                       {status.label}
                     </div>
 
-                    {/* Badges */}
                     <div className="absolute top-3 right-3 flex gap-2">
                       {listing.guestFavorite && (
                         <div className="px-2 py-1 bg-white rounded-full text-xs font-medium text-gray-900 shadow">
@@ -584,7 +591,6 @@ export default function HouseianaHostListings() {
                       )}
                     </div>
 
-                    {/* Selection Checkbox */}
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleListingSelection(listing.id); }}
                       className={`absolute bottom-3 left-3 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
@@ -598,29 +604,34 @@ export default function HouseianaHostListings() {
                       )}
                     </button>
 
-                    {/* Quick Actions */}
                     <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2 bg-white rounded-full shadow hover:bg-gray-100">
+                      <button
+                        onClick={() => handleViewListing(listing.id)}
+                        className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+                      >
                         <Eye className="w-4 h-4 text-gray-600" />
                       </button>
-                      <button className="p-2 bg-white rounded-full shadow hover:bg-gray-100">
+                      <button
+                        onClick={() => handleEditListing(listing.id)}
+                        className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+                      >
                         <Edit className="w-4 h-4 text-gray-600" />
                       </button>
-                      <button className="p-2 bg-white rounded-full shadow hover:bg-gray-100">
+                      <button
+                        onClick={() => handleViewCalendar(listing.id)}
+                        className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+                      >
                         <MoreHorizontal className="w-4 h-4 text-gray-600" />
                       </button>
                     </div>
 
-                    {/* Image Count */}
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/60 text-white text-xs rounded-full flex items-center gap-1">
                       <Camera className="w-3 h-3" />
                       {listing.imageCount}
                     </div>
                   </div>
 
-                  {/* Content */}
                   <div className="p-4">
-                    {/* Title & Location */}
                     <div className="mb-3">
                       <h3 className="font-semibold text-gray-900 line-clamp-1">{listing.title}</h3>
                       <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
@@ -629,7 +640,6 @@ export default function HouseianaHostListings() {
                       </p>
                     </div>
 
-                    {/* Property Details */}
                     <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
                       <span className="flex items-center gap-1">
                         <Bed className="w-4 h-4" />
@@ -645,7 +655,6 @@ export default function HouseianaHostListings() {
                       </span>
                     </div>
 
-                    {/* Stats Row */}
                     <div className="flex items-center justify-between py-3 border-t border-gray-100">
                       <div className="flex items-center gap-4">
                         {listing.rating && (
@@ -673,17 +682,10 @@ export default function HouseianaHostListings() {
                       </div>
                     </div>
 
-                    {/* Footer Stats */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-sm">
                       <div className="flex items-center gap-1 text-gray-500">
                         <Eye className="w-4 h-4" />
                         {listing.views.toLocaleString()} views
-                        {listing.viewsTrend !== 0 && (
-                          <span className={`flex items-center ${listing.viewsTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {listing.viewsTrend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                            {Math.abs(listing.viewsTrend)}%
-                          </span>
-                        )}
                       </div>
                       {listing.bookings.upcoming > 0 && (
                         <span className="text-teal-600 font-medium">
@@ -692,7 +694,6 @@ export default function HouseianaHostListings() {
                       )}
                     </div>
 
-                    {/* Pause/Draft Reason */}
                     {(listing.pauseReason || listing.deactivationReason) && (
                       <div className="mt-3 p-2 bg-amber-50 rounded-lg flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -709,7 +710,7 @@ export default function HouseianaHostListings() {
         )}
 
         {/* Listings List View */}
-        {viewMode === 'list' && (
+        {!loading && viewMode === 'list' && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -748,8 +749,16 @@ export default function HouseianaHostListings() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-16 h-12 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Image className="w-5 h-5 text-gray-400" />
+                          <div className="w-16 h-12 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {listing.images.length > 0 ? (
+                              <img
+                                src={listing.images[0]}
+                                alt={listing.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <ImageIcon className="w-5 h-5 text-gray-400" />
+                            )}
                           </div>
                           <div>
                             <p className="font-medium text-gray-900 line-clamp-1">{listing.title}</p>
@@ -798,17 +807,26 @@ export default function HouseianaHostListings() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button className="p-2 hover:bg-gray-100 rounded-lg" title="Preview">
+                          <button
+                            onClick={() => handleViewListing(listing.id)}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            title="Preview"
+                          >
                             <Eye className="w-4 h-4 text-gray-500" />
                           </button>
-                          <button className="p-2 hover:bg-gray-100 rounded-lg" title="Edit">
+                          <button
+                            onClick={() => handleEditListing(listing.id)}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            title="Edit"
+                          >
                             <Edit className="w-4 h-4 text-gray-500" />
                           </button>
-                          <button className="p-2 hover:bg-gray-100 rounded-lg" title="Calendar">
+                          <button
+                            onClick={() => handleViewCalendar(listing.id)}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            title="Calendar"
+                          >
                             <Calendar className="w-4 h-4 text-gray-500" />
-                          </button>
-                          <button className="p-2 hover:bg-gray-100 rounded-lg" title="More">
-                            <MoreHorizontal className="w-4 h-4 text-gray-500" />
                           </button>
                         </div>
                       </td>
@@ -821,7 +839,7 @@ export default function HouseianaHostListings() {
         )}
 
         {/* Empty State */}
-        {filteredListings.length === 0 && (
+        {!loading && filteredListings.length === 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Building2 className="w-8 h-8 text-gray-400" />
@@ -836,7 +854,7 @@ export default function HouseianaHostListings() {
             </p>
             {!searchQuery && (
               <a
-                href="/host-dashboard/listings/new"
+                href="/host-dashboard/add-listing"
                 className="inline-flex items-center gap-2 px-5 py-3 bg-teal-600 text-white font-medium rounded-lg hover:bg-teal-700"
               >
                 <Plus className="w-5 h-5" />

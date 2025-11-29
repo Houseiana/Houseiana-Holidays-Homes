@@ -74,42 +74,58 @@ export default function PropertyDetailPage() {
     setDefaultDates()
   }, [params.id])
 
-  const loadProperty = (id: string) => {
-    // Mock property data
-    const mockProperty: Property = {
-      id,
-      title: 'kawans Inn lembongan villa',
-      type: 'Entire villa',
-      location: 'Nusapenida, Indonesia',
-      price: 31.82,
-      rating: 4.82,
-      reviews: 199,
-      images: [
-        'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
-        'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800',
-        'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
-        'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800',
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800'
-      ],
-      amenities: ['wifi', 'pool', 'kitchen', 'parking', 'air-conditioning', 'tv'],
-      bedrooms: 3,
-      bathrooms: 2,
-      guests: 6,
-      host: {
-        name: 'Nyoman',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        joinDate: 'June 2020',
-        verified: true
-      },
-      latitude: -8.674,
-      longitude: 115.448,
-      description: 'lembongan Inn has a private room decorated with gardens around it, strategic location of the Inn, close to diving shop and yoga place just 5 minutes walk. we invite tourists to stay at the Inn.',
-      isRareFind: true,
-      guestFavorite: true,
-      perks: ['Flexible check-in', 'Self check-in', 'Dedicated workspace']
-    }
+  const loadProperty = async (id: string) => {
+    try {
+      console.log('🔍 Loading property:', id);
 
-    setProperty(mockProperty)
+      const response = await fetch(`/api/properties/${id}`);
+      const data = await response.json();
+
+      if (data.success && data.property) {
+        console.log('✅ Property loaded:', data.property.title);
+
+        // Map API data to component structure
+        const mappedProperty: Property = {
+          id: data.property.id,
+          title: data.property.title,
+          type: data.property.type,
+          location: data.property.location,
+          latitude: data.property.latitude,
+          longitude: data.property.longitude,
+          price: data.property.price,
+          rating: data.property.rating,
+          reviews: data.property.reviews,
+          images: data.property.images.length > 0
+            ? data.property.images
+            : ['https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800'],
+          amenities: data.property.amenities,
+          bedrooms: data.property.bedrooms,
+          bathrooms: data.property.bathrooms,
+          guests: data.property.guests,
+          host: data.property.host || {
+            name: 'Host',
+            avatar: '',
+            joinDate: 'Recently joined',
+            verified: false
+          },
+          description: data.property.description,
+          isRareFind: data.property.isRareFind || false,
+          guestFavorite: data.property.guestFavorite || false,
+          perks: ['Flexible check-in', 'Self check-in']
+        };
+
+        setProperty(mappedProperty);
+      } else {
+        console.error('❌ Failed to load property:', data.error);
+        // Show error to user
+        alert('Property not found');
+        router.push('/discover');
+      }
+    } catch (error) {
+      console.error('❌ Error loading property:', error);
+      alert('Failed to load property');
+      router.push('/discover');
+    }
   }
 
   const nextImage = () => {
