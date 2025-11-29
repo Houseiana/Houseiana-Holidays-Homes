@@ -60,9 +60,10 @@ interface BookingData {
 interface PaymentMethod {
   id: string;
   name: string;
-  type: 'digital';
+  type: 'card' | 'digital' | 'wallet';
   icon: string;
   selected: boolean;
+  logos?: string[];
 }
 
 export default function BookingConfirm() {
@@ -90,14 +91,45 @@ export default function BookingConfirm() {
     specialRequests: ''
   });
 
-  // Payment methods - Only PayPal and Sadad
+  // Card form data
+  const [cardForm, setCardForm] = useState({
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    zipCode: '',
+    billingCountry: 'United States'
+  });
+
+  // Payment methods
   const paymentMethods: PaymentMethod[] = [
+    {
+      id: 'card',
+      name: 'Credit or debit card',
+      type: 'card',
+      icon: 'card',
+      selected: true,
+      logos: ['VISA', 'MC', 'AMEX', 'DISC']
+    },
     {
       id: 'paypal',
       name: 'PayPal',
       type: 'digital',
       icon: 'paypal',
-      selected: true
+      selected: false
+    },
+    {
+      id: 'apple_pay',
+      name: 'Apple Pay',
+      type: 'wallet',
+      icon: 'apple',
+      selected: false
+    },
+    {
+      id: 'google_pay',
+      name: 'Google Pay',
+      type: 'wallet',
+      icon: 'google',
+      selected: false
     },
     {
       id: 'sadad',
@@ -595,26 +627,129 @@ export default function BookingConfirm() {
                       <div
                         key={method.id}
                         onClick={() => selectPaymentMethod(method)}
-                        className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
+                        className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                           selectedPaymentMethod?.id === method.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-gray-400'
                         }`}
                       >
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 flex items-center justify-center">
-                            {method.icon === 'paypal' && <div className="text-sm font-bold text-blue-600">PayPal</div>}
-                            {method.icon === 'sadad' && <div className="text-sm font-bold text-purple-600">Sadad</div>}
-                          </div>
-                          <span className="ml-3 font-medium text-gray-900">{method.name}</span>
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border-2 ${
-                          selectedPaymentMethod?.id === method.id ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
-                        }`}>
-                          {selectedPaymentMethod?.id === method.id && (
-                            <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center flex-1">
+                            <div className="flex items-center gap-2">
+                              {method.icon === 'card' && <div className="text-sm font-bold text-gray-700">💳</div>}
+                              {method.icon === 'paypal' && <div className="text-sm font-bold text-blue-600">PayPal</div>}
+                              {method.icon === 'apple' && <div className="text-sm">🍎</div>}
+                              {method.icon === 'google' && <div className="text-sm">G</div>}
+                              {method.icon === 'sadad' && <div className="text-sm font-bold text-purple-600">Sadad</div>}
+                              <span className="ml-2 font-medium text-gray-900">{method.name}</span>
                             </div>
-                          )}
+                            {method.logos && (
+                              <div className="ml-4 flex items-center gap-2">
+                                {method.logos.map((logo) => (
+                                  <span key={logo} className="text-xs font-semibold text-gray-500 bg-white border border-gray-200 px-2 py-1 rounded">
+                                    {logo}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                            selectedPaymentMethod?.id === method.id ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
+                          }`}>
+                            {selectedPaymentMethod?.id === method.id && (
+                              <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Card Form - Show when card payment is selected */}
+                        {selectedPaymentMethod?.id === 'card' && method.id === 'card' && (
+                          <div className="mt-4 pt-4 border-t space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Card number 🔒
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="1234 5678 9012 3456"
+                                maxLength={19}
+                                value={cardForm.cardNumber}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+                                  const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
+                                  setCardForm(prev => ({ ...prev, cardNumber: formatted }));
+                                }}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              />
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Expiry
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="MM/YY"
+                                  maxLength={5}
+                                  value={cardForm.expiryDate}
+                                  onChange={(e) => {
+                                    let value = e.target.value.replace(/\D/g, '');
+                                    if (value.length >= 2) {
+                                      value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                                    }
+                                    setCardForm(prev => ({ ...prev, expiryDate: value }));
+                                  }}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  CVV
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="123"
+                                  maxLength={4}
+                                  value={cardForm.cvv}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    setCardForm(prev => ({ ...prev, cvv: value }));
+                                  }}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  ZIP code
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="12345"
+                                  maxLength={10}
+                                  value={cardForm.zipCode}
+                                  onChange={(e) => setCardForm(prev => ({ ...prev, zipCode: e.target.value }))}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Billing Country
+                              </label>
+                              <select
+                                value={cardForm.billingCountry}
+                                onChange={(e) => setCardForm(prev => ({ ...prev, billingCountry: e.target.value }))}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              >
+                                {countries.map((country) => (
+                                  <option key={country.code} value={country.name}>
+                                    {country.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
