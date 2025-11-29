@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Home, Calendar, Building2, MessageSquare, ChevronDown,
   ChevronRight, Globe, Menu, Search, X, Check,
@@ -16,16 +16,45 @@ export default function HouseianaHostReservations() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProperty, setSelectedProperty] = useState('all');
   const [expandedReservation, setExpandedReservation] = useState<string | null>(null);
+  const [allReservations, setAllReservations] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // TODO: Fetch from API
-  const properties = [
-    { id: 'P001', name: 'Beachfront Villa', location: 'The Pearl, Doha' },
-    { id: 'P002', name: 'Mountain Cabin', location: 'Al Khor' },
-    { id: 'P003', name: 'City Loft Premium', location: 'West Bay, Doha' },
-  ];
+  // Fetch bookings from API
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const response = await fetch('/api/host/bookings');
+        const result = await response.json();
 
-  // TODO: Fetch from API
-  const allReservations: any[] = [];
+        if (result.success) {
+          // Convert date strings back to Date objects
+          const bookingsWithDates = result.data.map((b: any) => ({
+            ...b,
+            checkIn: new Date(b.checkIn),
+            checkOut: new Date(b.checkOut),
+            bookedAt: new Date(b.bookedAt),
+          }));
+          setAllReservations(bookingsWithDates);
+
+          // Extract unique properties
+          const uniqueProperties = Array.from(
+            new Map(result.data.map((b: any) => [
+              b.propertyId,
+              { id: b.propertyId, name: b.propertyName, location: b.propertyLocation }
+            ])).values()
+          );
+          setProperties(uniqueProperties);
+        }
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, []);
 
   // Status configurations
   const statusConfig = {
