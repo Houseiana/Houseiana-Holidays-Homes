@@ -338,6 +338,9 @@ export default function BookingConfirm() {
 
       console.log('✅ Booking created successfully:', bookingId);
 
+      // Store booking ID for payment return page
+      localStorage.setItem('pending_payment_booking', bookingId);
+
       // Step 2: Create payment based on selected method
       if (selectedPaymentMethod.id === 'paypal') {
         console.log('💳 Initiating PayPal payment...');
