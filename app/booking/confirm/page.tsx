@@ -603,35 +603,47 @@ export default function BookingConfirm() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-900">Contact information</h3>
                     <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                        <input
+                          type="text"
+                          placeholder="Enter first name"
+                          value={guestForm.firstName}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, firstName: e.target.value }))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                        <input
+                          type="text"
+                          placeholder="Enter last name"
+                          value={guestForm.lastName}
+                          onChange={(e) => setGuestForm(prev => ({ ...prev, lastName: e.target.value }))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                       <input
-                        type="text"
-                        placeholder="First name"
-                        value={guestForm.firstName}
-                        onChange={(e) => setGuestForm(prev => ({ ...prev, firstName: e.target.value }))}
-                        className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Last name"
-                        value={guestForm.lastName}
-                        onChange={(e) => setGuestForm(prev => ({ ...prev, lastName: e.target.value }))}
-                        className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        type="email"
+                        placeholder="Enter email address"
+                        value={guestForm.email}
+                        onChange={(e) => setGuestForm(prev => ({ ...prev, email: e.target.value }))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
-                    <input
-                      type="email"
-                      placeholder="Email address"
-                      value={guestForm.email}
-                      onChange={(e) => setGuestForm(prev => ({ ...prev, email: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
-                    <input
-                      type="tel"
-                      placeholder="Phone number"
-                      value={guestForm.phone}
-                      onChange={(e) => setGuestForm(prev => ({ ...prev, phone: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                      <input
+                        type="tel"
+                        placeholder="Enter phone number"
+                        value={guestForm.phone}
+                        onChange={(e) => setGuestForm(prev => ({ ...prev, phone: e.target.value }))}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -673,10 +685,23 @@ export default function BookingConfirm() {
                     />
                   </div>
 
+                  {/* Payment Notice */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-yellow-900 mb-1">Payment Required</h4>
+                        <p className="text-sm text-yellow-800">
+                          After clicking "Proceed to Payment", you will be redirected to {selectedPaymentMethod?.name} to complete your payment securely. Your booking will only be confirmed after successful payment.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Terms and Conditions */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-600">
-                      By selecting the button below, I agree to the{' '}
+                      By proceeding to payment, I agree to the{' '}
                       <a href="#" className="text-indigo-600 hover:text-indigo-800">Host's House Rules</a>,{' '}
                       <a href="#" className="text-indigo-600 hover:text-indigo-800">Ground rules for guests</a>,{' '}
                       <a href="#" className="text-indigo-600 hover:text-indigo-800">Houseiana's Rebooking and Refund Policy</a>, and that{' '}
@@ -694,10 +719,10 @@ export default function BookingConfirm() {
                       {processing ? (
                         <>
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Processing...
+                          Redirecting to Payment...
                         </>
                       ) : (
-                        'Confirm and pay'
+                        <>Proceed to Payment ({selectedPaymentMethod?.name})</>
                       )}
                     </button>
                   )}
