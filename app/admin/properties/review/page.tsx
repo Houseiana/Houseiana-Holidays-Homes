@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
 import {
   CheckCircle,
   XCircle,
@@ -24,7 +26,9 @@ import {
   ArrowLeft,
   Filter,
   Search,
-  ChevronDown
+  ChevronDown,
+  ImageIcon,
+  ZoomIn
 } from 'lucide-react';
 
 interface Property {
@@ -84,6 +88,9 @@ export default function AdminReviewDashboard() {
     rejected: 0,
   });
   const [filterStatus, setFilterStatus] = useState('PENDING_REVIEW');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxImages, setLightboxImages] = useState<Array<{ src: string }>>([]);
 
   useEffect(() => {
     checkAdminAccess();
@@ -189,12 +196,25 @@ export default function AdminReviewDashboard() {
     }
   };
 
-  const getPhotoUrl = (property: Property) => {
-    if (property.coverPhoto) return property.coverPhoto;
-    if (property.photos && Array.isArray(property.photos) && property.photos.length > 0) {
-      return property.photos[0];
+  const getPhotosArray = (property: Property): string[] => {
+    try {
+      if (Array.isArray(property.photos)) {
+        return property.photos;
+      }
+      if (typeof property.photos === 'string') {
+        const parsed = JSON.parse(property.photos);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+      return [];
+    } catch {
+      return [];
     }
-    return null;
+  };
+
+  const openLightbox = (photos: string[], index: number) => {
+    setLightboxImages(photos.map(src => ({ src })));
+    setLightboxIndex(index);
+    setLightboxOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -209,6 +229,12 @@ export default function AdminReviewDashboard() {
 
   const getAmenityList = (amenities: any) => {
     if (Array.isArray(amenities)) return amenities;
+    try {
+      if (typeof amenities === 'string') {
+        const parsed = JSON.parse(amenities);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch {}
     return [];
   };
 
@@ -308,32 +334,12 @@ export default function AdminReviewDashboard() {
         {properties.length > 0 ? (
           <div className="space-y-6">
             {properties.map((property) => {
-              const photoUrl = getPhotoUrl(property);
+              const photos = getPhotosArray(property);
               const amenities = getAmenityList(property.amenities);
 
               return (
                 <div key={property.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="md:flex">
-                    {/* Property Image */}
-                    <div className="md:w-1/3">
-                      <div className="relative h-64 md:h-full bg-gray-200">
-                        {photoUrl ? (
-                          <Image
-                            src={photoUrl}
-                            alt={property.title}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex items-center justify-center h-full">
-                            <Home className="w-16 h-16 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Property Details */}
-                    <div className="md:w-2/3 p-6">
+                  <div className="p-6">
                       {/* Header */}
                       <div className="flex items-start justify-between mb-4">
                         <div>
@@ -357,6 +363,44 @@ export default function AdminReviewDashboard() {
                           {property.status.replace('_', ' ')}
                         </span>
                       </div>
+
+                      {/* Photo Gallery */}
+                      {photos.length > 0 && (
+                        <div className="mb-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <ImageIcon className="w-4 h-4 text-gray-600" />
+                            <p className="text-sm font-medium text-gray-700">Property Photos ({photos.length})</p>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                            {photos.slice(0, 10).map((photo, index) => (
+                              <div
+                                key={index}
+                                className="relative h-32 bg-gray-200 rounded-lg overflow-hidden cursor-pointer group"
+                                onClick={() => openLightbox(photos, index)}
+                              >
+                                <Image
+                                  src={photo}
+                                  alt={`${property.title} - Photo ${index + 1}`}
+                                  fill
+                                  className="object-cover group-hover:scale-110 transition-transform duration-200"
+                                  unoptimized
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity duration-200 flex items-center justify-center">
+                                  <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                                </div>
+                              </div>
+                            ))}
+                            {photos.length > 10 && (
+                              <div
+                                className="relative h-32 bg-gray-800 rounded-lg overflow-hidden cursor-pointer flex items-center justify-center"
+                                onClick={() => openLightbox(photos, 10)}
+                              >
+                                <p className="text-white text-lg font-semibold">+{photos.length - 10}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Property Info */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -584,6 +628,14 @@ export default function AdminReviewDashboard() {
           </div>
         </div>
       )}
+
+      {/* Lightbox */}
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxImages}
+        index={lightboxIndex}
+      />
     </div>
   );
 }
