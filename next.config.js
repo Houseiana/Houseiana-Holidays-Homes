@@ -50,13 +50,21 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.imagedelivery.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'houseiana-property-photos.s3.us-east-1.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'houseiana-property-photos.s3.amazonaws.com',
+      },
     ],
     unoptimized: process.env.NODE_ENV === 'development',
   },
   experimental: {
     // Only external packages actually used by frontend
     // Note: pg, bcryptjs removed - database access is via Railway API only
-    serverComponentsExternalPackages: ['@vercel/blob', 'nodemailer', 'twilio', '@sendgrid/mail']
+    serverComponentsExternalPackages: ['@vercel/blob', 'nodemailer', 'twilio', '@sendgrid/mail', '@aws-sdk/client-s3', '@aws-sdk/s3-request-presigner']
   },
   // Environment variables that should be available on the client
   env: {

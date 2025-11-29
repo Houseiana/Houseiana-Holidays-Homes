@@ -454,16 +454,19 @@ export default function AddListingPage() {
     try {
       // Upload photos to S3 first
       const uploadedPhotoUrls: string[] = [];
+      const failedPhotos: string[] = [];
 
       if (listing.photos.length > 0) {
-        for (const photoFile of listing.photos) {
+        alert(`Uploading ${listing.photos.length} photo(s)... This may take a moment.`);
+
+        for (let i = 0; i < listing.photos.length; i++) {
+          const photoFile = listing.photos[i];
           try {
             const formData = new FormData();
             formData.append('file', photoFile);
             formData.append('folder', 'properties');
 
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-            const uploadResponse = await fetch(`${API_URL}/api/upload-photo`, {
+            const uploadResponse = await fetch(`/api/upload-photo`, {
               method: 'POST',
               body: formData,
             });
@@ -472,12 +475,26 @@ export default function AddListingPage() {
 
             if (uploadResponse.ok && uploadResult.success) {
               uploadedPhotoUrls.push(uploadResult.url);
+              console.log(`✅ Photo ${i + 1}/${listing.photos.length} uploaded successfully`);
             } else {
-              console.error('Failed to upload photo:', uploadResult.error);
+              const errorMsg = uploadResult.error || 'Unknown error';
+              console.error(`❌ Photo ${i + 1} upload failed:`, errorMsg);
+              failedPhotos.push(`Photo ${i + 1}: ${errorMsg}`);
             }
-          } catch (uploadError) {
-            console.error('Error uploading photo:', uploadError);
+          } catch (uploadError: any) {
+            console.error(`❌ Photo ${i + 1} upload error:`, uploadError);
+            failedPhotos.push(`Photo ${i + 1}: ${uploadError.message || 'Network error'}`);
           }
+        }
+
+        // Show results
+        if (failedPhotos.length > 0) {
+          const message = `⚠️ ${uploadedPhotoUrls.length}/${listing.photos.length} photos uploaded successfully.\n\nFailed uploads:\n${failedPhotos.join('\n')}\n\nDo you want to continue creating the property without these photos?`;
+          if (!confirm(message)) {
+            return;
+          }
+        } else {
+          console.log(`✅ All ${uploadedPhotoUrls.length} photos uploaded successfully!`);
         }
       }
 
