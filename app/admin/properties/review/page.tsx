@@ -517,7 +517,6 @@ export default function AdminReviewDashboard() {
                           View
                         </Link>
                       </div>
-                    </div>
                   </div>
                 </div>
               );
