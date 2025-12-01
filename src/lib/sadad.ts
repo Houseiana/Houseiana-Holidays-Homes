@@ -1,342 +1,243 @@
+import crypto from 'crypto';
+
+const SADAD_API_URL = 'https://api-s.sadad.qa';
+
+// Cache for access token
+let accessTokenCache: { token: string; expiresAt: number } | null = null;
+
+interface SadadLoginResponse {
+  accessToken: string;
+}
+
+interface CreatePaymentParams {
+  amount: number;
+  currency: string;
+  merchantReference: string;
+  customerEmail: string;
+  customerName: string;
+  description: string;
+  metadata?: Record<string, any>;
+}
+
+interface CreatePaymentResponse {
+  transactionId: string;
+  paymentUrl: string;
+  status: string;
+  merchantReference: string;
+}
+
+interface RefundParams {
+  transactionId: string;
+  amount: number;
+  reason: string;
+}
+
+interface RefundResponse {
+  refundId: string;
+  status: string;
+  amount: number;
+}
+
+interface TransactionStatusResponse {
+  transactionId: string;
+  status: string;
+  amount: number;
+  currency: string;
+  paidAt?: string;
+}
+
 /**
- * Sadad Qatar Payment Gateway Integration
- * Documentation: https://developer.sadad.qa
- * API Base URL: https://api-s.sadad.qa
- */
-
-// Sadad API Configuration
-const SADAD_API_URL = 'https://api-s.sadad.qa'
-const SADAD_SECRET_KEY = process.env.SADAD_SECRET_KEY || ''
-const SADAD_ID = process.env.SADAD_ID || '' // Your Sadad ID number
-const SADAD_DOMAIN = process.env.SADAD_DOMAIN || 'www.houseiana.net'
-
-// Cache access token (tokens don't expire quickly, so we can cache)
-let cachedAccessToken: string | null = null
-let tokenExpiry: number = 0
-
-/**
- * Authenticate with Sadad and get access token
+ * Get Sadad access token (with 1-hour caching)
  */
 async function getSadadAccessToken(): Promise<string> {
-  // Return cached token if still valid (cache for 1 hour)
-  if (cachedAccessToken && Date.now() < tokenExpiry) {
-    return cachedAccessToken
+  // Check cache
+  if (accessTokenCache && accessTokenCache.expiresAt > Date.now()) {
+    return accessTokenCache.token;
+  }
+
+  const sadadId = process.env.SADAD_ID;
+  const secretKey = process.env.SADAD_SECRET_KEY;
+  const domain = process.env.SADAD_DOMAIN;
+
+  if (!sadadId || !secretKey || !domain) {
+    throw new Error('Missing Sadad credentials in environment variables');
   }
 
   try {
     const response = await fetch(`${SADAD_API_URL}/api/userbusinesses/login`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sadadId: parseInt(SADAD_ID),
-        secretKey: SADAD_SECRET_KEY,
-        domain: SADAD_DOMAIN
-      })
-    })
+        sadadId: parseInt(sadadId),
+        secretKey,
+        domain,
+      }),
+    });
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Authentication failed')
+      const error = await response.text();
+      throw new Error(`Sadad login failed: ${error}`);
     }
 
-    const data = await response.json()
-    cachedAccessToken = data.accessToken
-    tokenExpiry = Date.now() + (60 * 60 * 1000) // Cache for 1 hour
+    const data: SadadLoginResponse = await response.json();
 
-    return data.accessToken
-  } catch (error) {
-    console.error('Sadad authentication error:', error)
-    throw error
+    // Cache token for 1 hour
+    accessTokenCache = {
+      token: data.accessToken,
+      expiresAt: Date.now() + 3600000, // 1 hour
+    };
+
+    return data.accessToken;
+  } catch (error: any) {
+    console.error('Failed to get Sadad access token:', error);
+    throw new Error(`Sadad authentication failed: ${error.message}`);
   }
 }
 
 /**
- * Create an invoice for payment
+ * Create a payment transaction with Sadad
  */
-export async function createSadadPayment(params: {
-  amount: number
-  customerName: string
-  customerPhone?: string
-  customerCountryCode?: string
-  description: string
-  metadata?: Record<string, any>
-}): Promise<{
-  invoiceNumber: string
-  invoiceId: number
-  amount: number
-  status: string
-  paymentUrl: string
-}> {
+export async function createSadadPayment(
+  params: CreatePaymentParams
+): Promise<CreatePaymentResponse> {
+  const accessToken = await getSadadAccessToken();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.houseiana.net';
+
   try {
-    const accessToken = await getSadadAccessToken()
-
-    // Prepare invoice details
-    const invoiceDetails = [
-      {
-        description: params.description,
-        quantity: 1,
-        amount: params.amount
-      }
-    ]
-
-    // Create invoice
-    const response = await fetch(`${SADAD_API_URL}/api/invoices/createInvoice`, {
+    const response = await fetch(`${SADAD_API_URL}/api/transactions/create`, {
       method: 'POST',
       headers: {
+        'Authorization': accessToken,
         'Content-Type': 'application/json',
-        'Authorization': accessToken
       },
       body: JSON.stringify({
-        countryCode: params.customerCountryCode || 974, // Qatar country code
-        cellnumber: params.customerPhone || '00000000',
-        clientname: params.customerName,
-        status: 2, // 2 = Unpaid
-        remarks: JSON.stringify(params.metadata || {}),
         amount: params.amount,
-        invoicedetails: invoiceDetails
-      })
-    })
+        currency: params.currency,
+        merchantReference: params.merchantReference,
+        customerEmail: params.customerEmail,
+        customerName: params.customerName,
+        description: params.description,
+        returnUrl: `${appUrl}/payment/return`,
+        cancelUrl: `${appUrl}/payment/return?status=cancelled`,
+        webhookUrl: `${appUrl}/api/webhooks/sadad`,
+        metadata: params.metadata,
+      }),
+    });
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Failed to create invoice')
+      const error = await response.text();
+      throw new Error(`Sadad payment creation failed: ${error}`);
     }
 
-    const data = await response.json()
-    const invoice = Array.isArray(data) ? data[0] : data
-
-    // Generate payment URL (Sadad's invoice payment page)
-    const paymentUrl = `https://sadad.qa/invoice/${invoice.invoiceno}`
+    const data = await response.json();
 
     return {
-      invoiceNumber: invoice.invoiceno,
-      invoiceId: invoice.id,
-      amount: invoice.grossamount,
-      status: 'pending',
-      paymentUrl
-    }
-  } catch (error) {
-    console.error('Sadad invoice creation error:', error)
-    throw error
+      transactionId: data.transactionId || data.id,
+      paymentUrl: data.paymentUrl || data.checkoutUrl,
+      status: data.status || 'pending',
+      merchantReference: params.merchantReference,
+    };
+  } catch (error: any) {
+    console.error('Failed to create Sadad payment:', error);
+    throw new Error(`Sadad payment creation failed: ${error.message}`);
   }
 }
 
 /**
- * Get transaction details by transaction number
+ * Create a refund for a transaction
  */
-export async function getSadadTransaction(
-  transactionNumber: string
-): Promise<{
-  transactionNumber: string
-  status: string
-  amount: number
-  isPaid: boolean
-  transactionDate?: string
-}> {
-  try {
-    const accessToken = await getSadadAccessToken()
+export async function createSadadRefund(
+  params: RefundParams
+): Promise<RefundResponse> {
+  const accessToken = await getSadadAccessToken();
 
-    const response = await fetch(
-      `${SADAD_API_URL}/api/transactions/getTransaction`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': accessToken,
-          'Origin': `https://${SADAD_DOMAIN}`
-        },
-        body: JSON.stringify({
-          transactionno: transactionNumber
-        })
-      }
-    )
+  try {
+    const response = await fetch(`${SADAD_API_URL}/api/transactions/${params.transactionId}/refund`, {
+      method: 'POST',
+      headers: {
+        'Authorization': accessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: params.amount,
+        reason: params.reason,
+      }),
+    });
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Transaction not found')
+      const error = await response.text();
+      throw new Error(`Sadad refund failed: ${error}`);
     }
 
-    const data = await response.json()
+    const data = await response.json();
 
     return {
-      transactionNumber: data.invoicenumber,
-      status: data.transactionstatus?.name || 'UNKNOWN',
-      amount: data.amount,
-      isPaid: data.transactionstatusId === 3, // 3 = SUCCESS
-      transactionDate: data.transactiondate
-    }
-  } catch (error) {
-    console.error('Sadad transaction lookup error:', error)
-    throw error
+      refundId: data.refundId || data.id,
+      status: data.status || 'completed',
+      amount: params.amount,
+    };
+  } catch (error: any) {
+    console.error('Failed to create Sadad refund:', error);
+    throw new Error(`Sadad refund failed: ${error.message}`);
   }
 }
 
 /**
- * List transactions with filters
+ * Get transaction status
  */
-export async function listSadadTransactions(params?: {
-  skip?: number
-  limit?: number
-  startDate?: string
-  endDate?: string
-}): Promise<any[]> {
+export async function getSadadTransactionStatus(
+  transactionId: string
+): Promise<TransactionStatusResponse> {
+  const accessToken = await getSadadAccessToken();
+
   try {
-    const accessToken = await getSadadAccessToken()
-
-    const skip = params?.skip || 0
-    const limit = params?.limit || 10
-
-    let url = `${SADAD_API_URL}/api/transactions/listTransactions?filter[skip]=${skip}&filter[limit]=${limit}`
-
-    if (params?.startDate && params?.endDate) {
-      url += `&filter[date_range][startDate]=${params.startDate}&filter[date_range][endDate]=${params.endDate}`
-    }
-
-    const response = await fetch(url, {
+    const response = await fetch(`${SADAD_API_URL}/api/transactions/${transactionId}`, {
       method: 'GET',
       headers: {
+        'Authorization': accessToken,
         'Content-Type': 'application/json',
-        'Authorization': accessToken
-      }
-    })
+      },
+    });
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Failed to list transactions')
+      const error = await response.text();
+      throw new Error(`Failed to get transaction status: ${error}`);
     }
 
-    return await response.json()
-  } catch (error) {
-    console.error('Sadad list transactions error:', error)
-    throw error
-  }
-}
-
-/**
- * Refund a transaction
- */
-export async function createSadadRefund(params: {
-  transactionNumber: string
-  amount?: number
-  reason?: string
-}): Promise<{
-  refundId: string
-  status: string
-  amount: number
-}> {
-  try {
-    const accessToken = await getSadadAccessToken()
-
-    const response = await fetch(
-      `${SADAD_API_URL}/api/transactions/refundTransaction`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': accessToken
-        },
-        body: JSON.stringify({
-          transactionnumber: params.transactionNumber
-        })
-      }
-    )
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Refund failed')
-    }
-
-    const data = await response.json()
+    const data = await response.json();
 
     return {
-      refundId: data.invoicenumber,
-      status: data.transactionstatus?.name || 'REFUND',
-      amount: data.amount
-    }
-  } catch (error) {
-    console.error('Sadad refund error:', error)
-    throw error
+      transactionId: data.transactionId || data.id,
+      status: data.status,
+      amount: data.amount,
+      currency: data.currency,
+      paidAt: data.paidAt || data.paid_at,
+    };
+  } catch (error: any) {
+    console.error('Failed to get Sadad transaction status:', error);
+    throw new Error(`Failed to get transaction status: ${error.message}`);
   }
 }
 
 /**
- * Share invoice via SMS or Email
+ * Verify Sadad webhook signature
  */
-export async function shareSadadInvoice(params: {
-  invoiceNumber: string
-  method: 'sms' | 'email'
-  recipient: string
-}): Promise<boolean> {
-  try {
-    const accessToken = await getSadadAccessToken()
+export function verifySadadWebhook(payload: string, signature: string): boolean {
+  const secretKey = process.env.SADAD_SECRET_KEY;
 
-    const requestBody: any = {
-      sentvia: params.method === 'sms' ? 4 : 3,
-      invoicenumber: params.invoiceNumber
-    }
-
-    if (params.method === 'sms') {
-      requestBody.receivercellno = params.recipient
-    } else {
-      requestBody.receiverEmail = params.recipient
-    }
-
-    const response = await fetch(`${SADAD_API_URL}/api/invoices/share`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': accessToken
-      },
-      body: JSON.stringify(requestBody)
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error?.message || 'Failed to share invoice')
-    }
-
-    const data = await response.json()
-    return data.result === true
-  } catch (error) {
-    console.error('Sadad share invoice error:', error)
-    throw error
+  if (!secretKey) {
+    throw new Error('Missing SADAD_SECRET_KEY in environment variables');
   }
-}
 
-/**
- * Generate merchant reference for booking
- */
-export function generateMerchantReference(bookingId: string): string {
-  const timestamp = Date.now().toString().slice(-8)
-  return `BK${bookingId.slice(0, 8).toUpperCase()}${timestamp}`
-}
+  const expectedSignature = crypto
+    .createHmac('sha256', secretKey)
+    .update(payload)
+    .digest('hex');
 
-/**
- * Validate Sadad configuration
- */
-export function validateSadadConfig(): void {
-  if (!SADAD_SECRET_KEY) {
-    throw new Error('SADAD_SECRET_KEY is not configured')
-  }
-  if (!SADAD_ID) {
-    throw new Error('SADAD_ID is not configured')
-  }
-  if (!SADAD_DOMAIN) {
-    throw new Error('SADAD_DOMAIN is not configured')
-  }
-}
-
-/**
- * Verify webhook signature (if Sadad provides webhooks)
- * Note: Sadad API docs don't mention webhooks, may need to poll transactions instead
- */
-export function verifySadadWebhook(
-  payload: string,
-  signature: string
-): boolean {
-  // TODO: Implement if Sadad provides webhook signatures
-  // For now, return true (assuming webhooks are from trusted source)
-  return true
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
 }
