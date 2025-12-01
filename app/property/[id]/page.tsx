@@ -173,8 +173,19 @@ export default function PropertyDetailPage() {
   }
 
   const proceedToReserve = () => {
-    if (calculateNights() > 0) {
-      router.push('/booking/confirm')
+    if (calculateNights() > 0 && property) {
+      // Build URL with all required booking parameters
+      const params = new URLSearchParams({
+        propertyId: property.id,
+        checkIn: bookingForm.checkIn,
+        checkOut: bookingForm.checkOut,
+        guests: bookingForm.guests.toString(),
+        adults: bookingForm.guests.toString(), // For now, all guests are adults
+        children: '0',
+        infants: '0'
+      });
+
+      router.push(`/booking/confirm?${params.toString()}`);
     }
   }
 
