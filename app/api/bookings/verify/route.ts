@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma-server'
 import { checkPaymentGatewayStatus, PaymentProvider } from '@/lib/payment-gateways'
+import { sendEmail, getBookingConfirmationEmail, getPaymentFailedEmail } from '@/lib/email'
 
 /**
  * GET /api/bookings/verify?id=booking_123
@@ -39,8 +40,12 @@ export async function GET(request: NextRequest) {
         transactionId: true,
         paymentIntentId: true,
         totalPrice: true,
+        amountPaid: true,
         confirmedAt: true,
         holdExpiresAt: true,
+        confirmationCode: true,
+        checkIn: true,
+        checkOut: true,
         property: {
           select: {
             id: true,
@@ -155,6 +160,32 @@ export async function GET(request: NextRequest) {
 
           console.log(`✅ Booking ${bookingId} payment verified: $${paymentAmount} (Total paid: $${totalAmountPaid}/${booking.totalPrice})`)
 
+          // Send booking confirmation email if fully paid
+          if (isFullyPaid) {
+            try {
+              const emailTemplate = getBookingConfirmationEmail({
+                guestName: `${booking.guest.firstName} ${booking.guest.lastName}`,
+                propertyTitle: booking.property.title,
+                checkIn: booking.checkIn,
+                checkOut: booking.checkOut,
+                totalPrice: booking.totalPrice,
+                confirmationCode: booking.confirmationCode,
+                bookingId: booking.id,
+              })
+
+              await sendEmail({
+                to: booking.guest.email,
+                subject: 'Booking Confirmed - Houseiana Holidays Homes',
+                ...emailTemplate,
+              })
+
+              console.log(`📧 Booking confirmation email sent to ${booking.guest.email}`)
+            } catch (emailError) {
+              console.error('❌ Failed to send confirmation email:', emailError)
+              // Don't fail the whole request if email fails
+            }
+          }
+
           return NextResponse.json({
             success: true,
             booking: {
@@ -180,7 +211,27 @@ export async function GET(request: NextRequest) {
             error: verificationResult.error || 'Payment is still pending',
           })
         } else {
-          // Payment failed
+          // Payment failed - send notification email
+          try {
+            const emailTemplate = getPaymentFailedEmail({
+              guestName: `${booking.guest.firstName} ${booking.guest.lastName}`,
+              propertyTitle: booking.property.title,
+              bookingId: booking.id,
+              amount: booking.totalPrice - (booking.amountPaid || 0),
+            })
+
+            await sendEmail({
+              to: booking.guest.email,
+              subject: 'Payment Failed - Houseiana Holidays Homes',
+              ...emailTemplate,
+            })
+
+            console.log(`📧 Payment failed email sent to ${booking.guest.email}`)
+          } catch (emailError) {
+            console.error('❌ Failed to send payment failed email:', emailError)
+            // Don't fail the whole request if email fails
+          }
+
           return NextResponse.json({
             success: false,
             booking: {
