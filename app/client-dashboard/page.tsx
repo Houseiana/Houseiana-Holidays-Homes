@@ -24,6 +24,8 @@ interface Trip {
   status: 'confirmed' | 'pending' | 'cancelled';
   confirmationCode: string;
   coverPhoto?: string;
+  paymentStatus?: 'PAID' | 'PARTIALLY_PAID' | 'PENDING' | 'FAILED';
+  amountPaid?: number;
 }
 
 interface Wishlist {
@@ -141,6 +143,37 @@ export default function ClientDashboard() {
     return Math.ceil(diff / (1000 * 3600 * 24));
   };
 
+  // Handle pay balance for PARTIALLY_PAID bookings
+  const handlePayBalance = async (bookingId: string, paymentProvider: string = 'paypal') => {
+    try {
+      const response = await fetch('/api/bookings/pay-balance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookingId,
+          paymentProvider,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.paymentUrl) {
+        // Store booking ID in localStorage for verification after payment
+        localStorage.setItem('pending_payment_booking', bookingId);
+
+        // Redirect to payment gateway
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(data.error || 'Failed to create payment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating balance payment:', error);
+      alert('Failed to create payment. Please try again.');
+    }
+  };
+
   // Render content based on active tab
   const renderTabContent = () => {
     switch (activeTab) {
@@ -214,11 +247,18 @@ export default function ClientDashboard() {
                               {trip.propertyTitle}
                             </h3>
                           </div>
-                          {trip.status === 'confirmed' && (
-                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                              Confirmed
-                            </span>
-                          )}
+                          <div className="flex flex-col gap-2">
+                            {trip.status === 'confirmed' && (
+                              <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full text-center">
+                                Confirmed
+                              </span>
+                            )}
+                            {trip.paymentStatus === 'PARTIALLY_PAID' && (
+                              <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full text-center">
+                                Balance Due
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
@@ -248,6 +288,33 @@ export default function ClientDashboard() {
                             <p className="text-xl font-semibold text-gray-900">${trip.totalPrice.toLocaleString()}</p>
                           </div>
                         </div>
+
+                        {/* Pay Balance Button for PARTIALLY_PAID bookings */}
+                        {trip.paymentStatus === 'PARTIALLY_PAID' && (
+                          <div className="mt-4 pt-4 border-t border-gray-100">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <p className="text-sm font-medium text-amber-600">Balance Due</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Paid: ${(trip.amountPaid || 0).toLocaleString()} / ${trip.totalPrice.toLocaleString()}
+                                </p>
+                              </div>
+                              <p className="text-lg font-semibold text-amber-600">
+                                ${(trip.totalPrice - (trip.amountPaid || 0)).toLocaleString()}
+                              </p>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePayBalance(trip.id);
+                              }}
+                              className="w-full px-4 py-3 bg-amber-500 text-white font-medium rounded-lg hover:bg-amber-600 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <CreditCard size={18} />
+                              Pay Remaining Balance
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -748,6 +748,7 @@ model Booking {
   serviceFee      Float          @default(0)
   taxAmount       Float          @default(0)
   totalPrice      Float
+  amountPaid      Float          @default(0) // Track partial payments (50/50 split)
 
   // Platform Commission
   platformCommission Float
@@ -814,6 +815,7 @@ model Booking {
 //   REJECTED
 //   EXPIRED
 //   CHECKED_IN
+//   AWAITING_PAYMENT  // NEW: Soft hold - expires in 15 min if payment not received
 // }
 
 // enum PaymentStatus {
@@ -822,6 +824,7 @@ model Booking {
 //   FAILED
 //   REFUNDED
 //   PARTIALLY_REFUNDED
+//   PARTIALLY_PAID    // NEW: For split payment scenarios
 // }
 
 // ============================================================================

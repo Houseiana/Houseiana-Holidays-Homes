@@ -233,11 +233,11 @@ export async function POST(request: NextRequest) {
 
     // Use transaction for concurrency control
     const booking = await (prisma as any).$transaction(async (prismaTransaction: any) => {
-      // Check for conflicting bookings
-      const conflictingBooking = await (prismaTransaction as any).booking.findFirst({
+      // Check for conflicting bookings (include AWAITING_PAYMENT but with lazy expiration)
+      const potentialConflicts = await (prismaTransaction as any).booking.findMany({
         where: {
           propertyId,
-          status: { in: ['PENDING', 'CONFIRMED', 'CHECKED_IN'] },
+          status: { in: ['AWAITING_PAYMENT', 'REQUESTED', 'CONFIRMED', 'CHECKED_IN'] },
           OR: [
             {
               AND: [
@@ -261,7 +261,26 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      if (conflictingBooking) {
+      // Lazy Expiration: Check if AWAITING_PAYMENT bookings have expired
+      const now = new Date()
+      const expiredBookingIds: string[] = []
+      const validConflicts = potentialConflicts.filter((booking: any) => {
+        if (booking.status === 'AWAITING_PAYMENT' && booking.holdExpiresAt && new Date(booking.holdExpiresAt) <= now) {
+          expiredBookingIds.push(booking.id)
+          return false // This booking has expired, not a real conflict
+        }
+        return true // Valid conflict
+      })
+
+      // Update expired bookings to EXPIRED status
+      if (expiredBookingIds.length > 0) {
+        await (prismaTransaction as any).booking.updateMany({
+          where: { id: { in: expiredBookingIds } },
+          data: { status: 'EXPIRED' }
+        })
+      }
+
+      if (validConflicts.length > 0) {
         throw new Error('Property is not available for selected dates')
       }
 
@@ -296,11 +315,11 @@ export async function POST(request: NextRequest) {
 
       // Determine booking flow: instant book or request-to-book
       const isInstantBook = property.instantBook && !property.requestToBook
-      const initialStatus = isInstantBook ? 'REQUESTED' : 'REQUESTED' // Both start as REQUESTED
+      const initialStatus = isInstantBook ? 'AWAITING_PAYMENT' : 'REQUESTED'
 
-      // Set hold expiry (24 hours for request-to-book, 2 hours for instant book awaiting payment)
-      const holdExpiryHours = property.requestToBook ? (property.approvalWindowHours || 24) : 2
-      const holdExpiresAt = new Date(Date.now() + holdExpiryHours * 60 * 60 * 1000)
+      // Set hold expiry (24 hours for request-to-book, 15 minutes for instant book)
+      const holdExpiryMinutes = property.requestToBook ? (property.approvalWindowHours || 24) * 60 : 15
+      const holdExpiresAt = new Date(Date.now() + holdExpiryMinutes * 60 * 1000)
 
       // Get cancellation policy from property
       const cancellationPolicy = property.cancellationPolicy || 'FLEXIBLE'

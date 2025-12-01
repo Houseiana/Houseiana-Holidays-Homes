@@ -13,47 +13,25 @@ export default function PaymentReturnContent() {
 
   useEffect(() => {
     const checkPaymentStatus = async () => {
-      // Get transaction details from URL params
-      const transactionId = searchParams.get('transaction_id') || searchParams.get('txn_id')
-      const paymentStatus = searchParams.get('status')
-      const merchantRef = searchParams.get('merchant_reference') || searchParams.get('ref')
-
       // Get booking ID from localStorage
       const pendingBookingId = localStorage.getItem('pending_payment_booking')
       setBookingId(pendingBookingId)
 
-      console.log('Payment return:', {
-        transactionId,
-        paymentStatus,
-        merchantRef,
-        bookingId: pendingBookingId
-      })
-
-      // Check if payment was successful
-      if (paymentStatus === 'success' || paymentStatus === 'paid' || paymentStatus === 'completed') {
-        setStatus('success')
-        setMessage('Payment successful! Your booking has been confirmed.')
-
-        // Clear the pending payment
-        localStorage.removeItem('pending_payment_booking')
-
-        // Redirect to bookings page after 3 seconds
-        setTimeout(() => {
-          router.push('/client-dashboard?tab=trips')
-        }, 3000)
-      } else if (paymentStatus === 'failed' || paymentStatus === 'cancelled' || paymentStatus === 'declined') {
+      if (!pendingBookingId) {
         setStatus('failed')
-        setMessage('Payment failed. Please try again or contact support.')
-      } else {
-        // Status unclear, check with backend
-        await verifyPaymentStatus(pendingBookingId, transactionId)
+        setMessage('Booking not found. Please contact support.')
+        return
       }
+
+      // SECURITY: Never trust URL parameters for payment confirmation
+      // Always verify with the payment gateway via our backend API
+      await verifyPaymentStatus(pendingBookingId)
     }
 
     checkPaymentStatus()
   }, [searchParams, router])
 
-  const verifyPaymentStatus = async (bookingId: string | null, transactionId: string | null) => {
+  const verifyPaymentStatus = async (bookingId: string | null) => {
     if (!bookingId) {
       setStatus('failed')
       setMessage('Booking not found. Please contact support.')
@@ -61,35 +39,39 @@ export default function PaymentReturnContent() {
     }
 
     try {
-      // Fetch booking to check payment status
-      const response = await fetch(`/api/bookings?role=guest`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        }
-      })
+      // Call verification endpoint that queries payment gateway directly
+      // This is the SINGLE SOURCE OF TRUTH for payment confirmation
+      const response = await fetch(`/api/bookings/verify?id=${bookingId}`)
 
       if (response.ok) {
         const data = await response.json()
-        const booking = data.items?.find((b: any) => b.id === bookingId)
 
-        if (booking) {
-          if (booking.paymentStatus === 'PAID' && booking.status === 'CONFIRMED') {
-            setStatus('success')
-            setMessage('Payment confirmed! Your booking is confirmed.')
-            localStorage.removeItem('pending_payment_booking')
+        if (data.success && data.booking.status === 'CONFIRMED') {
+          // Payment verified and booking confirmed!
+          setStatus('success')
+          setMessage('Payment verified! Your booking has been confirmed.')
+          localStorage.removeItem('pending_payment_booking')
 
-            setTimeout(() => {
-              router.push('/client-dashboard?tab=trips')
-            }, 3000)
-          } else if (booking.paymentStatus === 'FAILED') {
-            setStatus('failed')
-            setMessage('Payment failed. Please try again.')
-          } else {
-            // Still pending - keep checking
-            setMessage('Verifying payment status...')
-            setTimeout(() => verifyPaymentStatus(bookingId, transactionId), 2000)
-          }
+          setTimeout(() => {
+            router.push('/client-dashboard?tab=trips')
+          }, 3000)
+        } else if (data.booking?.status === 'AWAITING_PAYMENT') {
+          // Payment still pending - continue checking
+          setMessage('Verifying payment with payment gateway...')
+          setTimeout(() => verifyPaymentStatus(bookingId), 3000) // Check every 3 seconds
+        } else if (data.booking?.status === 'EXPIRED') {
+          // Booking expired
+          setStatus('failed')
+          setMessage('Booking expired. The 15-minute payment window has passed. Please create a new booking.')
+        } else {
+          // Payment failed
+          setStatus('failed')
+          setMessage(data.error || 'Payment verification failed. Please try again or contact support.')
         }
+      } else {
+        const errorData = await response.json()
+        setStatus('failed')
+        setMessage(errorData.error || 'Error verifying payment. Please contact support.')
       }
     } catch (error) {
       console.error('Error verifying payment:', error)
