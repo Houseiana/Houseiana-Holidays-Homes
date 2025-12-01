@@ -104,33 +104,11 @@ function BookingConfirmContent() {
   // Payment methods
   const paymentMethods: PaymentMethod[] = [
     {
-      id: 'card',
-      name: 'Credit or debit card',
-      type: 'card',
-      icon: 'card',
-      selected: true,
-      logos: ['VISA', 'MC', 'AMEX', 'DISC']
-    },
-    {
       id: 'paypal',
       name: 'PayPal',
       type: 'digital',
       icon: 'paypal',
-      selected: false
-    },
-    {
-      id: 'apple_pay',
-      name: 'Apple Pay',
-      type: 'wallet',
-      icon: 'apple',
-      selected: false
-    },
-    {
-      id: 'google_pay',
-      name: 'Google Pay',
-      type: 'wallet',
-      icon: 'google',
-      selected: false
+      selected: true
     },
     {
       id: 'sadad',
@@ -683,95 +661,6 @@ function BookingConfirmContent() {
                             )}
                           </div>
                         </div>
-
-                        {/* Card Form - Show when card payment is selected */}
-                        {selectedPaymentMethod?.id === 'card' && method.id === 'card' && (
-                          <div className="mt-4 pt-4 border-t space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Card number 🔒
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="1234 5678 9012 3456"
-                                maxLength={19}
-                                value={cardForm.cardNumber}
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-                                  const formatted = value.match(/.{1,4}/g)?.join(' ') || value;
-                                  setCardForm(prev => ({ ...prev, cardNumber: formatted }));
-                                }}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              />
-                            </div>
-                            <div className="grid grid-cols-3 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Expiry
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="MM/YY"
-                                  maxLength={5}
-                                  value={cardForm.expiryDate}
-                                  onChange={(e) => {
-                                    let value = e.target.value.replace(/\D/g, '');
-                                    if (value.length >= 2) {
-                                      value = value.slice(0, 2) + '/' + value.slice(2, 4);
-                                    }
-                                    setCardForm(prev => ({ ...prev, expiryDate: value }));
-                                  }}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  CVV
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="123"
-                                  maxLength={4}
-                                  value={cardForm.cvv}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(/\D/g, '');
-                                    setCardForm(prev => ({ ...prev, cvv: value }));
-                                  }}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  ZIP code
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="12345"
-                                  maxLength={10}
-                                  value={cardForm.zipCode}
-                                  onChange={(e) => setCardForm(prev => ({ ...prev, zipCode: e.target.value }))}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Billing Country
-                              </label>
-                              <select
-                                value={cardForm.billingCountry}
-                                onChange={(e) => setCardForm(prev => ({ ...prev, billingCountry: e.target.value }))}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              >
-                                {countries.map((country) => (
-                                  <option key={country.code} value={country.name}>
-                                    {country.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
