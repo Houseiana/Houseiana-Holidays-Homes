@@ -59,9 +59,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['PENDING', 'APPROVED'].includes(booking.status)) {
+    // Check if booking is in correct status (AWAITING_PAYMENT for instant book, or PENDING/REQUESTED/APPROVED for request-to-book)
+    if (!['AWAITING_PAYMENT', 'PENDING', 'REQUESTED', 'APPROVED'].includes(booking.status)) {
       return NextResponse.json(
-        { error: 'Booking cannot be paid' },
+        { error: `Booking cannot be paid. Current status: ${booking.status}` },
         { status: 400 }
       );
     }
