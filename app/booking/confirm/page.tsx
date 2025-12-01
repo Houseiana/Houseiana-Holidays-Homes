@@ -314,12 +314,19 @@ function BookingConfirmContent() {
       return;
     }
 
-    // Get authentication token from localStorage (custom JWT)
-    const token = localStorage.getItem('auth_token');
-
-    // Check if user has valid authentication token
-    if (!token) {
+    // Get authentication token from Clerk
+    if (!isSignedIn) {
       setError('You must be signed in to complete a booking. Redirecting to sign in...');
+      setTimeout(() => {
+        router.push('/sign-in');
+      }, 1500);
+      return;
+    }
+
+    const token = await getToken();
+
+    if (!token) {
+      setError('Unable to authenticate. Please try signing in again.');
       setTimeout(() => {
         router.push('/sign-in');
       }, 1500);
