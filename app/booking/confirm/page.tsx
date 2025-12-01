@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-
-export const dynamic = 'force-dynamic';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import {
   ArrowLeft,
   Star,
@@ -68,7 +67,7 @@ interface PaymentMethod {
   logos?: string[];
 }
 
-export default function BookingConfirm() {
+function BookingConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
@@ -1109,5 +1108,18 @@ export default function BookingConfirm() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function BookingConfirm() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col justify-center items-center min-h-screen">
+        <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+        <p className="text-gray-600">Loading booking details...</p>
+      </div>
+    }>
+      <BookingConfirmContent />
+    </Suspense>
   );
 }
