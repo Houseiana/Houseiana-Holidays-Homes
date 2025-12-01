@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -70,6 +70,7 @@ function BookingConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
+  const { getToken, isSignedIn, isLoaded } = useAuth();
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -325,7 +326,7 @@ function BookingConfirmContent() {
       return;
     }
 
-    if (!bookingData || !user) {
+    if (!bookingData) {
       setError('Missing required information. Please refresh the page.');
       return;
     }
@@ -335,10 +336,23 @@ function BookingConfirmContent() {
       return;
     }
 
+    // Get authentication token from localStorage (custom JWT)
+    const token = localStorage.getItem('auth_token');
+
+    // Check if user has valid authentication token
+    if (!token) {
+      setError('You must be signed in to complete a booking. Redirecting to sign in...');
+      setTimeout(() => {
+        router.push('/sign-in');
+      }, 1500);
+      return;
+    }
+
     setProcessing(true);
     setError(null);
 
     try {
+
       // Step 1: Create the booking
       console.log('📝 Creating booking...', {
         propertyId: bookingData.property.id,
@@ -351,6 +365,7 @@ function BookingConfirmContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           propertyId: bookingData.property.id,
