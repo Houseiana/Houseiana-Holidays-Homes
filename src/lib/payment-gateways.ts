@@ -308,58 +308,7 @@ export async function verifySadadTransaction(transactionId: string): Promise<Pay
   }
 }
 
-// ============================================================================
-// Stripe Payment Verification
-// ============================================================================
-
-import { getStripePaymentIntent } from './stripe-config'
-
-/**
- * Verify Stripe payment intent status
- *
- * @param paymentIntentId - Stripe payment intent ID
- * @returns Payment verification result
- */
-export async function verifyStripePaymentIntent(paymentIntentId: string): Promise<PaymentVerificationResult> {
-  try {
-    const paymentIntent = await getStripePaymentIntent(paymentIntentId)
-
-    // Check if payment is successful
-    if (paymentIntent.status === 'succeeded') {
-      return {
-        success: true,
-        status: 'COMPLETED',
-        transactionId: paymentIntent.id,
-        amount: paymentIntent.amount / 100, // Convert cents to dollars
-        currency: paymentIntent.currency.toUpperCase(),
-      }
-    }
-
-    // Payment exists but not completed
-    if (paymentIntent.status === 'processing' || paymentIntent.status === 'requires_action') {
-      return {
-        success: false,
-        status: 'PENDING',
-        error: 'Payment is being processed',
-      }
-    }
-
-    // Payment failed or cancelled
-    return {
-      success: false,
-      status: 'FAILED',
-      error: `Stripe payment status: ${paymentIntent.status}`,
-    }
-
-  } catch (error) {
-    console.error('Error verifying Stripe payment:', error)
-    return {
-      success: false,
-      status: 'FAILED',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
-  }
-}
+// Note: Stripe verification removed - using Sadad Qatar as primary payment gateway
 
 // ============================================================================
 // Unified Payment Gateway Verification
@@ -389,13 +338,14 @@ export async function checkPaymentGatewayStatus(
       return verifySadadTransaction(paymentOrderId)
 
     case 'stripe':
-      return verifyStripePaymentIntent(paymentOrderId)
-
     case 'apple_pay':
     case 'google_pay':
-      // Apple Pay and Google Pay typically use Stripe as backend
-      // Use Stripe verification for these
-      return verifyStripePaymentIntent(paymentOrderId)
+      // Stripe has been removed - redirecting to Sadad
+      return {
+        success: false,
+        status: 'FAILED',
+        error: 'Stripe payment gateway is no longer supported. Please use Sadad Qatar or PayPal.',
+      }
 
     default:
       return {
