@@ -2,11 +2,13 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 
 function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getToken, isSignedIn } = useAuth();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [message, setMessage] = useState('Verifying your payment...');
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -40,11 +42,14 @@ function PaymentSuccessContent() {
 
         setBookingId(storedBookingId);
 
+        // Get Clerk authentication token
+        const authToken = isSignedIn ? await getToken() : null;
+
         // Verify payment with backend
         const response = await fetch(`/api/bookings/verify?id=${storedBookingId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-          }
+          headers: authToken ? {
+            'Authorization': `Bearer ${authToken}`
+          } : {}
         });
 
         const data = await response.json();
