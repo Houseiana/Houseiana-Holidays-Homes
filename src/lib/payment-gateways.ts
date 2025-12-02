@@ -309,6 +309,59 @@ export async function verifySadadTransaction(transactionId: string): Promise<Pay
 }
 
 // ============================================================================
+// Stripe Payment Verification
+// ============================================================================
+
+import { getStripePaymentIntent } from './stripe-config'
+
+/**
+ * Verify Stripe payment intent status
+ *
+ * @param paymentIntentId - Stripe payment intent ID
+ * @returns Payment verification result
+ */
+export async function verifyStripePaymentIntent(paymentIntentId: string): Promise<PaymentVerificationResult> {
+  try {
+    const paymentIntent = await getStripePaymentIntent(paymentIntentId)
+
+    // Check if payment is successful
+    if (paymentIntent.status === 'succeeded') {
+      return {
+        success: true,
+        status: 'COMPLETED',
+        transactionId: paymentIntent.id,
+        amount: paymentIntent.amount / 100, // Convert cents to dollars
+        currency: paymentIntent.currency.toUpperCase(),
+      }
+    }
+
+    // Payment exists but not completed
+    if (paymentIntent.status === 'processing' || paymentIntent.status === 'requires_action') {
+      return {
+        success: false,
+        status: 'PENDING',
+        error: 'Payment is being processed',
+      }
+    }
+
+    // Payment failed or cancelled
+    return {
+      success: false,
+      status: 'FAILED',
+      error: `Stripe payment status: ${paymentIntent.status}`,
+    }
+
+  } catch (error) {
+    console.error('Error verifying Stripe payment:', error)
+    return {
+      success: false,
+      status: 'FAILED',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+// ============================================================================
 // Unified Payment Gateway Verification
 // ============================================================================
 
@@ -336,16 +389,13 @@ export async function checkPaymentGatewayStatus(
       return verifySadadTransaction(paymentOrderId)
 
     case 'stripe':
+      return verifyStripePaymentIntent(paymentOrderId)
+
     case 'apple_pay':
     case 'google_pay':
-      // These typically use Stripe as the backend
-      // Implement Stripe verification here when available
-      console.warn(`Payment verification not yet implemented for ${provider}`)
-      return {
-        success: false,
-        status: 'FAILED',
-        error: `Verification not implemented for ${provider}`,
-      }
+      // Apple Pay and Google Pay typically use Stripe as backend
+      // Use Stripe verification for these
+      return verifyStripePaymentIntent(paymentOrderId)
 
     default:
       return {

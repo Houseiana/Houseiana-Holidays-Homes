@@ -15,6 +15,7 @@ import {
   Home
 } from 'lucide-react';
 import { countries } from '@/lib/countries';
+import StripePaymentForm from '@/components/StripePaymentForm';
 
 interface Property {
   id: string;
@@ -78,6 +79,8 @@ function BookingConfirmContent() {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentTiming, setPaymentTiming] = useState<'now' | 'split'>('now');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
 
   // Form data
   const [guestForm, setGuestForm] = useState({
@@ -104,11 +107,19 @@ function BookingConfirmContent() {
   // Payment methods
   const paymentMethods: PaymentMethod[] = [
     {
+      id: 'stripe',
+      name: 'Credit or Debit Card',
+      type: 'card',
+      icon: 'card',
+      selected: true,
+      logos: ['Visa', 'Mastercard', 'Amex']
+    },
+    {
       id: 'paypal',
       name: 'PayPal',
       type: 'digital',
       icon: 'paypal',
-      selected: true
+      selected: false
     },
     {
       id: 'sadad',
@@ -381,7 +392,37 @@ function BookingConfirmContent() {
       sessionStorage.setItem('pendingBookingId', bookingId);
 
       // Step 2: Create payment based on selected method
-      if (selectedPaymentMethod.id === 'paypal') {
+      if (selectedPaymentMethod.id === 'stripe') {
+        // For Stripe, create payment intent and show inline form
+        console.log('💳 Creating Stripe payment intent...');
+        const stripeResponse = await fetch('/api/stripe/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ bookingId }),
+        });
+
+        console.log('📡 Stripe response status:', stripeResponse.status);
+
+        if (!stripeResponse.ok) {
+          const errorData = await stripeResponse.json();
+          console.error('❌ Stripe payment intent creation failed:', errorData);
+          throw new Error(errorData.error || 'Failed to create Stripe payment');
+        }
+
+        const stripeData = await stripeResponse.json();
+        console.log('✅ Stripe payment intent created:', stripeData.paymentIntentId);
+
+        // Store client secret and booking ID to show payment form
+        setStripeClientSecret(stripeData.clientSecret);
+        setCreatedBookingId(bookingId);
+        setProcessing(false);
+
+        // Don't redirect - show inline payment form
+        return;
+      } else if (selectedPaymentMethod.id === 'paypal') {
         console.log('💳 Initiating PayPal payment...');
         const paypalResponse = await fetch('/api/paypal/create-order', {
           method: 'POST',
@@ -676,7 +717,11 @@ function BookingConfirmContent() {
 
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-800">
-                      <strong>Secure Payment:</strong> You will be redirected to complete your payment securely with {selectedPaymentMethod?.name}.
+                      <strong>Secure Payment:</strong>{' '}
+                      {selectedPaymentMethod?.id === 'stripe'
+                        ? 'Enter your card details securely on this page. Your payment information is encrypted and protected by Stripe.'
+                        : `You will be redirected to complete your payment securely with ${selectedPaymentMethod?.name}.`
+                      }
                     </p>
                   </div>
 
@@ -880,17 +925,22 @@ function BookingConfirmContent() {
                   </div>
 
                   {/* Payment Notice */}
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start">
-                      <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-yellow-900 mb-1">Payment Required</h4>
-                        <p className="text-sm text-yellow-800">
-                          After clicking "Proceed to Payment", you will be redirected to {selectedPaymentMethod?.name} to complete your payment securely. Your booking will only be confirmed after successful payment.
-                        </p>
+                  {!stripeClientSecret && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-yellow-900 mb-1">Payment Required</h4>
+                          <p className="text-sm text-yellow-800">
+                            {selectedPaymentMethod?.id === 'stripe'
+                              ? 'Click "Continue to Payment" to enter your card details securely. Your booking will be confirmed after successful payment.'
+                              : `After clicking "Proceed to Payment", you will be redirected to ${selectedPaymentMethod?.name} to complete your payment securely. Your booking will only be confirmed after successful payment.`
+                            }
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Terms and Conditions */}
                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -903,8 +953,36 @@ function BookingConfirmContent() {
                     </p>
                   </div>
 
-                  {/* Complete Booking Button */}
-                  {currentStep === 3 && (
+                  {/* Stripe Payment Form (inline) */}
+                  {currentStep === 3 && stripeClientSecret && createdBookingId && bookingData && (
+                    <div className="space-y-4">
+                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <h4 className="font-medium text-indigo-900 mb-1">Enter Payment Details</h4>
+                        <p className="text-sm text-indigo-800">
+                          Complete your payment securely to confirm your booking.
+                        </p>
+                      </div>
+                      <StripePaymentForm
+                        clientSecret={stripeClientSecret}
+                        amount={bookingData.pricing.total}
+                        currency={bookingData.property.country === 'Qatar' ? 'QAR' : 'USD'}
+                        bookingId={createdBookingId}
+                        onSuccess={() => {
+                          console.log('✅ Stripe payment successful, redirecting...');
+                          router.push('/client-dashboard?tab=trips&success=booking_confirmed');
+                        }}
+                        onError={(error: string) => {
+                          console.error('❌ Stripe payment failed:', error);
+                          setError(error);
+                          setStripeClientSecret(null);
+                          setCreatedBookingId(null);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Complete Booking Button (for non-Stripe or before payment form) */}
+                  {currentStep === 3 && !stripeClientSecret && (
                     <button
                       onClick={completeBooking}
                       disabled={!isStepCompleted(3) || processing}
@@ -913,10 +991,12 @@ function BookingConfirmContent() {
                       {processing ? (
                         <>
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Redirecting to Payment...
+                          {selectedPaymentMethod?.id === 'stripe' ? 'Preparing Payment...' : 'Redirecting to Payment...'}
                         </>
                       ) : (
-                        <>Proceed to Payment ({selectedPaymentMethod?.name})</>
+                        <>
+                          {selectedPaymentMethod?.id === 'stripe' ? 'Continue to Payment' : `Proceed to Payment (${selectedPaymentMethod?.name})`}
+                        </>
                       )}
                     </button>
                   )}
