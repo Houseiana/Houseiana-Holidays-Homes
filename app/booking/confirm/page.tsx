@@ -15,7 +15,7 @@ import {
   Home
 } from 'lucide-react';
 import { countries } from '@/lib/countries';
-import StripePaymentForm from '@/components/StripePaymentForm';
+import SadadPaymentForm from '@/components/SadadPaymentForm';
 
 interface Property {
   id: string;
@@ -79,7 +79,7 @@ function BookingConfirmContent() {
   const [currentStep, setCurrentStep] = useState(1);
   const [paymentTiming, setPaymentTiming] = useState<'now' | 'split'>('now');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [sadadPaymentReady, setSadadPaymentReady] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
 
   // Form data
@@ -107,25 +107,18 @@ function BookingConfirmContent() {
   // Payment methods
   const paymentMethods: PaymentMethod[] = [
     {
-      id: 'stripe',
+      id: 'sadad',
       name: 'Credit or Debit Card',
       type: 'card',
       icon: 'card',
       selected: true,
-      logos: ['Visa', 'Mastercard', 'Amex']
+      logos: ['Visa', 'Mastercard', 'QPAY']
     },
     {
       id: 'paypal',
       name: 'PayPal',
       type: 'digital',
       icon: 'paypal',
-      selected: false
-    },
-    {
-      id: 'sadad',
-      name: 'Sadad Qatar',
-      type: 'digital',
-      icon: 'sadad',
       selected: false
     }
   ];
@@ -392,32 +385,13 @@ function BookingConfirmContent() {
       sessionStorage.setItem('pendingBookingId', bookingId);
 
       // Step 2: Create payment based on selected method
-      if (selectedPaymentMethod.id === 'stripe') {
-        // For Stripe, create payment intent and show inline form
-        console.log('💳 Creating Stripe payment intent...');
-        const stripeResponse = await fetch('/api/stripe/create-payment-intent', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ bookingId }),
-        });
+      if (selectedPaymentMethod.id === 'sadad') {
+        // For Sadad, show inline payment form (no need to create payment - form will handle it)
+        console.log('💳 Preparing Sadad inline payment...');
 
-        console.log('📡 Stripe response status:', stripeResponse.status);
-
-        if (!stripeResponse.ok) {
-          const errorData = await stripeResponse.json();
-          console.error('❌ Stripe payment intent creation failed:', errorData);
-          throw new Error(errorData.error || 'Failed to create Stripe payment');
-        }
-
-        const stripeData = await stripeResponse.json();
-        console.log('✅ Stripe payment intent created:', stripeData.paymentIntentId);
-
-        // Store client secret and booking ID to show payment form
-        setStripeClientSecret(stripeData.clientSecret);
+        // Store booking ID and set ready flag to show payment form
         setCreatedBookingId(bookingId);
+        setSadadPaymentReady(true);
         setProcessing(false);
 
         // Don't redirect - show inline payment form
@@ -448,32 +422,6 @@ function BookingConfirmContent() {
         const paypalUrl = `https://www.paypal.com/checkoutnow?token=${paypalData.orderId}`;
         console.log('🔄 Redirecting to PayPal:', paypalUrl);
         window.location.href = paypalUrl;
-      } else if (selectedPaymentMethod.id === 'sadad') {
-        console.log('💳 Initiating Sadad payment...');
-        const sadadResponse = await fetch('/api/sadad/create-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ bookingId }),
-        });
-
-        console.log('📡 Sadad response status:', sadadResponse.status);
-
-        if (!sadadResponse.ok) {
-          const errorData = await sadadResponse.json();
-          console.error('❌ Sadad payment creation failed:', errorData);
-          throw new Error(errorData.error || 'Failed to create Sadad payment');
-        }
-
-        const sadadData = await sadadResponse.json();
-        console.log('✅ Sadad transaction created:', sadadData.transactionId);
-        console.log('🔗 Payment URL:', sadadData.paymentUrl);
-
-        // Redirect to Sadad
-        console.log('🔄 Redirecting to Sadad payment gateway...');
-        window.location.href = sadadData.paymentUrl;
       } else {
         throw new Error('Invalid payment method selected');
       }
@@ -718,8 +666,8 @@ function BookingConfirmContent() {
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-800">
                       <strong>Secure Payment:</strong>{' '}
-                      {selectedPaymentMethod?.id === 'stripe'
-                        ? 'Enter your card details securely on this page. Your payment information is encrypted and protected by Stripe.'
+                      {selectedPaymentMethod?.id === 'sadad'
+                        ? 'Enter your card details securely on this page. Your payment information is encrypted and protected by Sadad Qatar.'
                         : `You will be redirected to complete your payment securely with ${selectedPaymentMethod?.name}.`
                       }
                     </p>
@@ -925,14 +873,14 @@ function BookingConfirmContent() {
                   </div>
 
                   {/* Payment Notice */}
-                  {!stripeClientSecret && (
+                  {!sadadPaymentReady && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                       <div className="flex items-start">
                         <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
                         <div>
                           <h4 className="font-medium text-yellow-900 mb-1">Payment Required</h4>
                           <p className="text-sm text-yellow-800">
-                            {selectedPaymentMethod?.id === 'stripe'
+                            {selectedPaymentMethod?.id === 'sadad'
                               ? 'Click "Continue to Payment" to enter your card details securely. Your booking will be confirmed after successful payment.'
                               : `After clicking "Proceed to Payment", you will be redirected to ${selectedPaymentMethod?.name} to complete your payment securely. Your booking will only be confirmed after successful payment.`
                             }
@@ -953,8 +901,8 @@ function BookingConfirmContent() {
                     </p>
                   </div>
 
-                  {/* Stripe Payment Form (inline) */}
-                  {currentStep === 3 && stripeClientSecret && createdBookingId && bookingData && (
+                  {/* Sadad Payment Form (inline) */}
+                  {currentStep === 3 && sadadPaymentReady && createdBookingId && bookingData && (
                     <div className="space-y-4">
                       <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
                         <h4 className="font-medium text-indigo-900 mb-1">Enter Payment Details</h4>
@@ -962,27 +910,26 @@ function BookingConfirmContent() {
                           Complete your payment securely to confirm your booking.
                         </p>
                       </div>
-                      <StripePaymentForm
-                        clientSecret={stripeClientSecret}
+                      <SadadPaymentForm
+                        bookingId={createdBookingId}
                         amount={bookingData.pricing.total}
                         currency={bookingData.property.country === 'Qatar' ? 'QAR' : 'USD'}
-                        bookingId={createdBookingId}
                         onSuccess={() => {
-                          console.log('✅ Stripe payment successful, redirecting...');
+                          console.log('✅ Sadad payment successful, redirecting...');
                           router.push('/client-dashboard?tab=trips&success=booking_confirmed');
                         }}
                         onError={(error: string) => {
-                          console.error('❌ Stripe payment failed:', error);
+                          console.error('❌ Sadad payment failed:', error);
                           setError(error);
-                          setStripeClientSecret(null);
+                          setSadadPaymentReady(false);
                           setCreatedBookingId(null);
                         }}
                       />
                     </div>
                   )}
 
-                  {/* Complete Booking Button (for non-Stripe or before payment form) */}
-                  {currentStep === 3 && !stripeClientSecret && (
+                  {/* Complete Booking Button (for non-Sadad or before payment form) */}
+                  {currentStep === 3 && !sadadPaymentReady && (
                     <button
                       onClick={completeBooking}
                       disabled={!isStepCompleted(3) || processing}
@@ -991,11 +938,11 @@ function BookingConfirmContent() {
                       {processing ? (
                         <>
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          {selectedPaymentMethod?.id === 'stripe' ? 'Preparing Payment...' : 'Redirecting to Payment...'}
+                          {selectedPaymentMethod?.id === 'sadad' ? 'Preparing Payment...' : 'Redirecting to Payment...'}
                         </>
                       ) : (
                         <>
-                          {selectedPaymentMethod?.id === 'stripe' ? 'Continue to Payment' : `Proceed to Payment (${selectedPaymentMethod?.name})`}
+                          {selectedPaymentMethod?.id === 'sadad' ? 'Continue to Payment' : `Proceed to Payment (${selectedPaymentMethod?.name})`}
                         </>
                       )}
                     </button>
