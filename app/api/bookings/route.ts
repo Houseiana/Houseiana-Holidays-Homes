@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma-server'
-import { getUserFromRequest, generateConfirmationCode } from '@/lib/auth'
 
 // GET /api/bookings - Get user's bookings
 export async function GET(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request)
+    const { userId } = await auth()
 
-    if (!user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
+
+    const user = { userId }
 
     const { searchParams } = new URL(request.url)
     const role = searchParams.get('role') || 'guest' // 'guest' or 'host'
@@ -143,14 +145,16 @@ export async function GET(request: NextRequest) {
 // POST /api/bookings - Create new booking with concurrency control
 export async function POST(request: NextRequest) {
   try {
-    const user = getUserFromRequest(request)
+    const { userId } = await auth()
 
-    if (!user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
+
+    const user = { userId }
 
     const bookingData = await request.json()
 
