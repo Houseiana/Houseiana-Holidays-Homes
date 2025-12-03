@@ -6,10 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { auth } from '@clerk/nextjs/server'
+import { prisma } from '@/lib/prisma-server'
 
 // .NET Backend API URL
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app'
@@ -17,7 +15,7 @@ const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://hous
 export async function POST(req: NextRequest) {
   try {
     // Verify authentication
-    const { userId } = auth()
+    const { userId } = await auth()
 
     if (!userId) {
       return NextResponse.json(
@@ -38,11 +36,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch booking details from local database
-    const booking = await prisma.booking.findUnique({
+    const booking = await (prisma as any).booking.findUnique({
       where: { id: bookingId },
       include: {
         property: true,
-        user: true,
+        guest: true,
       },
     })
 
@@ -54,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the booking belongs to the authenticated user
-    if (booking.userId !== userId) {
+    if (booking.guestId !== userId) {
       return NextResponse.json(
         { error: 'Unauthorized - This booking does not belong to you' },
         { status: 403 }
@@ -79,8 +77,8 @@ export async function POST(req: NextRequest) {
         orderId: booking.id,
         bookingId: booking.id,
         amount: parseFloat(booking.totalPrice.toString()),
-        customerEmail: booking.user?.email || booking.guestEmail || '',
-        customerMobile: booking.user?.phone || booking.guestPhone || '',
+        customerEmail: booking.guest?.email || '',
+        customerMobile: booking.guest?.phone || '',
         itemName: `${booking.property?.title || 'Property'} - Booking`,
         language: 'ENG',
       }),
@@ -99,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update local booking status
-    await prisma.booking.update({
+    await (prisma as any).booking.update({
       where: { id: bookingId },
       data: {
         status: 'AWAITING_PAYMENT',
@@ -107,7 +105,8 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Map backend response to frontend expected format
+    // Map backend response to form fields matching exact Sadad field names
+    // Based on reference: direct_payment/checksum_form.html
     const formFields: Record<string, string> = {
       merchant_id: backendData.data.merchantId,
       ORDER_ID: backendData.data.orderId,
@@ -121,11 +120,11 @@ export async function POST(req: NextRequest) {
       txnDate: backendData.data.txnDate,
       VERSION: backendData.data.version || '1.1',
       checksumhash: backendData.data.checksumHash,
-      [`productdetail[0][order_id]`]: backendData.data.productDetail.order_id,
-      [`productdetail[0][itemname]`]: backendData.data.productDetail.itemname,
-      [`productdetail[0][amount]`]: backendData.data.productDetail.amount,
-      [`productdetail[0][quantity]`]: backendData.data.productDetail.quantity,
-      [`productdetail[0][type]`]: backendData.data.productDetail.type,
+      'productdetail[0][order_id]': backendData.data.productDetail?.order_id || backendData.data.orderId,
+      'productdetail[0][itemname]': backendData.data.productDetail?.itemname || `${booking.property?.title || 'Property'} - Booking`,
+      'productdetail[0][amount]': backendData.data.productDetail?.amount || backendData.data.txnAmount,
+      'productdetail[0][quantity]': backendData.data.productDetail?.quantity || '1',
+      'productdetail[0][type]': backendData.data.productDetail?.type || 'line_item',
     }
 
     console.log('Sadad payment form generated via backend:', {
@@ -134,7 +133,7 @@ export async function POST(req: NextRequest) {
       actionUrl: backendData.data.actionUrl,
     })
 
-    // Return form data for iframe submission
+    // Return form data for direct form submission
     return NextResponse.json({
       success: true,
       action: backendData.data.actionUrl,
@@ -153,7 +152,5 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }
