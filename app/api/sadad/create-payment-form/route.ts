@@ -1,15 +1,18 @@
 /**
  * Sadad Payment Form Creation API
  *
- * Generates Sadad payment form data with checksumhash for inline payment processing
+ * Proxies to the .NET backend for Sadad payment processing
+ * Backend: https://houseiana-user-backend-production.up.railway.app
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs'
 import { PrismaClient } from '@prisma/client'
-import { createSadadPaymentForm, type SadadPaymentData } from '@/lib/sadad-config'
 
 const prisma = new PrismaClient()
+
+// .NET Backend API URL
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app'
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +37,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Fetch booking details
+    // Fetch booking details from local database
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
@@ -66,63 +69,76 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Prepare Sadad payment data
-    const callbackUrl = `${process.env.NEXTAUTH_URL || 'https://www.houseiana.net'}/api/sadad/callback`
+    // Call .NET backend Sadad API
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/sadadpayment/initiate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        orderId: booking.id,
+        bookingId: booking.id,
+        amount: parseFloat(booking.totalPrice.toString()),
+        customerEmail: booking.user?.email || booking.guestEmail || '',
+        customerMobile: booking.user?.phone || booking.guestPhone || '',
+        itemName: `${booking.property?.title || 'Property'} - Booking`,
+        language: 'ENG',
+      }),
+    })
 
-    const paymentData: SadadPaymentData = {
-      orderId: booking.id,
-      amount: parseFloat(booking.totalPrice.toString()),
-      currency: 'QAR',
-      customerEmail: booking.user.email || booking.guestEmail || '',
-      customerMobile: booking.user.phone || booking.guestPhone || '',
-      customerId: booking.userId,
-      productDetails: [
-        {
-          order_id: booking.id,
-          itemname: `${booking.property.title} - Booking`,
-          amount: parseFloat(booking.totalPrice.toString()),
-          quantity: 1,
-          type: 'accommodation',
-        },
-      ],
-      callbackUrl,
+    if (!backendResponse.ok) {
+      const errorData = await backendResponse.json().catch(() => ({}))
+      console.error('Backend Sadad API error:', errorData)
+      throw new Error(errorData.message || 'Failed to initiate payment with backend')
     }
 
-    // Generate Sadad payment form
-    const sadadForm = createSadadPaymentForm(paymentData)
+    const backendData = await backendResponse.json()
 
-    // Create or update payment record in database
-    const payment = await prisma.payment.upsert({
-      where: { bookingId: booking.id },
-      update: {
-        provider: 'SADAD',
-        status: 'PENDING',
-        amount: booking.totalPrice,
-        currency: 'QAR',
+    if (!backendData.success) {
+      throw new Error('Backend returned unsuccessful response')
+    }
+
+    // Update local booking status
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: 'AWAITING_PAYMENT',
         updatedAt: new Date(),
-      },
-      create: {
-        bookingId: booking.id,
-        userId: booking.userId,
-        provider: 'SADAD',
-        status: 'PENDING',
-        amount: booking.totalPrice,
-        currency: 'QAR',
       },
     })
 
-    console.log('Sadad payment form generated:', {
+    // Map backend response to frontend expected format
+    const formFields: Record<string, string> = {
+      merchant_id: backendData.data.merchantId,
+      ORDER_ID: backendData.data.orderId,
+      WEBSITE: backendData.data.website,
+      TXN_AMOUNT: backendData.data.txnAmount,
+      CUST_ID: backendData.data.customerId,
+      EMAIL: backendData.data.email,
+      MOBILE_NO: backendData.data.mobileNo,
+      SADAD_WEBCHECKOUT_PAGE_LANGUAGE: backendData.data.language,
+      CALLBACK_URL: backendData.data.callbackUrl,
+      txnDate: backendData.data.txnDate,
+      VERSION: backendData.data.version || '1.1',
+      checksumhash: backendData.data.checksumHash,
+      [`productdetail[0][order_id]`]: backendData.data.productDetail.order_id,
+      [`productdetail[0][itemname]`]: backendData.data.productDetail.itemname,
+      [`productdetail[0][amount]`]: backendData.data.productDetail.amount,
+      [`productdetail[0][quantity]`]: backendData.data.productDetail.quantity,
+      [`productdetail[0][type]`]: backendData.data.productDetail.type,
+    }
+
+    console.log('Sadad payment form generated via backend:', {
       bookingId: booking.id,
       amount: booking.totalPrice,
-      paymentId: payment.id,
+      actionUrl: backendData.data.actionUrl,
     })
 
     // Return form data for iframe submission
     return NextResponse.json({
       success: true,
-      action: sadadForm.action,
-      formFields: sadadForm.formFields,
-      paymentId: payment.id,
+      action: backendData.data.actionUrl,
+      formFields: formFields,
       bookingId: booking.id,
       amount: booking.totalPrice,
     })
