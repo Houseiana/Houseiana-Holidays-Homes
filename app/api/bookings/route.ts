@@ -380,14 +380,7 @@ export async function POST(request: NextRequest) {
           cancellationDeadline
         },
         include: {
-          property: {
-            include: {
-              photos: {
-                where: { isMain: true },
-                take: 1
-              }
-            }
-          },
+          property: true, // photos is a JSON field, not a relation
           guest: {
             select: {
               id: true,
