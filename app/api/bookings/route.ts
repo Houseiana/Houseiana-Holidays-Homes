@@ -191,7 +191,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (checkInDate < new Date()) {
+    // Compare dates at day level only (ignore time) - allows same-day bookings
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const checkInDay = new Date(checkInDate)
+    checkInDay.setHours(0, 0, 0, 0)
+
+    if (checkInDay < today) {
       return NextResponse.json(
         { error: 'Check-in date cannot be in the past' },
         { status: 400 }
