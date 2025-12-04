@@ -20,6 +20,16 @@ export const SADAD_CONFIG = {
 
 const IV = '@@@@&&&&####$$$$' // Fixed IV for Sadad encryption
 
+function buildKey(key: string): Buffer {
+  const keyBytes = Buffer.from(key, 'utf8')
+  // PHP openssl_encrypt for AES-128-CBC uses the first 16 bytes, zero-padding if shorter
+  if (keyBytes.length >= 16) return keyBytes.subarray(0, 16)
+
+  const buf = Buffer.alloc(16)
+  keyBytes.copy(buf)
+  return buf
+}
+
 /**
  * Generate random salt for checksum
  */
@@ -39,7 +49,7 @@ function generateSalt(length: number): string {
  * Encrypt string using AES-128-CBC (matching PHP's openssl_encrypt)
  */
 function encrypt(input: string, key: string): string {
-  const cipher = createCipheriv('aes-128-cbc', Buffer.from(key.substring(0, 16)), Buffer.from(IV))
+  const cipher = createCipheriv('aes-128-cbc', buildKey(key), Buffer.from(IV))
   let encrypted = cipher.update(input, 'utf8', 'base64')
   encrypted += cipher.final('base64')
   return encrypted
@@ -49,7 +59,7 @@ function encrypt(input: string, key: string): string {
  * Decrypt string using AES-128-CBC (matching PHP's openssl_decrypt)
  */
 function decrypt(crypt: string, key: string): string {
-  const decipher = createDecipheriv('aes-128-cbc', Buffer.from(key.substring(0, 16)), Buffer.from(IV))
+  const decipher = createDecipheriv('aes-128-cbc', buildKey(key), Buffer.from(IV))
   let decrypted = decipher.update(crypt, 'base64', 'utf8')
   decrypted += decipher.final('utf8')
   return decrypted
@@ -144,6 +154,7 @@ export function createSadadPaymentForm(paymentData: SadadPaymentData): {
       CUST_ID: customerId,
       EMAIL: paymentData.customerEmail,
       MOBILE_NO: paymentData.customerMobile,
+      VERSION: '2.1',
       CALLBACK_URL: paymentData.callbackUrl,
       txnDate: txnDate,
       productdetail: paymentData.productDetails.map(item => ({
@@ -167,6 +178,7 @@ export function createSadadPaymentForm(paymentData: SadadPaymentData): {
     CUST_ID: customerId,
     EMAIL: paymentData.customerEmail,
     MOBILE_NO: paymentData.customerMobile,
+    VERSION: '2.1',
     CALLBACK_URL: paymentData.callbackUrl,
     txnDate: txnDate,
     checksumhash: checksumhash,
