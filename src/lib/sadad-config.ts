@@ -156,7 +156,7 @@ export function createSadadPaymentForm(paymentData: SadadPaymentData): {
     secretKey: secretKey,
   }
 
-  const checksumhash = generateChecksumhash(checksumPayload, secretKey, merchantId)
+ const checksumhash = generateChecksumhash(checksumPayload, secretKey, merchantId)
 
   // Build final form fields
   const formFields: Record<string, string> = {
@@ -167,12 +167,9 @@ export function createSadadPaymentForm(paymentData: SadadPaymentData): {
     CUST_ID: customerId,
     EMAIL: paymentData.customerEmail,
     MOBILE_NO: paymentData.customerMobile,
-    SADAD_WEBCHECKOUT_PAGE_LANGUAGE: SADAD_CONFIG.language,
     CALLBACK_URL: paymentData.callbackUrl,
     txnDate: txnDate,
     checksumhash: checksumhash,
-    showdialog: '2', // Use iframe mode
-    SADAD_WEBCHECKOUT_HIDE_LOADER: 'YES',
   }
 
   // Add product details as individual fields
