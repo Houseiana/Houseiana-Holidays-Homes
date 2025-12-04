@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
     const property = await (prisma as any).property.findUnique({
       where: { id: propertyId },
       include: {
-        host: true
+        owner: true
       }
     })
 
@@ -219,22 +219,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (property.status !== 'ACTIVE') {
-      return NextResponse.json(
-        { error: 'Property is not available for booking' },
-        { status: 400 }
-      )
-    }
-
-    if (guests > property.maxGuests) {
-      return NextResponse.json(
-        { error: `Property can accommodate maximum ${property.maxGuests} guests` },
-        { status: 400 }
-      )
-    }
-
     // Prevent host from booking their own property
-    if (property.hostId === user.userId) {
+    if (property.ownerId === user.userId) {
       return NextResponse.json(
         { error: 'You cannot book your own property' },
         { status: 400 }
@@ -294,22 +280,6 @@ export async function POST(request: NextRequest) {
         throw new Error('Property is not available for selected dates')
       }
 
-      // Check availability calendar
-      const unavailableDates = await (prismaTransaction as any).availability.findMany({
-        where: {
-          propertyId,
-          date: {
-            gte: checkInDate,
-            lt: checkOutDate
-          },
-          available: false
-        }
-      })
-
-      if (unavailableDates.length > 0) {
-        throw new Error('Property is not available for selected dates')
-      }
-
       // Calculate pricing
       const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))
       const nightlyRate = property.pricePerNight || property.basePrice || 0
@@ -356,7 +326,7 @@ export async function POST(request: NextRequest) {
         data: {
           guestId: user.userId,
           propertyId,
-          hostId: property.hostId,
+          hostId: property.ownerId,
           checkIn: checkInDate,
           checkOut: checkOutDate,
           numberOfNights: nights,
@@ -380,7 +350,7 @@ export async function POST(request: NextRequest) {
           cancellationDeadline
         },
         include: {
-          property: true, // photos is a JSON field, not a relation
+          property: true,
           guest: {
             select: {
               id: true,
@@ -401,22 +371,6 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Block availability dates (mark as unavailable)
-      const datesToBlock = []
-      for (let d = new Date(checkInDate); d < checkOutDate; d.setDate(d.getDate() + 1)) {
-        datesToBlock.push(new Date(d))
-      }
-
-      await (prismaTransaction as any).availability.updateMany({
-        where: {
-          propertyId,
-          date: { in: datesToBlock }
-        },
-        data: {
-          available: false
-        }
-      })
-
       return newBooking
     })
 
@@ -433,7 +387,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${error instanceof Error ? error.message : String(error)}` },
       { status: 500 }
     )
   }

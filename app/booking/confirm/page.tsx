@@ -15,6 +15,7 @@ import {
   Shield
 } from 'lucide-react';
 import { countries } from '@/lib/countries';
+import SadadPaymentForm from '@/components/SadadPaymentForm';
 
 interface Property {
   id: string;
@@ -60,13 +61,15 @@ function BookingConfirmContent() {
   const searchParams = useSearchParams();
   const { user } = useUser();
   const { getToken, isSignedIn } = useAuth();
-  const formRef = useRef<HTMLFormElement>(null);
 
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [sadadFormData, setSadadFormData] = useState<SadadFormData | null>(null);
+  
+  // Payment frame state
+  const [showPaymentFrame, setShowPaymentFrame] = useState(false);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
   // Guest form
   const [guestForm, setGuestForm] = useState({
@@ -170,14 +173,6 @@ function BookingConfirmContent() {
     );
   };
 
-  // Auto-submit form when sadadFormData is ready
-  useEffect(() => {
-    if (sadadFormData && formRef.current) {
-      console.log('🚀 Auto-submitting Sadad form to:', sadadFormData.action);
-      formRef.current.submit();
-    }
-  }, [sadadFormData]);
-
   const handlePayment = async () => {
     if (!isFormValid() || !bookingData || !isSignedIn) {
       setError('Please fill in all required fields');
@@ -218,43 +213,25 @@ function BookingConfirmContent() {
       const booking = await bookingResponse.json();
       console.log('✅ Booking created:', booking.id);
 
-      // Store booking ID
-      sessionStorage.setItem('pendingBookingId', booking.id);
-
-      // Step 2: Get Sadad payment form data
-      console.log('💳 Getting Sadad payment form...');
-      const sadadResponse = await fetch('/api/sadad/create-payment-form', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ bookingId: booking.id }),
-      });
-
-      if (!sadadResponse.ok) {
-        const errorData = await sadadResponse.json();
-        throw new Error(errorData.error || 'Failed to initialize payment');
-      }
-
-      const sadadData = await sadadResponse.json();
-      console.log('✅ Sadad form data received:', sadadData.action);
-
-      if (!sadadData.success || !sadadData.action) {
-        throw new Error('Invalid payment form data received');
-      }
-
-      // Set form data - useEffect will auto-submit
-      setSadadFormData({
-        action: sadadData.action,
-        formFields: sadadData.formFields,
-      });
+      // Store booking ID and show payment frame
+      setPendingBookingId(booking.id);
+      setShowPaymentFrame(true);
+      setProcessing(false);
 
     } catch (err: any) {
       console.error('❌ Error:', err);
       setError(err.message || 'Payment failed. Please try again.');
       setProcessing(false);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    router.push(`/payment/success?bookingId=${pendingBookingId}`);
+  };
+
+  const handlePaymentError = (errorMessage: string) => {
+    setError(errorMessage);
+    setShowPaymentFrame(false);
   };
 
   if (loading) {
@@ -286,22 +263,52 @@ function BookingConfirmContent() {
 
   const displayImage = bookingData.property.coverPhoto || bookingData.property.images?.[0] || '/placeholder.jpg';
 
+  // Show payment frame if active
+  if (showPaymentFrame && pendingBookingId) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">Complete Payment</h1>
+            <button 
+              onClick={() => setShowPaymentFrame(false)}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              Cancel
+            </button>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div className="flex items-center space-x-4 mb-6 pb-6 border-b">
+              <img src={displayImage} alt={bookingData.property.title} className="w-20 h-20 rounded-lg object-cover" />
+              <div>
+                <h3 className="font-semibold text-gray-900">{bookingData.property.title}</h3>
+                <p className="text-gray-600 text-sm">
+                  {bookingData.booking.checkIn} - {bookingData.booking.checkOut}
+                </p>
+                <p className="font-bold text-indigo-600 mt-1">
+                  Total: ${bookingData.pricing.total.toFixed(2)}
+                </p>
+              </div>
+            </div>
+            
+            <SadadPaymentForm
+              bookingId={pendingBookingId}
+              amount={bookingData.pricing.total}
+              currency="QAR"
+              customerEmail={guestForm.email}
+              customerPhone={guestForm.phoneCode.replace('+', '') + guestForm.phone}
+              onSuccess={handlePaymentSuccess}
+              onError={handlePaymentError}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hidden Sadad Form - Will auto-submit */}
-      {sadadFormData && (
-        <form
-          ref={formRef}
-          action={sadadFormData.action}
-          method="POST"
-          style={{ display: 'none' }}
-        >
-          {Object.entries(sadadFormData.formFields).map(([key, value]) => (
-            <input key={key} type="hidden" name={key} value={value} />
-          ))}
-        </form>
-      )}
-
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -466,7 +473,7 @@ function BookingConfirmContent() {
               {processing ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Redirecting to Payment...
+                  Processing...
                 </>
               ) : (
                 <>

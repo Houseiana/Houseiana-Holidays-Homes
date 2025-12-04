@@ -117,7 +117,7 @@ export interface SadadPaymentData {
     itemname: string
     amount: number
     quantity: number
-    type: string
+    type?: string
   }>
   callbackUrl: string
 }
@@ -131,42 +131,29 @@ export function createSadadPaymentForm(paymentData: SadadPaymentData): {
 } {
   const { merchantId, secretKey, domain } = SADAD_CONFIG
   const txnDate = new Date().toISOString().replace('T', ' ').substring(0, 19)
+  const amount = paymentData.amount.toFixed(2)
+  const customerId = paymentData.customerId || paymentData.customerEmail
 
-  // Build form data
-  const formData: Record<string, any> = {
-    merchant_id: merchantId,
-    ORDER_ID: paymentData.orderId,
-    WEBSITE: domain,
-    TXN_AMOUNT: paymentData.amount.toFixed(2),
-    CUST_ID: paymentData.customerId || paymentData.customerEmail,
-    EMAIL: paymentData.customerEmail,
-    MOBILE_NO: paymentData.customerMobile,
-    SADAD_WEBCHECKOUT_PAGE_LANGUAGE: SADAD_CONFIG.language,
-    CALLBACK_URL: paymentData.callbackUrl,
-    txnDate: txnDate,
-    productdetail: paymentData.productDetails,
-  }
-
-  // Prepare data for checksumhash (flatten productdetail)
-  const checksumData: Record<string, any> = { ...formData }
-  const flattenedData: Record<string, any> = {}
-
-  Object.keys(checksumData).forEach(key => {
-    if (key === 'productdetail' && Array.isArray(checksumData[key])) {
-      checksumData[key].forEach((product: any, index: number) => {
-        Object.keys(product).forEach(prodKey => {
-          flattenedData[`productdetail[${index}][${prodKey}]`] = String(product[prodKey]).trim()
-        })
-      })
-    } else {
-      flattenedData[key] = String(checksumData[key]).trim()
-    }
-  })
-
-  // Generate checksumhash
+  // Build data EXACTLY like the PHP sample before hashing (no extra fields)
   const checksumPayload = {
-    postData: flattenedData,
-    secretKey: secretKey
+    postData: {
+      merchant_id: merchantId,
+      ORDER_ID: paymentData.orderId,
+      WEBSITE: domain,
+      TXN_AMOUNT: amount,
+      CUST_ID: customerId,
+      EMAIL: paymentData.customerEmail,
+      MOBILE_NO: paymentData.customerMobile,
+      CALLBACK_URL: paymentData.callbackUrl,
+      txnDate: txnDate,
+      productdetail: paymentData.productDetails.map(item => ({
+        order_id: item.order_id,
+        quantity: String(item.quantity),
+        amount: item.amount.toFixed(2),
+        itemname: item.itemname,
+      })),
+    },
+    secretKey: secretKey,
   }
 
   const checksumhash = generateChecksumhash(checksumPayload, secretKey, merchantId)
@@ -176,8 +163,8 @@ export function createSadadPaymentForm(paymentData: SadadPaymentData): {
     merchant_id: merchantId,
     ORDER_ID: paymentData.orderId,
     WEBSITE: domain,
-    TXN_AMOUNT: paymentData.amount.toFixed(2),
-    CUST_ID: paymentData.customerId || paymentData.customerEmail,
+    TXN_AMOUNT: amount,
+    CUST_ID: customerId,
     EMAIL: paymentData.customerEmail,
     MOBILE_NO: paymentData.customerMobile,
     SADAD_WEBCHECKOUT_PAGE_LANGUAGE: SADAD_CONFIG.language,
@@ -194,7 +181,6 @@ export function createSadadPaymentForm(paymentData: SadadPaymentData): {
     formFields[`productdetail[${index}][itemname]`] = product.itemname
     formFields[`productdetail[${index}][amount]`] = product.amount.toFixed(2)
     formFields[`productdetail[${index}][quantity]`] = String(product.quantity)
-    formFields[`productdetail[${index}][type]`] = product.type
   })
 
   return {
