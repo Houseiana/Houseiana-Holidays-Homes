@@ -121,7 +121,6 @@ export async function POST(req: NextRequest) {
       CUST_ID: backendData.data.customerId,
       EMAIL: backendData.data.email,
       MOBILE_NO: backendData.data.mobileNo,
-      VERSION: '2.1',
       CALLBACK_URL: backendData.data.callbackUrl,
       txnDate: backendData.data.txnDate,
       // productdetail fields - order matters: order_id, quantity, amount, itemname
