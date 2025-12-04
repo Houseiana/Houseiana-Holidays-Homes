@@ -109,10 +109,8 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Map backend response to form fields matching EXACT PHP reference
-    // IMPORTANT: Only include fields that are in the checksum calculation
-    // Based on: direct_payment/sadad.php and checksum_form.html
-    // DO NOT include: SADAD_WEBCHECKOUT_PAGE_LANGUAGE, VERSION, productdetail[0][type]
+    // Map backend response to form fields matching original Sadad PHP sample
+    // IMPORTANT: Do NOT include VERSION - it's not in the original sadad.php checksum
     const formFields: Record<string, string> = {
       merchant_id: backendData.data.merchantId,
       ORDER_ID: backendData.data.orderId,
