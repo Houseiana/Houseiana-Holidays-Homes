@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json()
-    const { bookingId } = body
+    const { bookingId, customerEmail, customerPhone } = body
 
     if (!bookingId) {
       return NextResponse.json(
@@ -67,6 +67,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Use provided email/phone or fall back to guest record
+    const email = customerEmail || booking.guest?.email || 'guest@houseiana.net'
+    const phone = customerPhone || booking.guest?.phone || '12345678'
+
     // Call .NET backend Sadad API
     const backendResponse = await fetch(`${BACKEND_API_URL}/api/sadadpayment/initiate`, {
       method: 'POST',
@@ -77,8 +81,8 @@ export async function POST(req: NextRequest) {
         orderId: booking.id,
         bookingId: booking.id,
         amount: parseFloat(booking.totalPrice.toString()),
-        customerEmail: booking.guest?.email || '',
-        customerMobile: booking.guest?.phone || '',
+        customerEmail: email,
+        customerMobile: phone,
         itemName: `${booking.property?.title || 'Property'} - Booking`,
         language: 'ENG',
       }),
@@ -105,8 +109,10 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Map backend response to form fields matching exact Sadad field names
-    // Based on reference: direct_payment/checksum_form.html
+    // Map backend response to form fields matching EXACT PHP reference
+    // IMPORTANT: Only include fields that are in the checksum calculation
+    // Based on: direct_payment/sadad.php and checksum_form.html
+    // DO NOT include: SADAD_WEBCHECKOUT_PAGE_LANGUAGE, VERSION, productdetail[0][type]
     const formFields: Record<string, string> = {
       merchant_id: backendData.data.merchantId,
       ORDER_ID: backendData.data.orderId,
@@ -115,16 +121,15 @@ export async function POST(req: NextRequest) {
       CUST_ID: backendData.data.customerId,
       EMAIL: backendData.data.email,
       MOBILE_NO: backendData.data.mobileNo,
-      SADAD_WEBCHECKOUT_PAGE_LANGUAGE: backendData.data.language,
       CALLBACK_URL: backendData.data.callbackUrl,
       txnDate: backendData.data.txnDate,
-      VERSION: backendData.data.version || '1.1',
-      checksumhash: backendData.data.checksumHash,
+      // productdetail fields - order matters: order_id, quantity, amount, itemname
       'productdetail[0][order_id]': backendData.data.productDetail?.order_id || backendData.data.orderId,
-      'productdetail[0][itemname]': backendData.data.productDetail?.itemname || `${booking.property?.title || 'Property'} - Booking`,
-      'productdetail[0][amount]': backendData.data.productDetail?.amount || backendData.data.txnAmount,
       'productdetail[0][quantity]': backendData.data.productDetail?.quantity || '1',
-      'productdetail[0][type]': backendData.data.productDetail?.type || 'line_item',
+      'productdetail[0][amount]': backendData.data.productDetail?.amount || backendData.data.txnAmount,
+      'productdetail[0][itemname]': backendData.data.productDetail?.itemname || `${booking.property?.title || 'Property'} - Booking`,
+      // checksumhash must be last
+      checksumhash: backendData.data.checksumHash,
     }
 
     console.log('Sadad payment form generated via backend:', {
