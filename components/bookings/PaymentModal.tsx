@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, CreditCard, Lock } from 'lucide-react'
+import { X, CreditCard, Lock, Shield } from 'lucide-react'
+import { createSadadPayment, submitToSadad } from '@/lib/sadad'
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -16,10 +17,19 @@ interface PaymentModalProps {
     checkOut: string
     cancellationPolicyType?: string
   }
+  customerEmail?: string
+  customerPhone?: string
   onPaymentSuccess: () => void
 }
 
-export function PaymentModal({ isOpen, onClose, booking, onPaymentSuccess }: PaymentModalProps) {
+export function PaymentModal({
+  isOpen,
+  onClose,
+  booking,
+  customerEmail = '',
+  customerPhone = '',
+  onPaymentSuccess
+}: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,35 +38,24 @@ export function PaymentModal({ isOpen, onClose, booking, onPaymentSuccess }: Pay
     setError(null)
 
     try {
-      // Create Sadad payment transaction
-      const response = await fetch('/api/payments/create-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-        },
-        body: JSON.stringify({
-          bookingId: booking.id
-        })
+      // Store booking ID for callback verification
+      localStorage.setItem('pending_sadad_booking', booking.id)
+
+      // Create payment via backend
+      const response = await createSadadPayment({
+        amount: booking.totalPrice,
+        orderId: booking.id,
+        email: customerEmail || 'guest@houseiana.com',
+        mobileNo: customerPhone || '97400000000',
+        description: `Booking for ${booking.property.title}`,
       })
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to create payment transaction')
-      }
+      console.log('Sadad payment created:', response)
 
-      const data = await response.json()
-      console.log('Sadad payment created:', data.transactionId)
+      // Submit form to Sadad - this will redirect the user
+      submitToSadad(response.formAction, response.formData)
 
-      // Redirect to Sadad payment page
-      if (data.paymentUrl) {
-        // Store booking ID to check status when user returns
-        localStorage.setItem('pending_payment_booking', booking.id)
-        window.location.href = data.paymentUrl
-      } else {
-        throw new Error('No payment URL received from Sadad')
-      }
-
+      // Note: The page will redirect, so onPaymentSuccess won't be called here
     } catch (err: any) {
       console.error('Payment error:', err)
       setError(err.message || 'Payment failed')
@@ -125,12 +124,22 @@ export function PaymentModal({ isOpen, onClose, booking, onPaymentSuccess }: Pay
               <p className="text-sm text-gray-600 mb-4">
                 You'll be redirected to Sadad Qatar's secure payment page to complete your transaction.
               </p>
+              <div className="flex items-center justify-center gap-4 text-xs text-gray-500 mb-2">
+                <span className="flex items-center gap-1">
+                  <Shield size={12} className="text-green-600" />
+                  SSL Secured
+                </span>
+                <span className="flex items-center gap-1">
+                  <Lock size={12} className="text-green-600" />
+                  PCI Compliant
+                </span>
+              </div>
               <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                <span>✓ Credit Card</span>
-                <span>•</span>
-                <span>✓ Debit Card</span>
-                <span>•</span>
-                <span>✓ Sadad Pay</span>
+                <span>Visa</span>
+                <span>|</span>
+                <span>Mastercard</span>
+                <span>|</span>
+                <span>QPAY</span>
               </div>
             </div>
           </div>
@@ -152,7 +161,7 @@ export function PaymentModal({ isOpen, onClose, booking, onPaymentSuccess }: Pay
               {isProcessing ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Processing...
+                  Connecting...
                 </>
               ) : (
                 <>

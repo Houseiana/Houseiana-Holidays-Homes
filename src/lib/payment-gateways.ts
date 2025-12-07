@@ -2,7 +2,7 @@
  * Payment Gateway Verification Utilities
  *
  * This module provides secure server-side verification of payment transactions
- * with PayPal and Sadad Qatar payment gateways.
+ * with PayPal payment gateway.
  *
  * SECURITY: Never trust client-side payment confirmations. Always verify with the gateway.
  */
@@ -173,148 +173,13 @@ export async function verifyPayPalOrder(orderId: string): Promise<PaymentVerific
   }
 }
 
-// ============================================================================
-// Sadad Qatar Payment Verification
-// ============================================================================
-
-interface SadadAccessTokenResponse {
-  access_token: string
-  token_type: string
-  expires_in: number
-}
-
-interface SadadTransactionDetails {
-  transactionId: string
-  status: 'SUCCESS' | 'PENDING' | 'FAILED' | 'CANCELLED'
-  amount: number
-  currency: string
-  merchantReference?: string
-}
-
-/**
- * Get Sadad Qatar OAuth2 access token for API requests
- */
-export async function getSadadAccessToken(): Promise<string | null> {
-  try {
-    const clientId = process.env.SADAD_CLIENT_ID
-    const clientSecret = process.env.SADAD_CLIENT_SECRET
-    const baseUrl = process.env.SADAD_MODE === 'live'
-      ? process.env.SADAD_LIVE_URL
-      : process.env.SADAD_SANDBOX_URL
-
-    if (!clientId || !clientSecret || !baseUrl) {
-      console.error('Sadad credentials not configured')
-      return null
-    }
-
-    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-
-    const response = await fetch(`${baseUrl}/oauth/token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials',
-    })
-
-    if (!response.ok) {
-      console.error('Failed to get Sadad access token:', response.status)
-      return null
-    }
-
-    const data: SadadAccessTokenResponse = await response.json()
-    return data.access_token
-  } catch (error) {
-    console.error('Error getting Sadad access token:', error)
-    return null
-  }
-}
-
-/**
- * Verify Sadad Qatar payment transaction by querying Sadad API directly
- *
- * @param transactionId - Sadad transaction ID
- * @returns Payment verification result
- */
-export async function verifySadadTransaction(transactionId: string): Promise<PaymentVerificationResult> {
-  try {
-    const accessToken = await getSadadAccessToken()
-    if (!accessToken) {
-      return {
-        success: false,
-        status: 'FAILED',
-        error: 'Failed to authenticate with Sadad',
-      }
-    }
-
-    const baseUrl = process.env.SADAD_MODE === 'live'
-      ? process.env.SADAD_LIVE_URL
-      : process.env.SADAD_SANDBOX_URL
-
-    const response = await fetch(`${baseUrl}/api/v1/transactions/${transactionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      console.error('Sadad transaction verification failed:', response.status)
-      return {
-        success: false,
-        status: 'FAILED',
-        error: `Sadad API returned status ${response.status}`,
-      }
-    }
-
-    const transactionDetails: SadadTransactionDetails = await response.json()
-
-    // Check if transaction is successful
-    if (transactionDetails.status === 'SUCCESS') {
-      return {
-        success: true,
-        status: 'COMPLETED',
-        transactionId: transactionDetails.transactionId,
-        amount: transactionDetails.amount,
-        currency: transactionDetails.currency,
-      }
-    }
-
-    // Transaction exists but not completed
-    if (transactionDetails.status === 'PENDING') {
-      return {
-        success: false,
-        status: 'PENDING',
-        error: 'Payment is still pending',
-      }
-    }
-
-    // Transaction failed or cancelled
-    return {
-      success: false,
-      status: 'FAILED',
-      error: `Sadad transaction status: ${transactionDetails.status}`,
-    }
-
-  } catch (error) {
-    console.error('Error verifying Sadad transaction:', error)
-    return {
-      success: false,
-      status: 'FAILED',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }
-  }
-}
-
-// Note: Stripe verification removed - using Sadad Qatar as primary payment gateway
+// Note: Additional payment gateways will be configured via new endpoint
 
 // ============================================================================
 // Unified Payment Gateway Verification
 // ============================================================================
 
-export type PaymentProvider = 'paypal' | 'sadad' | 'stripe' | 'apple_pay' | 'google_pay'
+export type PaymentProvider = 'paypal' | 'stripe' | 'apple_pay' | 'google_pay'
 
 /**
  * Check payment status directly with the payment gateway
@@ -334,17 +199,14 @@ export async function checkPaymentGatewayStatus(
     case 'paypal':
       return verifyPayPalOrder(paymentOrderId)
 
-    case 'sadad':
-      return verifySadadTransaction(paymentOrderId)
-
     case 'stripe':
     case 'apple_pay':
     case 'google_pay':
-      // Stripe has been removed - redirecting to Sadad
+      // These payment methods are not currently configured
       return {
         success: false,
         status: 'FAILED',
-        error: 'Stripe payment gateway is no longer supported. Please use Sadad Qatar or PayPal.',
+        error: 'This payment method is not currently supported.',
       }
 
     default:

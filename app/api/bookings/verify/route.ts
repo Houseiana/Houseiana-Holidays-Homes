@@ -118,8 +118,6 @@ export async function GET(request: NextRequest) {
         const method = booking.paymentMethod.toLowerCase()
         if (method.includes('paypal')) {
           provider = 'paypal'
-        } else if (method.includes('sadad')) {
-          provider = 'sadad'
         } else if (method.includes('stripe') || method.includes('card')) {
           provider = 'stripe'
         } else if (method.includes('apple')) {

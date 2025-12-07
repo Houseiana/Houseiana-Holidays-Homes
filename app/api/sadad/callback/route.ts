@@ -1,264 +1,173 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma-server';
+
 /**
- * Sadad Payment Callback Handler
+ * POST /api/sadad/callback
  *
- * Receives payment response from Sadad gateway after transaction completion
- * Verifies checksumhash and updates booking and payment status
+ * Callback endpoint for Sadad payment gateway
+ * Sadad will POST payment result to this endpoint after payment completion
+ *
+ * Expected parameters from Sadad:
+ * - ORDER_ID: The booking ID / order ID
+ * - TXNID: Transaction ID from Sadad
+ * - STATUS: Payment status (TXN_SUCCESS, TXN_FAILURE, PENDING)
+ * - BANKTXNID: Bank transaction ID
+ * - TXNAMOUNT: Transaction amount
+ * - CHECKSUMHASH: Checksum for verification
  */
-
-import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-import { verifySadadCallback, type SadadCallbackResponse } from '@/lib/sadad-config'
-
-const prisma = new PrismaClient()
-
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    console.log('Sadad callback received')
-
     // Parse form data from Sadad
-    const formData = await req.formData()
+    const formData = await request.formData();
 
-    // Extract all parameters
-    const response: SadadCallbackResponse = {
-      ORDERID: formData.get('ORDERID') as string,
-      RESPCODE: formData.get('RESPCODE') as string,
-      RESPMSG: formData.get('RESPMSG') as string,
-      TXNAMOUNT: formData.get('TXNAMOUNT') as string,
-      transaction_number: formData.get('transaction_number') as string,
-      checksumhash: formData.get('checksumhash') as string,
+    const orderId = formData.get('ORDER_ID') as string;
+    const txnId = formData.get('TXNID') as string;
+    const status = formData.get('STATUS') as string;
+    const bankTxnId = formData.get('BANKTXNID') as string;
+    const txnAmount = formData.get('TXNAMOUNT') as string;
+    const checksumHash = formData.get('CHECKSUMHASH') as string;
+    const respMsg = formData.get('RESPMSG') as string;
+
+    console.log('Sadad callback received:', {
+      orderId,
+      txnId,
+      status,
+      bankTxnId,
+      txnAmount,
+      respMsg,
+    });
+
+    if (!orderId) {
+      console.error('Missing ORDER_ID in Sadad callback');
+      return NextResponse.redirect(new URL('/payment/failed?error=missing_order', request.url));
     }
 
-    console.log('Sadad callback data:', {
-      orderId: response.ORDERID,
-      responseCode: response.RESPCODE,
-      transactionNumber: response.transaction_number,
-      amount: response.TXNAMOUNT,
-    })
-
-    // Verify checksumhash
-    const verification = verifySadadCallback(response)
-
-    if (!verification.valid) {
-      console.error('Sadad checksumhash verification failed')
-      return NextResponse.json(
-        { error: 'Invalid checksumhash - security verification failed' },
-        { status: 400 }
-      )
-    }
-
-    console.log('Sadad checksumhash verified successfully')
-
-    // Find booking
-    const booking = await prisma.booking.findUnique({
-      where: { id: verification.orderId },
-    })
+    // Find the booking
+    const booking = await (prisma as any).booking.findUnique({
+      where: { id: orderId },
+      include: {
+        property: true,
+        guest: true,
+      },
+    });
 
     if (!booking) {
-      console.error('Booking not found:', verification.orderId)
-      return NextResponse.json(
-        { error: 'Booking not found' },
-        { status: 404 }
-      )
+      console.error('Booking not found:', orderId);
+      return NextResponse.redirect(new URL('/payment/failed?error=booking_not_found', request.url));
     }
 
-    // Update payment record
-    const payment = await prisma.payment.upsert({
-      where: { bookingId: booking.id },
-      update: {
-        status: verification.success ? 'COMPLETED' : 'FAILED',
-        transactionId: verification.transactionId,
-        amount: verification.amount,
-        currency: 'QAR',
-        metadata: JSON.stringify({
-          respCode: response.RESPCODE,
-          respMsg: response.RESPMSG,
-          verifiedAt: new Date().toISOString(),
-        }),
-        updatedAt: new Date(),
-      },
-      create: {
-        bookingId: booking.id,
-        userId: booking.userId,
-        provider: 'SADAD',
-        status: verification.success ? 'COMPLETED' : 'FAILED',
-        transactionId: verification.transactionId,
-        amount: verification.amount,
-        currency: 'QAR',
-        metadata: JSON.stringify({
-          respCode: response.RESPCODE,
-          respMsg: response.RESPMSG,
-          verifiedAt: new Date().toISOString(),
-        }),
-      },
-    })
-
-    console.log('Payment record updated:', payment.id)
-
-    // Update booking status if payment successful
-    if (verification.success) {
-      await prisma.booking.update({
-        where: { id: booking.id },
+    // Process based on status
+    if (status === 'TXN_SUCCESS') {
+      // Payment successful - update booking
+      await (prisma as any).booking.update({
+        where: { id: orderId },
         data: {
           status: 'CONFIRMED',
           paymentStatus: 'PAID',
-          updatedAt: new Date(),
+          paymentMethod: 'SADAD',
+          transactionId: txnId,
+          paymentIntentId: bankTxnId,
+          amountPaid: parseFloat(txnAmount) || booking.totalPrice,
+          confirmedAt: new Date(),
+          paymentCapturedAt: new Date(),
         },
-      })
+      });
 
-      console.log('Booking confirmed:', booking.id)
+      console.log('Payment successful for booking:', orderId);
 
-      // TODO: Send confirmation email to customer
-      // TODO: Send notification to host
-    } else {
-      // Payment failed - update booking status
-      await prisma.booking.update({
-        where: { id: booking.id },
+      // Redirect to success page
+      return NextResponse.redirect(
+        new URL(`/payment/success?bookingId=${orderId}&txnId=${txnId}`, request.url)
+      );
+    } else if (status === 'TXN_FAILURE') {
+      // Payment failed
+      await (prisma as any).booking.update({
+        where: { id: orderId },
         data: {
           paymentStatus: 'FAILED',
-          updatedAt: new Date(),
+          paymentMethod: 'SADAD',
         },
-      })
+      });
 
-      console.log('Booking payment failed:', booking.id)
+      console.log('Payment failed for booking:', orderId, respMsg);
+
+      // Redirect to failed page
+      return NextResponse.redirect(
+        new URL(`/payment/failed?bookingId=${orderId}&error=${encodeURIComponent(respMsg || 'Payment failed')}`, request.url)
+      );
+    } else if (status === 'PENDING') {
+      // Payment pending
+      await (prisma as any).booking.update({
+        where: { id: orderId },
+        data: {
+          paymentStatus: 'PENDING',
+          paymentMethod: 'SADAD',
+          transactionId: txnId,
+        },
+      });
+
+      console.log('Payment pending for booking:', orderId);
+
+      // Redirect to pending page
+      return NextResponse.redirect(
+        new URL(`/payment/pending?bookingId=${orderId}`, request.url)
+      );
+    } else {
+      // Unknown status
+      console.error('Unknown payment status:', status);
+      return NextResponse.redirect(
+        new URL(`/payment/failed?bookingId=${orderId}&error=unknown_status`, request.url)
+      );
     }
-
-    // Return HTML response for iframe redirect
-    const successHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Payment ${verification.success ? 'Successful' : 'Failed'}</title>
-        <style>
-          body {
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background: ${verification.success ? '#f0fdf4' : '#fef2f2'};
-          }
-          .container {
-            text-align: center;
-            padding: 2rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 400px;
-          }
-          .icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-          }
-          h1 {
-            color: ${verification.success ? '#16a34a' : '#dc2626'};
-            margin-bottom: 0.5rem;
-          }
-          p {
-            color: #6b7280;
-            margin-bottom: 1.5rem;
-          }
-          .button {
-            display: inline-block;
-            padding: 0.75rem 2rem;
-            background: ${verification.success ? '#16a34a' : '#dc2626'};
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            font-weight: 600;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="icon">${verification.success ? '✓' : '✗'}</div>
-          <h1>Payment ${verification.success ? 'Successful' : 'Failed'}</h1>
-          <p>${verification.message}</p>
-          <p><strong>Order ID:</strong> ${verification.orderId}</p>
-          ${verification.transactionId ? `<p><strong>Transaction ID:</strong> ${verification.transactionId}</p>` : ''}
-          <a href="/payment/${verification.success ? 'success' : 'failed'}?bookingId=${verification.orderId}" class="button">
-            Continue
-          </a>
-        </div>
-        <script>
-          // Send message to parent window
-          window.parent.postMessage({
-            status: '${verification.success ? 'success' : 'failed'}',
-            RESPCODE: '${response.RESPCODE}',
-            ORDERID: '${verification.orderId}',
-            transaction_number: '${verification.transactionId}',
-            RESPMSG: '${verification.message}',
-            TXNAMOUNT: '${verification.amount}'
-          }, '*');
-        </script>
-      </body>
-      </html>
-    `
-
-    return new NextResponse(successHtml, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-    })
-
   } catch (error) {
-    console.error('Error processing Sadad callback:', error)
-
-    const errorHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Payment Error</title>
-        <style>
-          body {
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background: #fef2f2;
-          }
-          .container {
-            text-align: center;
-            padding: 2rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>Payment Processing Error</h1>
-          <p>An error occurred while processing your payment. Please contact support.</p>
-          <a href="/">Return Home</a>
-        </div>
-      </body>
-      </html>
-    `
-
-    return new NextResponse(errorHtml, {
-      status: 500,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-    })
-  } finally {
-    await prisma.$disconnect()
+    console.error('Error processing Sadad callback:', error);
+    return NextResponse.redirect(
+      new URL('/payment/failed?error=processing_error', request.url)
+    );
   }
 }
 
-// Handle GET requests (when users navigate directly to callback URL)
-export async function GET(req: NextRequest) {
-  const searchParams = req.nextUrl.searchParams
-  const orderId = searchParams.get('ORDERID')
+// Also handle GET requests (in case Sadad redirects via GET)
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
+  const orderId = searchParams.get('ORDER_ID');
+  const status = searchParams.get('STATUS');
+  const txnId = searchParams.get('TXNID');
+
+  console.log('Sadad callback GET received:', { orderId, status, txnId });
 
   if (!orderId) {
-    return NextResponse.redirect('/payment/failed')
+    return NextResponse.redirect(new URL('/payment/failed?error=missing_order', request.url));
   }
 
-  // Redirect to payment verification page
-  return NextResponse.redirect(`/payment/success?bookingId=${orderId}`)
+  if (status === 'TXN_SUCCESS') {
+    // Update booking and redirect to success
+    try {
+      await (prisma as any).booking.update({
+        where: { id: orderId },
+        data: {
+          status: 'CONFIRMED',
+          paymentStatus: 'PAID',
+          paymentMethod: 'SADAD',
+          transactionId: txnId,
+          confirmedAt: new Date(),
+          paymentCapturedAt: new Date(),
+        },
+      });
+
+      return NextResponse.redirect(
+        new URL(`/payment/success?bookingId=${orderId}&txnId=${txnId}`, request.url)
+      );
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      return NextResponse.redirect(
+        new URL(`/payment/success?bookingId=${orderId}&txnId=${txnId}`, request.url)
+      );
+    }
+  } else {
+    return NextResponse.redirect(
+      new URL(`/payment/failed?bookingId=${orderId}&status=${status}`, request.url)
+    );
+  }
 }

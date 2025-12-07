@@ -1,243 +1,175 @@
-import crypto from 'crypto';
+/**
+ * Sadad Payment Integration
+ *
+ * This module handles payment creation via the .NET backend
+ * which generates the checksum and returns form data for submission to Sadad
+ */
 
-const SADAD_API_URL = 'https://api-s.sadad.qa';
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app';
 
-// Cache for access token
-let accessTokenCache: { token: string; expiresAt: number } | null = null;
-
-interface SadadLoginResponse {
-  accessToken: string;
-}
-
-interface CreatePaymentParams {
+export interface SadadPaymentRequest {
   amount: number;
-  currency: string;
-  merchantReference: string;
-  customerEmail: string;
-  customerName: string;
-  description: string;
-  metadata?: Record<string, any>;
+  orderId: string;
+  email: string;
+  mobileNo: string;
+  description?: string;
 }
 
-interface CreatePaymentResponse {
-  transactionId: string;
-  paymentUrl: string;
-  status: string;
-  merchantReference: string;
+export interface SadadProductDetail {
+  order_id: string;
+  quantity: string;
+  amount: string;
+  itemname: string;
 }
 
-interface RefundParams {
-  transactionId: string;
-  amount: number;
-  reason: string;
+export interface SadadFormData {
+  merchant_id: string;
+  ORDER_ID: string;
+  WEBSITE: string;
+  TXN_AMOUNT: string;
+  CUST_ID: string;
+  EMAIL: string;
+  MOBILE_NO: string;
+  CALLBACK_URL: string;
+  txnDate: string;
+  checksumhash: string;
+  productdetail: SadadProductDetail[];
 }
 
-interface RefundResponse {
-  refundId: string;
-  status: string;
-  amount: number;
+// Backend API response format
+interface BackendFormData {
+  actionUrl: string;
+  merchantId: string;
+  orderId: string;
+  website: string;
+  txnAmount: string;
+  customerId: string;
+  email: string;
+  mobileNo: string;
+  callbackUrl: string;
+  txnDate: string;
+  checksumHash: string;
+  productDetail: {
+    order_id: string;
+    itemname: string;
+    amount: string;
+    quantity: string;
+  };
 }
 
-interface TransactionStatusResponse {
-  transactionId: string;
-  status: string;
-  amount: number;
-  currency: string;
-  paidAt?: string;
+interface BackendResponse {
+  success: boolean;
+  message?: string;
+  data: BackendFormData;
+}
+
+export interface SadadPaymentResponse {
+  success: boolean;
+  error: string | null;
+  formAction: string;
+  formData: SadadFormData;
 }
 
 /**
- * Get Sadad access token (with 1-hour caching)
+ * Create a Sadad payment transaction via backend API
+ * Returns form data that should be submitted to Sadad
  */
-async function getSadadAccessToken(): Promise<string> {
-  // Check cache
-  if (accessTokenCache && accessTokenCache.expiresAt > Date.now()) {
-    return accessTokenCache.token;
+export async function createSadadPayment(request: SadadPaymentRequest): Promise<SadadPaymentResponse> {
+  const response = await fetch(`${BACKEND_API_URL}/api/sadadpayment/initiate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount: request.amount,
+      orderId: request.orderId,
+      customerEmail: request.email,
+      customerMobile: request.mobileNo,
+      itemName: request.description || 'Booking Payment',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to create Sadad payment: ${errorText}`);
   }
 
-  const sadadId = process.env.SADAD_ID;
-  const secretKey = process.env.SADAD_SECRET_KEY;
-  const domain = process.env.SADAD_DOMAIN;
+  const backendResponse: BackendResponse = await response.json();
 
-  if (!sadadId || !secretKey || !domain) {
-    throw new Error('Missing Sadad credentials in environment variables');
+  if (!backendResponse.success) {
+    throw new Error(backendResponse.message || 'Failed to create Sadad payment');
   }
 
-  try {
-    const response = await fetch(`${SADAD_API_URL}/api/userbusinesses/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sadadId: parseInt(sadadId),
-        secretKey,
-        domain,
-      }),
+  const data = backendResponse.data;
+
+  // Map backend response to Sadad form format
+  return {
+    success: true,
+    error: null,
+    formAction: data.actionUrl,
+    formData: {
+      merchant_id: data.merchantId,
+      ORDER_ID: data.orderId,
+      WEBSITE: data.website,
+      TXN_AMOUNT: data.txnAmount,
+      CUST_ID: data.customerId,
+      EMAIL: data.email,
+      MOBILE_NO: data.mobileNo,
+      CALLBACK_URL: data.callbackUrl,
+      txnDate: data.txnDate,
+      checksumhash: data.checksumHash,
+      productdetail: [{
+        order_id: data.productDetail.order_id,
+        quantity: data.productDetail.quantity,
+        amount: data.productDetail.amount,
+        itemname: data.productDetail.itemname,
+      }],
+    },
+  };
+}
+
+/**
+ * Submit payment form to Sadad
+ * This creates a hidden form and submits it, redirecting the user to Sadad payment page
+ */
+export function submitToSadad(formAction: string, formData: SadadFormData): void {
+  // Create a hidden form
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = formAction;
+  form.style.display = 'none';
+
+  // Add all form fields
+  const addField = (name: string, value: string) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  };
+
+  addField('merchant_id', formData.merchant_id);
+  addField('ORDER_ID', formData.ORDER_ID);
+  addField('WEBSITE', formData.WEBSITE);
+  addField('TXN_AMOUNT', formData.TXN_AMOUNT);
+  addField('CUST_ID', formData.CUST_ID);
+  addField('EMAIL', formData.EMAIL);
+  addField('MOBILE_NO', formData.MOBILE_NO);
+  addField('CALLBACK_URL', formData.CALLBACK_URL);
+  addField('txnDate', formData.txnDate);
+  addField('checksumhash', formData.checksumhash);
+
+  // Add product details as array fields (Sadad expects array format)
+  if (formData.productdetail && Array.isArray(formData.productdetail)) {
+    formData.productdetail.forEach((product, index) => {
+      addField(`productdetail[${index}][order_id]`, product.order_id);
+      addField(`productdetail[${index}][quantity]`, product.quantity);
+      addField(`productdetail[${index}][amount]`, product.amount);
+      addField(`productdetail[${index}][itemname]`, product.itemname);
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Sadad login failed: ${error}`);
-    }
-
-    const data: SadadLoginResponse = await response.json();
-
-    // Cache token for 1 hour
-    accessTokenCache = {
-      token: data.accessToken,
-      expiresAt: Date.now() + 3600000, // 1 hour
-    };
-
-    return data.accessToken;
-  } catch (error: any) {
-    console.error('Failed to get Sadad access token:', error);
-    throw new Error(`Sadad authentication failed: ${error.message}`);
-  }
-}
-
-/**
- * Create a payment transaction with Sadad
- */
-export async function createSadadPayment(
-  params: CreatePaymentParams
-): Promise<CreatePaymentResponse> {
-  const accessToken = await getSadadAccessToken();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.houseiana.net';
-
-  try {
-    const response = await fetch(`${SADAD_API_URL}/api/transactions/create`, {
-      method: 'POST',
-      headers: {
-        'Authorization': accessToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: params.amount,
-        currency: params.currency,
-        merchantReference: params.merchantReference,
-        customerEmail: params.customerEmail,
-        customerName: params.customerName,
-        description: params.description,
-        returnUrl: `${appUrl}/payment/return`,
-        cancelUrl: `${appUrl}/payment/return?status=cancelled`,
-        webhookUrl: `${appUrl}/api/webhooks/sadad`,
-        metadata: params.metadata,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Sadad payment creation failed: ${error}`);
-    }
-
-    const data = await response.json();
-
-    return {
-      transactionId: data.transactionId || data.id,
-      paymentUrl: data.paymentUrl || data.checkoutUrl,
-      status: data.status || 'pending',
-      merchantReference: params.merchantReference,
-    };
-  } catch (error: any) {
-    console.error('Failed to create Sadad payment:', error);
-    throw new Error(`Sadad payment creation failed: ${error.message}`);
-  }
-}
-
-/**
- * Create a refund for a transaction
- */
-export async function createSadadRefund(
-  params: RefundParams
-): Promise<RefundResponse> {
-  const accessToken = await getSadadAccessToken();
-
-  try {
-    const response = await fetch(`${SADAD_API_URL}/api/transactions/${params.transactionId}/refund`, {
-      method: 'POST',
-      headers: {
-        'Authorization': accessToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: params.amount,
-        reason: params.reason,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Sadad refund failed: ${error}`);
-    }
-
-    const data = await response.json();
-
-    return {
-      refundId: data.refundId || data.id,
-      status: data.status || 'completed',
-      amount: params.amount,
-    };
-  } catch (error: any) {
-    console.error('Failed to create Sadad refund:', error);
-    throw new Error(`Sadad refund failed: ${error.message}`);
-  }
-}
-
-/**
- * Get transaction status
- */
-export async function getSadadTransactionStatus(
-  transactionId: string
-): Promise<TransactionStatusResponse> {
-  const accessToken = await getSadadAccessToken();
-
-  try {
-    const response = await fetch(`${SADAD_API_URL}/api/transactions/${transactionId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': accessToken,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to get transaction status: ${error}`);
-    }
-
-    const data = await response.json();
-
-    return {
-      transactionId: data.transactionId || data.id,
-      status: data.status,
-      amount: data.amount,
-      currency: data.currency,
-      paidAt: data.paidAt || data.paid_at,
-    };
-  } catch (error: any) {
-    console.error('Failed to get Sadad transaction status:', error);
-    throw new Error(`Failed to get transaction status: ${error.message}`);
-  }
-}
-
-/**
- * Verify Sadad webhook signature
- */
-export function verifySadadWebhook(payload: string, signature: string): boolean {
-  const secretKey = process.env.SADAD_SECRET_KEY;
-
-  if (!secretKey) {
-    throw new Error('Missing SADAD_SECRET_KEY in environment variables');
   }
 
-  const expectedSignature = crypto
-    .createHmac('sha256', secretKey)
-    .update(payload)
-    .digest('hex');
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  // Append form to body and submit
+  document.body.appendChild(form);
+  form.submit();
 }

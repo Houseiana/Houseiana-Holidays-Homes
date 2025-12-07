@@ -141,26 +141,6 @@ export async function POST(request: NextRequest) {
         }
         break
 
-      case 'sadad':
-        // Create Sadad transaction for remaining balance
-        const sadadTxnId = `${bookingId}_balance_${Date.now()}`
-        const sadadResponse = await createSadadTransaction(
-          remainingBalance,
-          `Balance payment for booking ${bookingId}`,
-          sadadTxnId
-        )
-
-        if (sadadResponse.success) {
-          paymentUrl = sadadResponse.paymentUrl
-          paymentOrderId = sadadResponse.transactionId
-        } else {
-          return NextResponse.json(
-            { error: sadadResponse.error || 'Failed to create Sadad transaction' },
-            { status: 500 }
-          )
-        }
-        break
-
       default:
         return NextResponse.json(
           { error: `Unsupported payment provider: ${paymentProvider}` },
@@ -291,79 +271,3 @@ async function createPayPalOrder(
   }
 }
 
-interface SadadTransactionResponse {
-  success: boolean
-  transactionId?: string
-  paymentUrl?: string
-  error?: string
-}
-
-/**
- * Create Sadad Qatar transaction for balance payment
- */
-async function createSadadTransaction(
-  amount: number,
-  description: string,
-  referenceId: string
-): Promise<SadadTransactionResponse> {
-  try {
-    const clientId = process.env.SADAD_CLIENT_ID
-    const clientSecret = process.env.SADAD_CLIENT_SECRET
-    const baseUrl = process.env.SADAD_MODE === 'live'
-      ? process.env.SADAD_LIVE_URL
-      : process.env.SADAD_SANDBOX_URL
-
-    if (!clientId || !clientSecret || !baseUrl) {
-      return { success: false, error: 'Sadad credentials not configured' }
-    }
-
-    // Get access token
-    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-    const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'grant_type=client_credentials',
-    })
-
-    if (!tokenResponse.ok) {
-      return { success: false, error: 'Failed to get Sadad access token' }
-    }
-
-    const { access_token } = await tokenResponse.json()
-
-    // Create transaction
-    const txnResponse = await fetch(`${baseUrl}/api/v1/transactions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        merchantReference: referenceId,
-        description,
-        amount: amount.toFixed(2),
-        currency: 'QAR',
-        returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/return`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/cancel`,
-      }),
-    })
-
-    if (!txnResponse.ok) {
-      return { success: false, error: 'Failed to create Sadad transaction' }
-    }
-
-    const txnData = await txnResponse.json()
-
-    return {
-      success: true,
-      transactionId: txnData.transactionId,
-      paymentUrl: txnData.paymentUrl,
-    }
-  } catch (error) {
-    console.error('Sadad transaction creation error:', error)
-    return { success: false, error: 'Sadad transaction creation failed' }
-  }
-}

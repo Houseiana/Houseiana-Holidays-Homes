@@ -51,11 +51,6 @@ interface BookingData {
   };
 }
 
-interface SadadFormData {
-  action: string;
-  formFields: Record<string, string>;
-}
-
 function BookingConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -270,14 +265,14 @@ function BookingConfirmContent() {
         <div className="max-w-4xl mx-auto">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Complete Payment</h1>
-            <button 
+            <button
               onClick={() => setShowPaymentFrame(false)}
               className="text-gray-600 hover:text-gray-900"
             >
               Cancel
             </button>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <div className="flex items-center space-x-4 mb-6 pb-6 border-b">
               <img src={displayImage} alt={bookingData.property.title} className="w-20 h-20 rounded-lg object-cover" />
@@ -287,11 +282,11 @@ function BookingConfirmContent() {
                   {bookingData.booking.checkIn} - {bookingData.booking.checkOut}
                 </p>
                 <p className="font-bold text-indigo-600 mt-1">
-                  Total: ${bookingData.pricing.total.toFixed(2)}
+                  Total: QAR {bookingData.pricing.total.toFixed(2)}
                 </p>
               </div>
             </div>
-            
+
             <SadadPaymentForm
               bookingId={pendingBookingId}
               amount={bookingData.pricing.total}
