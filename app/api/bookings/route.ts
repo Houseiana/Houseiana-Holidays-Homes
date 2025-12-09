@@ -1,6 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma-server'
+
+/**
+ * Ensure user exists in database, create if not
+ * Syncs Clerk user to local database
+ */
+async function ensureUserExists(clerkUserId: string): Promise<string> {
+  // First, try to find user by clerkId
+  let user = await (prisma as any).user.findUnique({
+    where: { clerkId: clerkUserId },
+    select: { id: true }
+  })
+
+  if (user) {
+    return user.id
+  }
+
+  // User not found, get details from Clerk and create
+  try {
+    const client = await clerkClient()
+    const clerkUser = await client.users.getUser(clerkUserId)
+
+    // Create user in database
+    user = await (prisma as any).user.create({
+      data: {
+        clerkId: clerkUserId,
+        email: clerkUser.emailAddresses[0]?.emailAddress || `${clerkUserId}@temp.local`,
+        firstName: clerkUser.firstName || 'Guest',
+        lastName: clerkUser.lastName || 'User',
+        phone: clerkUser.phoneNumbers?.[0]?.phoneNumber || null,
+        emailVerified: clerkUser.emailAddresses[0]?.verification?.status === 'verified',
+      },
+      select: { id: true }
+    })
+
+    return user.id
+  } catch (error) {
+    console.error('Error syncing user from Clerk:', error)
+    throw new Error('Failed to sync user account. Please try again.')
+  }
+}
 
 // GET /api/bookings - Get user's bookings
 export async function GET(request: NextRequest) {
@@ -145,16 +185,17 @@ export async function GET(request: NextRequest) {
 // POST /api/bookings - Create new booking with concurrency control
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const { userId: clerkUserId } = await auth()
 
-    if (!userId) {
+    if (!clerkUserId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
-    const user = { userId }
+    // Ensure user exists in database and get their internal ID
+    const dbUserId = await ensureUserExists(clerkUserId)
 
     const bookingData = await request.json()
 
@@ -220,7 +261,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Prevent host from booking their own property
-    if (property.ownerId === user.userId) {
+    if (property.ownerId === dbUserId) {
       return NextResponse.json(
         { error: 'You cannot book your own property' },
         { status: 400 }
@@ -324,7 +365,7 @@ export async function POST(request: NextRequest) {
       // Create booking
       const newBooking = await (prismaTransaction as any).booking.create({
         data: {
-          guestId: user.userId,
+          guestId: dbUserId,
           propertyId,
           hostId: property.ownerId,
           checkIn: checkInDate,
