@@ -3,10 +3,21 @@
  *
  * This module handles payment creation via the .NET backend
  * which generates the checksum and returns form data for submission to Sadad
+ *
+ * Backend API: /users/sadad/payment
  */
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app';
+const BACKEND_API_URL =
+  process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+  'https://houseiana-user-backend-production.up.railway.app';
 
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
+
+/**
+ * Request payload to initiate a Sadad payment
+ */
 export interface SadadPaymentRequest {
   amount: number;
   orderId: string;
@@ -15,6 +26,9 @@ export interface SadadPaymentRequest {
   description?: string;
 }
 
+/**
+ * Product detail structure in the form data
+ */
 export interface SadadProductDetail {
   order_id: string;
   quantity: string;
@@ -22,6 +36,9 @@ export interface SadadProductDetail {
   itemname: string;
 }
 
+/**
+ * Form data returned by backend - ready for submission to Sadad
+ */
 export interface SadadFormData {
   merchant_id: string;
   ORDER_ID: string;
@@ -33,113 +50,97 @@ export interface SadadFormData {
   CALLBACK_URL: string;
   txnDate: string;
   checksumhash: string;
+  VERSION: string;
   productdetail: SadadProductDetail[];
 }
 
-// Backend API response format
-interface BackendFormData {
-  actionUrl: string;
-  merchantId: string;
-  orderId: string;
-  website: string;
-  txnAmount: string;
-  customerId: string;
-  email: string;
-  mobileNo: string;
-  callbackUrl: string;
-  txnDate: string;
-  checksumHash: string;
-  productDetail: {
-    order_id: string;
-    itemname: string;
-    amount: string;
-    quantity: string;
-  };
-}
-
-interface BackendResponse {
-  success: boolean;
-  message?: string;
-  data: BackendFormData;
-}
-
+/**
+ * Backend API response structure
+ */
 export interface SadadPaymentResponse {
   success: boolean;
-  error: string | null;
+  error?: string | null;
   formAction: string;
   formData: SadadFormData;
 }
 
+// ============================================================================
+// API Functions
+// ============================================================================
+
 /**
  * Create a Sadad payment transaction via backend API
- * Returns form data that should be submitted to Sadad
+ *
+ * Step 1: Send payment details to backend
+ * Step 2: Backend generates checksum and returns form data
+ * Step 3: Return the response for form submission
+ *
+ * @param request - Payment request details
+ * @returns Promise with form action URL and form data
+ * @throws Error if API call fails or response indicates failure
  */
-export async function createSadadPayment(request: SadadPaymentRequest): Promise<SadadPaymentResponse> {
-  const response = await fetch(`${BACKEND_API_URL}/api/sadadpayment/initiate`, {
+export async function createSadadPayment(
+  request: SadadPaymentRequest
+): Promise<SadadPaymentResponse> {
+  // Step 1: Prepare the request body
+  const requestBody = {
+    amount: request.amount,
+    orderId: request.orderId,
+    email: request.email,
+    mobileNo: request.mobileNo,
+    description: request.description || 'Booking Payment',
+  };
+
+  // Step 2: Call the backend API
+  const response = await fetch(`${BACKEND_API_URL}/users/sadad/payment`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      amount: request.amount,
-      orderId: request.orderId,
-      customerEmail: request.email,
-      customerMobile: request.mobileNo,
-      itemName: request.description || 'Booking Payment',
-    }),
+    body: JSON.stringify(requestBody),
   });
 
+  // Step 3: Handle non-OK responses
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Failed to create Sadad payment: ${errorText}`);
   }
 
-  const backendResponse: BackendResponse = await response.json();
+  // Step 4: Parse the response
+  const data: SadadPaymentResponse = await response.json();
 
-  if (!backendResponse.success) {
-    throw new Error(backendResponse.message || 'Failed to create Sadad payment');
+  // Step 5: Check for API-level errors
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to create Sadad payment');
   }
 
-  const data = backendResponse.data;
-
-  // Map backend response to Sadad form format
-  return {
-    success: true,
-    error: null,
-    formAction: data.actionUrl,
-    formData: {
-      merchant_id: data.merchantId,
-      ORDER_ID: data.orderId,
-      WEBSITE: data.website,
-      TXN_AMOUNT: data.txnAmount,
-      CUST_ID: data.customerId,
-      EMAIL: data.email,
-      MOBILE_NO: data.mobileNo,
-      CALLBACK_URL: data.callbackUrl,
-      txnDate: data.txnDate,
-      checksumhash: data.checksumHash,
-      productdetail: [{
-        order_id: data.productDetail.order_id,
-        quantity: data.productDetail.quantity,
-        amount: data.productDetail.amount,
-        itemname: data.productDetail.itemname,
-      }],
-    },
-  };
+  return data;
 }
+
+// ============================================================================
+// Form Submission Functions
+// ============================================================================
 
 /**
  * Submit payment form to Sadad
- * This creates a hidden form and submits it, redirecting the user to Sadad payment page
+ *
+ * This function dynamically creates an HTML form with all required fields
+ * and submits it, redirecting the user to the Sadad payment page.
+ *
+ * @param formAction - The Sadad payment page URL
+ * @param formData - The form data with all required fields including checksum
  */
-export function submitToSadad(formAction: string, formData: SadadFormData): void {
-  // Create a hidden form
+export function submitToSadad(
+  formAction: string,
+  formData: SadadFormData
+): void {
+  // Step 1: Create a hidden form element
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = formAction;
   form.style.display = 'none';
 
-  // Add all form fields
+  // Helper function to add hidden input fields
   const addField = (name: string, value: string) => {
     const input = document.createElement('input');
     input.type = 'hidden';
@@ -148,6 +149,7 @@ export function submitToSadad(formAction: string, formData: SadadFormData): void
     form.appendChild(input);
   };
 
+  // Step 2: Add all standard form fields
   addField('merchant_id', formData.merchant_id);
   addField('ORDER_ID', formData.ORDER_ID);
   addField('WEBSITE', formData.WEBSITE);
@@ -158,8 +160,9 @@ export function submitToSadad(formAction: string, formData: SadadFormData): void
   addField('CALLBACK_URL', formData.CALLBACK_URL);
   addField('txnDate', formData.txnDate);
   addField('checksumhash', formData.checksumhash);
+  addField('VERSION', formData.VERSION);
 
-  // Add product details as array fields (Sadad expects array format)
+  // Step 3: Add product details as array fields (Sadad expects array format)
   if (formData.productdetail && Array.isArray(formData.productdetail)) {
     formData.productdetail.forEach((product, index) => {
       addField(`productdetail[${index}][order_id]`, product.order_id);
@@ -169,7 +172,30 @@ export function submitToSadad(formAction: string, formData: SadadFormData): void
     });
   }
 
-  // Append form to body and submit
+  // Step 4: Append form to document body and submit
   document.body.appendChild(form);
   form.submit();
+}
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+/**
+ * Complete Sadad payment flow - create payment and redirect to Sadad
+ *
+ * This is a convenience function that combines createSadadPayment and submitToSadad
+ * into a single call for simpler usage.
+ *
+ * @param request - Payment request details
+ * @throws Error if payment creation fails
+ */
+export async function initiateSadadPayment(
+  request: SadadPaymentRequest
+): Promise<void> {
+  // Step 1: Create payment and get form data from backend
+  const response = await createSadadPayment(request);
+
+  // Step 2: Submit the form to redirect to Sadad payment page
+  submitToSadad(response.formAction, response.formData);
 }
