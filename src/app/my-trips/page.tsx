@@ -321,7 +321,7 @@ export default function MyTrips() {
               <h1 className="text-3xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent">
                 My Trips
               </h1>
-              <p className="text-gray-600 mt-1">Manage your travel experiences</p>
+              <p className="text-gray-600 mt-1">Manage your bookings and reservations</p>
             </div>
 
             <div className="flex items-center gap-4">

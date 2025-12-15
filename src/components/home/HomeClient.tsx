@@ -303,7 +303,6 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
                           <Link href="/host-dashboard/add-listing">
                             <button className="w-full text-left px-4 py-3 hover:bg-gray-50">List your home</button>
                           </Link>
-                          <button className="w-full text-left px-4 py-3 hover:bg-gray-50">Host an experience</button>
                           <button className="w-full text-left px-4 py-3 hover:bg-gray-50">Help Center</button>
                         </div>
                       </>
@@ -339,7 +338,6 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
               <div className="flex justify-center mb-4">
                 <div className="flex gap-6">
                   <button className="text-sm font-medium text-gray-900 border-b-2 border-gray-900 pb-3">Stays</button>
-                  <button className="text-sm font-medium text-gray-500 hover:text-gray-900 pb-3">Experiences</button>
                 </div>
               </div>
 

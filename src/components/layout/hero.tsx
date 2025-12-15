@@ -201,7 +201,7 @@ export function Hero() {
             </span>
           </h1>
           <p className="text-xl md:text-2xl mb-12 font-light text-gray-100 max-w-3xl mx-auto">
-            Book unique homes, experiences, and places to stay around the world with confidence
+            Book unique homes and places to stay around the world with confidence
           </p>
 
           {/* Property Search Box */}

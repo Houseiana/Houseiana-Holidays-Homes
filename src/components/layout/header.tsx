@@ -10,7 +10,6 @@ import {
   LogIn,
   UserPlus,
   Building2,
-  Compass,
   HelpCircle,
   ChevronDown,
   CheckCircle,
@@ -218,10 +217,6 @@ export function Header() {
                     <Link href="/become-host" className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
                       <Building2 className="w-4 h-4 mr-3" />
                       Houseiana your home
-                    </Link>
-                    <Link href="/become-host" className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
-                      <Compass className="w-4 h-4 mr-3" />
-                      Host an experience
                     </Link>
                     <Link href="/help" className="flex items-center px-4 py-2 text-sm hover:bg-gray-50">
                       <HelpCircle className="w-4 h-4 mr-3" />

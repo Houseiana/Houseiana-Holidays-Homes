@@ -389,7 +389,6 @@ export default function BecomeHost() {
                 <li><a href="#" className="hover:underline">Meet & Assist</a></li>
                 <li><a href="#" className="hover:underline">VIP Lounge Access</a></li>
                 <li><a href="#" className="hover:underline">Airport Transfers</a></li>
-                <li><a href="#" className="hover:underline">Local Experiences</a></li>
               </ul>
             </div>
           </div>

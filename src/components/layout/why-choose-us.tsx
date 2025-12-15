@@ -1,4 +1,4 @@
-import { Globe, CheckCircle, Star, Shield, Clock, Compass } from 'lucide-react';
+import { Globe, CheckCircle, Star, Shield, Clock, Headphones } from 'lucide-react';
 
 // TODO: Fetch statistics from API to populate dynamic descriptions
 const features = [
@@ -28,9 +28,9 @@ const features = [
     description: 'Many properties offer free cancellation options'
   },
   {
-    icon: Compass,
-    title: 'Local Experiences',
-    description: 'Discover unique experiences curated by local hosts'
+    icon: Headphones,
+    title: '24/7 Support',
+    description: 'Our support team is available around the clock to help you'
   }
 ];
 

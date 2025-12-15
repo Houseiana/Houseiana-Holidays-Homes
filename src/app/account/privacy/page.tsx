@@ -299,7 +299,7 @@ export default function PrivacyPage() {
                   <div>
                     <h3 className="text-gray-900 font-medium">Personalized recommendations</h3>
                     <p className="text-gray-500 text-sm mt-1">
-                      Allow us to use your browsing and booking history to show you personalized homes and experiences.
+                      Allow us to use your browsing and booking history to show you personalized homes and recommendations.
                     </p>
                   </div>
                 </div>
