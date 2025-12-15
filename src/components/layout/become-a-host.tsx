@@ -22,7 +22,7 @@ export function BecomeAHost() {
             </h2>
             <p className="text-xl mb-8 text-emerald-100">
               Join millions of hosts earning extra income by sharing their space.
-              It's easy to get started and we're here to help every step of the way.
+              It&apos;s easy to get started and we&apos;re here to help every step of the way.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
               <div className="flex items-center gap-3">

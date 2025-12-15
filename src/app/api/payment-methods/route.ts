@@ -1,104 +1,96 @@
-/**
- * Payment Methods API
- * Handles payment method CRUD operations
- */
+import { NextRequest, NextResponse } from 'next/server'
+import { getUserFromRequest } from '@/lib/auth'
+import { PaymentMethodsAPI } from '@/lib/backend-api'
 
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { currentUser } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
-
-/**
- * GET /api/payment-methods
- * Get all payment methods for the authenticated user
- */
 export async function GET(request: NextRequest) {
   try {
-    const user = await currentUser();
+    const user = getUserFromRequest(request)
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { error: 'Authentication required' },
         { status: 401 }
-      );
+      )
     }
 
-    const paymentMethods = await prisma.paymentMethod.findMany({
-      where: { userId: user.id },
-      orderBy: [
-        { isDefault: 'desc' },
-        { createdAt: 'desc' }
-      ]
-    });
+    console.log(`💳 Fetching payment methods via backend API for user: ${user.userId}`)
 
-    return NextResponse.json({
-      success: true,
-      data: paymentMethods
-    });
+    const response = await PaymentMethodsAPI.getUserPaymentMethods(user.userId)
+
+    if (!response.success) {
+      console.error('❌ Backend API error:', response.error)
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ methods: response.data || [] })
   } catch (error) {
-    console.error('Error fetching payment methods:', error);
+    console.error('Error fetching payment methods:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch payment methods' },
+      { error: 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }
 
-/**
- * POST /api/payment-methods
- * Add a new payment method
- */
 export async function POST(request: NextRequest) {
   try {
-    const user = await currentUser();
+    const user = getUserFromRequest(request)
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { error: 'Authentication required' },
         { status: 401 }
-      );
+      )
     }
 
-    const body = await request.json();
-    const { brand, last4, expiry, isDefault, stripePaymentMethodId } = body;
+    const { paymentMethodId } = await request.json()
 
-    // Validate required fields
-    if (!brand || !last4 || !expiry) {
+    if (!paymentMethodId) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: brand, last4, expiry' },
+        { error: 'Payment method ID is required' },
         { status: 400 }
-      );
+      )
     }
 
-    // If this is set as default, unset other defaults
-    if (isDefault) {
-      await prisma.paymentMethod.updateMany({
-        where: { userId: user.id, isDefault: true },
-        data: { isDefault: false }
-      });
-    }
+    console.log(`💳 Adding payment method via backend API for user: ${user.userId}`)
 
-    const paymentMethod = await prisma.paymentMethod.create({
-      data: {
-        userId: user.id,
-        brand: brand.toLowerCase(),
-        last4,
-        expiry,
-        isDefault: isDefault || false,
-        stripePaymentMethodId
+    // Backend handles:
+    // - User lookup
+    // - Stripe customer creation/lookup
+    // - Payment method attachment
+    // - Database storage
+    const response = await PaymentMethodsAPI.addPaymentMethod(user.userId, paymentMethodId)
+
+    if (!response.success) {
+      console.error('❌ Backend API error:', response.error)
+
+      if (response.error?.includes('not found')) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
       }
-    });
+
+      return NextResponse.json(
+        { error: response.error || 'Failed to add payment method' },
+        { status: 400 }
+      )
+    }
+
+    console.log(`✅ Payment method added via backend API`)
 
     return NextResponse.json({
-      success: true,
-      data: paymentMethod
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating payment method:', error);
+      method: response.data,
+      message: 'Payment method added successfully'
+    })
+  } catch (error: any) {
+    console.error('Error adding payment method:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to create payment method' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
-    );
+    )
   }
 }

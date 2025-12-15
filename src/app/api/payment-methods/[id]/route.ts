@@ -1,119 +1,137 @@
-/**
- * Payment Method Individual API
- * Handles individual payment method operations
- */
+import { NextRequest, NextResponse } from 'next/server'
+import { getUserFromRequest } from '@/lib/auth'
+import { PaymentMethodsAPI } from '@/lib/backend-api'
 
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { currentUser } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
-
-/**
- * PATCH /api/payment-methods/[id]
- * Update a payment method (e.g., set as default)
- */
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const user = await currentUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { id } = params;
-    const body = await request.json();
-    const { isDefault } = body;
-
-    // Verify payment method belongs to user
-    const existingMethod = await prisma.paymentMethod.findFirst({
-      where: { id, userId: user.id }
-    });
-
-    if (!existingMethod) {
-      return NextResponse.json(
-        { success: false, error: 'Payment method not found' },
-        { status: 404 }
-      );
-    }
-
-    // If setting as default, unset other defaults
-    if (isDefault) {
-      await prisma.paymentMethod.updateMany({
-        where: { userId: user.id, isDefault: true },
-        data: { isDefault: false }
-      });
-    }
-
-    const updatedMethod = await prisma.paymentMethod.update({
-      where: { id },
-      data: { isDefault }
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: updatedMethod
-    });
-  } catch (error) {
-    console.error('Error updating payment method:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to update payment method' },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * DELETE /api/payment-methods/[id]
- * Delete a payment method
- */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await currentUser();
+    const user = getUserFromRequest(request)
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { error: 'Authentication required' },
         { status: 401 }
-      );
+      )
     }
 
-    const { id } = params;
+    const methodId = params.id
 
-    // Verify payment method belongs to user
-    const existingMethod = await prisma.paymentMethod.findFirst({
-      where: { id, userId: user.id }
-    });
+    console.log(`🗑️ Deleting payment method via backend API: ${methodId}`)
 
-    if (!existingMethod) {
+    // Backend handles:
+    // - Ownership verification
+    // - Stripe payment method detachment
+    // - Database deletion
+    const response = await PaymentMethodsAPI.deletePaymentMethod(methodId, user.userId)
+
+    if (!response.success) {
+      console.error('❌ Backend API error:', response.error)
+
+      if (response.error?.includes('not found')) {
+        return NextResponse.json(
+          { error: 'Payment method not found' },
+          { status: 404 }
+        )
+      }
+      if (response.error?.includes('Unauthorized')) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 403 }
+        )
+      }
+
       return NextResponse.json(
-        { success: false, error: 'Payment method not found' },
-        { status: 404 }
-      );
+        { error: response.error || 'Failed to delete payment method' },
+        { status: 400 }
+      )
     }
 
-    await prisma.paymentMethod.delete({
-      where: { id }
-    });
+    console.log(`✅ Payment method deleted via backend API`)
 
     return NextResponse.json({
-      success: true,
       message: 'Payment method deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting payment method:', error);
+    })
+  } catch (error: any) {
+    console.error('Error deleting payment method:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to delete payment method' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
-    );
+    )
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = getUserFromRequest(request)
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    const methodId = params.id
+    const { action } = await request.json()
+
+    if (action !== 'set-default') {
+      return NextResponse.json(
+        { error: 'Invalid action' },
+        { status: 400 }
+      )
+    }
+
+    console.log(`⭐ Setting default payment method via backend API: ${methodId}`)
+
+    // Backend handles:
+    // - Ownership verification
+    // - Stripe default update
+    // - Database updates (unset others, set this one)
+    const response = await PaymentMethodsAPI.setDefaultPaymentMethod(methodId, user.userId)
+
+    if (!response.success) {
+      console.error('❌ Backend API error:', response.error)
+
+      if (response.error?.includes('not found')) {
+        return NextResponse.json(
+          { error: 'Payment method not found' },
+          { status: 404 }
+        )
+      }
+      if (response.error?.includes('Unauthorized')) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 403 }
+        )
+      }
+      if (response.error?.includes('Stripe customer')) {
+        return NextResponse.json(
+          { error: 'Stripe customer not found' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json(
+        { error: response.error || 'Failed to update payment method' },
+        { status: 400 }
+      )
+    }
+
+    console.log(`✅ Default payment method updated via backend API`)
+
+    return NextResponse.json({
+      message: 'Default payment method updated successfully'
+    })
+  } catch (error: any) {
+    console.error('Error updating payment method:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

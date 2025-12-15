@@ -157,7 +157,7 @@ export default function NewConversationModal({
           {/* Step 1: Choose conversation type */}
           {!conversationType ? (
             <div className="space-y-4">
-              <p className="text-gray-600 mb-6">Choose who you'd like to chat with:</p>
+              <p className="text-gray-600 mb-6">Choose who you&apos;d like to chat with:</p>
 
               {/* Support Option */}
               <button
@@ -273,7 +273,7 @@ export default function NewConversationModal({
                   onChange={(e) => setMessage(e.target.value)}
                   rows={6}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                  placeholder="Write your message here..."
+                  placeholder="Write your message here... (e.g., &apos;Hi, is this property available?&apos;)"
                   disabled={loading}
                 />
               </div>

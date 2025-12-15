@@ -41,8 +41,8 @@ export default function ContactSupportButton({
 
       window.Intercom('update', {
         conversation_type: conversationType,
-        ...(context?.booking_id && { booking_id: context.bookingId }),
-        ...(context?.property_id && { property_id: context.propertyId }),
+        ...(context?.bookingId && { booking_id: context.bookingId }),
+        ...(context?.propertyId && { property_id: context.propertyId }),
         conversation_about: 'support',
       });
     }

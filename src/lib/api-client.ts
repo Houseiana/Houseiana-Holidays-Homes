@@ -2,6 +2,36 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1.0';
 
+// Simple types for API responses (replaces domain entities)
+export interface Property {
+  id: string;
+  title: string;
+  description?: string;
+  type?: string;
+  pricePerNight: number;
+  city?: string;
+  country?: string;
+  maxGuests?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  beds?: number;
+  amenities?: string[];
+  photos?: string[];
+  [key: string]: any;
+}
+
+export interface Booking {
+  id: string;
+  propertyId: string;
+  guestId: string;
+  checkIn: string | Date;
+  checkOut: string | Date;
+  guests: number;
+  totalPrice: number;
+  status: string;
+  [key: string]: any;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -18,6 +48,78 @@ export interface PaginatedResponse<T> {
   totalPages: number;
   hasNext: boolean;
   hasPrevious: boolean;
+}
+
+export interface LoginRequest {
+  email: string;
+  password?: string;
+  phone?: string;
+  otp?: string;
+}
+
+export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password?: string;
+  phone?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
+export interface CreatePropertyRequest {
+  title: string;
+  description: string;
+  type: string;
+  pricePerNight: number;
+  address: {
+    street: string;
+    city: string;
+    country: string;
+    postalCode?: string;
+  };
+  maxGuests: number;
+  bedrooms: number;
+  bathrooms: number;
+  beds: number;
+  amenities: string[];
+  images: string[];
+}
+
+export interface CreateConversationRequest {
+  recipientId: string;
+  propertyId?: string;
+  message: string;
+}
+
+export interface SendMessageRequest {
+  conversationId: string;
+  content: string;
+}
+
+export interface Conversation {
+  id: string;
+  participants: any[];
+  lastMessage?: Message;
+  updatedAt: Date;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  createdAt: Date;
+  readAt?: Date;
 }
 
 class ApiClient {

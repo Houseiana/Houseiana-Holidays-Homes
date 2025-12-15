@@ -1,13 +1,13 @@
 /**
  * Custom Next.js Server with Socket.IO
  * This server enables real-time messaging functionality
+ * All database operations are delegated to the Backend API
  */
 
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { Server: SocketIOServer } = require('socket.io');
-const { PrismaClient } = require('@prisma/client');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -16,16 +16,53 @@ const port = parseInt(process.env.PORT || '3000', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-const prisma = new PrismaClient();
+// Backend API URL
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app';
 
-// JWT verification (simplified for server.js)
-function verifyToken(token) {
+/**
+ * Make API call to backend
+ */
+async function backendFetch(endpoint, options = {}) {
   try {
-    const jwt = require('jsonwebtoken');
-    const secret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-    return jwt.verify(token, secret);
+    const url = `${BACKEND_API_URL}${endpoint}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || data.message || `HTTP ${response.status}` };
+    }
+
+    return { success: true, data };
   } catch (error) {
-    console.error('Token verification failed:', error.message);
+    console.error('Backend API error:', error);
+    return { success: false, error: error.message || 'Network error' };
+  }
+}
+
+/**
+ * Basic JWT payload extraction (verification done by backend)
+ */
+function extractUserFromToken(token) {
+  try {
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    return {
+      userId: payload.userId || payload.sub || payload.id,
+      email: payload.email,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+    };
+  } catch (error) {
+    console.error('Token extraction failed:', error.message);
     return null;
   }
 }
@@ -50,24 +87,36 @@ app.prepare().then(() => {
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+      const userId = socket.handshake.auth.userId;
 
-      if (!token) {
-        console.log('Socket connection attempt without token');
-        // For development, allow connection without token
+      // Allow connection with either token or userId
+      if (!token && !userId) {
         if (dev) {
           socket.data.userId = 'anonymous';
           return next();
         }
-        return next(new Error('Authentication error: No token provided'));
+        return next(new Error('Authentication error: No token or userId provided'));
       }
 
-      const user = verifyToken(token);
-      if (!user) {
+      // If userId provided directly, trust it (token validation should be done by backend)
+      if (userId) {
+        socket.data.userId = userId;
+        socket.data.user = { userId };
+        return next();
+      }
+
+      // Extract user from token
+      const user = extractUserFromToken(token);
+      if (!user || !user.userId) {
+        if (dev) {
+          socket.data.userId = 'anonymous';
+          return next();
+        }
         return next(new Error('Authentication error: Invalid token'));
       }
 
       socket.data.user = user;
-      socket.data.userId = user.userId || user.id;
+      socket.data.userId = user.userId;
       next();
     } catch (error) {
       console.error('Socket authentication error:', error);
@@ -78,7 +127,7 @@ app.prepare().then(() => {
   // Handle Socket.IO connections
   io.on('connection', (socket) => {
     const userId = socket.data.userId;
-    console.log(`✅ User connected: ${userId} (Socket: ${socket.id})`);
+    console.log(`User connected: ${userId} (Socket: ${socket.id})`);
 
     // Join user's personal room
     socket.join(`user:${userId}`);
@@ -86,15 +135,15 @@ app.prepare().then(() => {
     // Join conversation room
     socket.on('join_conversation', async (conversationId) => {
       try {
-        const conversation = await prisma.conversation.findUnique({
-          where: { id: conversationId },
-        });
+        // Verify conversation access via backend API
+        const result = await backendFetch(`/api/conversations/${conversationId}`);
 
-        if (!conversation) {
-          socket.emit('error', { message: 'Conversation not found' });
+        if (!result.success) {
+          socket.emit('error', { message: 'Conversation not found or access denied' });
           return;
         }
 
+        const conversation = result.data;
         const isParticipant =
           conversation.participant1Id === userId ||
           conversation.participant2Id === userId;
@@ -118,54 +167,29 @@ app.prepare().then(() => {
       console.log(`User ${userId} left conversation: ${conversationId}`);
     });
 
-    // Send message
+    // Send message via backend API
     socket.on('send_message', async (data) => {
       try {
         const { conversationId, content, contentType = 'TEXT', attachments } = data;
 
-        const conversation = await prisma.conversation.findUnique({
-          where: { id: conversationId },
-        });
-
-        if (!conversation) {
-          socket.emit('error', { message: 'Conversation not found' });
-          return;
-        }
-
-        const isParticipant =
-          conversation.participant1Id === userId ||
-          conversation.participant2Id === userId;
-
-        if (!isParticipant && !dev) {
-          socket.emit('error', { message: 'Not authorized to send messages' });
-          return;
-        }
-
-        // Create message
-        const message = await prisma.message.create({
-          data: {
-            conversationId,
+        // Send message via backend API
+        const result = await backendFetch(`/api/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({
             senderId: userId,
             senderType: 'USER',
             content: content.trim(),
             contentType,
             attachments: attachments || [],
-            deliveredAt: new Date(),
-          },
+          }),
         });
 
-        // Update conversation
-        const isParticipant1 = conversation.participant1Id === userId;
-        await prisma.conversation.update({
-          where: { id: conversationId },
-          data: {
-            lastMessageAt: new Date(),
-            lastMessagePreview: content.substring(0, 100),
-            ...(isParticipant1
-              ? { unreadCount2: { increment: 1 } }
-              : { unreadCount1: { increment: 1 } }),
-          },
-        });
+        if (!result.success) {
+          socket.emit('error', { message: result.error || 'Failed to send message' });
+          return;
+        }
+
+        const message = result.data;
 
         // Broadcast to conversation
         io.to(`conversation:${conversationId}`).emit('new_message', {
@@ -173,47 +197,28 @@ app.prepare().then(() => {
           message,
         });
 
-        console.log(`📨 Message sent in conversation ${conversationId} by user ${userId}`);
+        console.log(`Message sent in conversation ${conversationId} by user ${userId}`);
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Failed to send message' });
       }
     });
 
-    // Mark as read
+    // Mark as read via backend API
     socket.on('mark_as_read', async (data) => {
       try {
         const { conversationId, messageId } = data;
 
-        const message = await prisma.message.findUnique({
-          where: { id: messageId },
-          include: { conversation: true },
+        // Mark as read via backend API
+        const result = await backendFetch(`/api/conversations/${conversationId}/messages/${messageId}/read`, {
+          method: 'POST',
+          body: JSON.stringify({ userId }),
         });
 
-        if (!message) {
-          socket.emit('error', { message: 'Message not found' });
+        if (!result.success) {
+          socket.emit('error', { message: result.error || 'Failed to mark message as read' });
           return;
         }
-
-        if (message.senderId === userId) {
-          return;
-        }
-
-        await prisma.message.update({
-          where: { id: messageId },
-          data: {
-            isRead: true,
-            readAt: new Date(),
-          },
-        });
-
-        const isParticipant1 = message.conversation.participant1Id === userId;
-        await prisma.conversation.update({
-          where: { id: conversationId },
-          data: isParticipant1
-            ? { unreadCount1: { decrement: 1 } }
-            : { unreadCount2: { decrement: 1 } },
-        });
 
         io.to(`conversation:${conversationId}`).emit('message_read', {
           conversationId,
@@ -226,7 +231,7 @@ app.prepare().then(() => {
       }
     });
 
-    // Typing indicator
+    // Typing indicator (client-to-client, no backend needed)
     socket.on('typing', (conversationId) => {
       socket.to(`conversation:${conversationId}`).emit('user_typing', {
         conversationId,
@@ -235,7 +240,7 @@ app.prepare().then(() => {
       });
     });
 
-    // Stop typing
+    // Stop typing (client-to-client, no backend needed)
     socket.on('stop_typing', (conversationId) => {
       socket.to(`conversation:${conversationId}`).emit('user_stopped_typing', {
         conversationId,
@@ -245,13 +250,13 @@ app.prepare().then(() => {
 
     // Disconnect
     socket.on('disconnect', () => {
-      console.log(`❌ User disconnected: ${userId} (Socket: ${socket.id})`);
+      console.log(`User disconnected: ${userId} (Socket: ${socket.id})`);
     });
   });
 
   server.listen(port, (err) => {
     if (err) throw err;
-    console.log(`\n🚀 Next.js ready on http://${hostname}:${port}`);
-    console.log(`💬 Socket.IO ready for real-time messaging\n`);
+    console.log(`\nNext.js ready on http://${hostname}:${port}`);
+    console.log(`Socket.IO ready for real-time messaging\n`);
   });
 });

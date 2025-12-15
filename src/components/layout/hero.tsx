@@ -6,6 +6,14 @@ import { Filter } from 'lucide-react';
 import PropertySearchBar from '@/components/search/property-search-bar';
 import AirbnbFilter, { FilterState } from '@/components/search/airbnb-filter';
 
+const heroImages = [
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Aurora Borealis with people
+  'https://images.unsplash.com/photo-1549144511-f099e773c147?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Eiffel Tower with people visiting
+  'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Luxury vacation home
+  'https://images.unsplash.com/photo-1483347756197-71ef80e95f73?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Beautiful Aurora Borealis
+  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'  // Modern apartment
+];
+
 export function Hero() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imagesLoaded, setImagesLoaded] = useState<boolean[]>([]);
@@ -29,13 +37,7 @@ export function Hero() {
     averageRating: 0
   });
 
-  const heroImages = [
-    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Aurora Borealis with people
-    'https://images.unsplash.com/photo-1549144511-f099e773c147?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Eiffel Tower with people visiting
-    'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Luxury vacation home
-    'https://images.unsplash.com/photo-1483347756197-71ef80e95f73?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80', // Beautiful Aurora Borealis
-    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'  // Modern apartment
-  ];
+
 
   // Preload images
   useEffect(() => {
@@ -70,7 +72,7 @@ export function Hero() {
       setCurrentImageIndex((prevIndex) => (prevIndex + 1) % heroImages.length);
     }, 4000); // Reduced from 5000 to 4000ms
     return () => clearInterval(interval);
-  }, [heroImages.length]);
+  }, []);
 
   const handleSearch = (searchData: any) => {
     try {

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "esnext",
     "lib": [
       "dom",
       "dom.iterable",
@@ -28,6 +28,7 @@
       "@/lib/*": ["./src/lib/*"],
       "@/types/*": ["./src/types/*"],
       "@/hooks/*": ["./src/hooks/*"],
+      "@/store/*": ["./src/store/*"],
       "@/services/*": ["./src/services/*"],
       "@/utils/*": ["./src/utils/*"]
     }
@@ -43,6 +44,9 @@
     "./.next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "prisma.config.ts",
+    "prisma/**/*.ts",
+    "scripts/**/*.ts"
   ]
 }

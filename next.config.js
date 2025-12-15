@@ -1,12 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // Ignore build errors for now to get it deployed
-    ignoreBuildErrors: true,
+    // strict mode enabled
   },
   eslint: {
-    // Ignore lint errors during build
-    ignoreDuringBuilds: true,
+    // strict mode enabled
   },
   images: {
     remotePatterns: [

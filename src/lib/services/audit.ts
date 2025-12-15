@@ -1,9 +1,11 @@
 /**
  * Audit Logging Service
  * Tracks all booking-related actions for compliance and debugging
+ *
+ * All audit logs are sent to the Backend API for storage
  */
 
-import { prisma } from '@/lib/prisma-server'
+import { AuditAPI } from '@/lib/backend-api'
 
 interface AuditLogEntry {
   entityType: 'booking' | 'payment' | 'refund' | 'property'
@@ -17,32 +19,25 @@ interface AuditLogEntry {
 }
 
 /**
- * Create an audit log entry
+ * Create an audit log entry via Backend API
  */
 export async function createAuditLog(entry: AuditLogEntry): Promise<void> {
-  const { entityType, entityId, action, actorId, actorType, metadata, ipAddress, userAgent } = entry
+  const { entityType, entityId, action, actorId, actorType, metadata } = entry
 
   console.log(`[Audit] ${actorType} ${actorId} performed ${action} on ${entityType} ${entityId}`, metadata)
 
-  // TODO: Store audit logs in dedicated table
-  // For now, just log to console
-
   try {
-    // Example: Store in SystemMetric or create dedicated AuditLog model
-    await (prisma as any).systemMetric.create({
-      data: {
-        metricType: 'audit_log',
-        value: 1,
-        metadata: {
-          entityType,
-          entityId,
-          action,
-          actorId,
-          actorType,
-          timestamp: new Date().toISOString(),
-          ...metadata
-        }
-      }
+    // Send audit log to backend for storage
+    await AuditAPI.createLog({
+      entityType,
+      entityId,
+      action,
+      actorId,
+      actorType,
+      metadata: {
+        ...metadata,
+        timestamp: new Date().toISOString(),
+      },
     })
   } catch (error) {
     console.error('Error creating audit log:', error)
