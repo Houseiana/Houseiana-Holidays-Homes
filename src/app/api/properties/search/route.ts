@@ -44,27 +44,62 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Backend returns { success: true, data: [...properties], pagination: {...} }
+    // Handle both direct array and nested data structures
+    let rawProperties: any[] = [];
+    if (Array.isArray(response.data)) {
+      rawProperties = response.data;
+    } else if (response.data && typeof response.data === 'object') {
+      // Could be { data: [...], pagination: {...} } or just the properties array
+      rawProperties = Array.isArray((response.data as any).data)
+        ? (response.data as any).data
+        : [];
+    }
+
+    // Filter only PUBLISHED properties
+    const publishedProperties = rawProperties.filter((p: any) => p.status === 'PUBLISHED');
+
     // Transform response data to match frontend expectations
-    const properties = response.data?.data || [];
-    const formattedProperties = properties.map((property: any) => ({
-      id: property.id,
-      title: property.title,
-      location: property.location || `${property.bedrooms} beds`,
-      city: property.location?.split(',')[0]?.trim() || '',
-      country: property.location?.split(',')[1]?.trim() || '',
-      latitude: property.latitude,
-      longitude: property.longitude,
-      beds: property.bedrooms || 0,
-      baths: property.bathrooms || 0,
-      sleeps: property.guests || 1,
-      rating: property.rating || 0,
-      reviewCount: property.reviews || 0,
-      price: property.price || 0,
-      image: property.images?.[0] || '/placeholder-property.jpg',
-      propertyType: property.type,
-      amenities: property.amenities || [],
-      description: property.description,
-    }));
+    const formattedProperties = publishedProperties.map((property: any) => {
+      // Parse photos if it's a JSON string
+      let photos = property.photos;
+      if (typeof photos === 'string') {
+        try {
+          photos = JSON.parse(photos);
+        } catch {
+          photos = [];
+        }
+      }
+
+      // Build location string from city, address, country
+      const locationParts = [property.city, property.country].filter(Boolean);
+      const locationString = locationParts.length > 0
+        ? locationParts.join(', ')
+        : property.address || `${property.bedrooms} beds`;
+
+      return {
+        id: property.id,
+        title: property.title?.trim() || 'Unnamed Property',
+        location: locationString,
+        city: property.city || '',
+        country: property.country || '',
+        address: property.address,
+        latitude: property.latitude,
+        longitude: property.longitude,
+        beds: property.bedrooms || property.beds || 0,
+        baths: property.bathrooms || 0,
+        sleeps: property.guests || 1,
+        rating: property.averageRating || property.rating || 0,
+        reviewCount: property.reviews || 0,
+        price: property.pricePerNight || property.price || 0,
+        image: property.coverPhoto || (Array.isArray(photos) && photos[0]) || '/placeholder-property.jpg',
+        images: Array.isArray(photos) ? photos : [],
+        propertyType: property.propertyType || property.type,
+        amenities: typeof property.amenities === 'string' ? JSON.parse(property.amenities || '[]') : (property.amenities || []),
+        description: property.description,
+        instantBook: property.instantBook,
+      };
+    });
 
     // Filter out properties without coordinates if requested
     const withCoordinates = searchParams.get('withCoordinates') === 'true';
