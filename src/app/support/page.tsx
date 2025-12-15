@@ -587,15 +587,6 @@ export default function SupportPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Houseiana</h4>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">About us</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Careers</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Press</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Investors</Link></li>
-              </ul>
-            </div>
-            <div>
               <h4 className="font-semibold text-gray-900 mb-4">Travel Services</h4>
               <ul className="space-y-3 text-sm text-gray-600">
                 <li><Link href="#" className="hover:text-gray-900 hover:underline">Meet & Assist</Link></li>

@@ -375,15 +375,6 @@ export default function BecomeHost() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Houseiana</h4>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li><a href="#" className="hover:underline">About us</a></li>
-                <li><a href="#" className="hover:underline">Careers</a></li>
-                <li><a href="#" className="hover:underline">Press</a></li>
-                <li><a href="#" className="hover:underline">Investors</a></li>
-              </ul>
-            </div>
-            <div>
               <h4 className="font-semibold mb-4">Travel Services</h4>
               <ul className="space-y-3 text-sm text-gray-600">
                 <li><a href="#" className="hover:underline">Meet & Assist</a></li>

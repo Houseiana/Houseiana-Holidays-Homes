@@ -13,6 +13,106 @@ import {
 } from 'lucide-react';
 import AirbnbFilter, { FilterState } from './airbnb-filter';
 
+// Qatar cities for location search
+const qatarLocations = [
+  {
+    id: 'qatar',
+    name: 'Qatar',
+    nameArabic: 'قطر',
+    description: 'Explore all properties in Qatar',
+    icon: '🇶🇦',
+    type: 'country'
+  },
+  {
+    id: 'doha',
+    name: 'Ad Dawhah (Doha)',
+    nameArabic: 'الدوحة',
+    description: 'Capital city with modern skyline and cultural attractions',
+    icon: '🏙️',
+    type: 'city'
+  },
+  {
+    id: 'al-rayyan',
+    name: 'Al Rayyan',
+    nameArabic: 'الريان',
+    description: 'Historic city with traditional architecture and sports venues',
+    icon: '🏛️',
+    type: 'city'
+  },
+  {
+    id: 'al-wakrah',
+    name: 'Al Wakrah',
+    nameArabic: 'الوكرة',
+    description: 'Coastal city with traditional souks and beautiful waterfront',
+    icon: '🏖️',
+    type: 'city'
+  },
+  {
+    id: 'umm-salal',
+    name: 'Umm Salal',
+    nameArabic: 'أم صلال',
+    description: 'Traditional area with historical sites and family communities',
+    icon: '🏘️',
+    type: 'city'
+  },
+  {
+    id: 'al-khor',
+    name: 'Al Khor',
+    nameArabic: 'الخور',
+    description: 'Northern coastal city with fishing heritage and resorts',
+    icon: '🐟',
+    type: 'city'
+  },
+  {
+    id: 'al-shamal',
+    name: 'Al Shamal',
+    nameArabic: 'الشمال',
+    description: 'Northernmost region with pristine beaches and nature',
+    icon: '🏔️',
+    type: 'city'
+  },
+  {
+    id: 'al-shahaniya',
+    name: 'Al-Shahaniya',
+    nameArabic: 'الشحانية',
+    description: 'Desert region known for camel racing and adventure tourism',
+    icon: '🐪',
+    type: 'city'
+  },
+  {
+    id: 'al-daayen',
+    name: 'Al Daayen',
+    nameArabic: 'الضعاين',
+    description: 'Growing urban area with modern developments',
+    icon: '🌆',
+    type: 'city'
+  },
+  {
+    id: 'lusail',
+    name: 'Lusail',
+    nameArabic: 'لوسيل',
+    description: 'Modern planned city with luxury properties and waterfront living',
+    icon: '✨',
+    type: 'city'
+  },
+  {
+    id: 'the-pearl',
+    name: 'The Pearl-Qatar',
+    nameArabic: 'اللؤلؤة',
+    description: 'Artificial island with upscale residences and marina',
+    icon: '💎',
+    type: 'area'
+  },
+  {
+    id: 'west-bay',
+    name: 'West Bay',
+    nameArabic: 'الخليج الغربي',
+    description: 'Business district with luxury hotels and apartments',
+    icon: '🏢',
+    type: 'area'
+  }
+];
+
 interface SearchFilters extends FilterState {
   location: string;
   checkIn: string;
@@ -67,13 +167,16 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
     amenities: initialFilters.amenities || []
   });
 
-  // TODO: Fetch from API - location search autocomplete
-  const locationSuggestions: Array<{
-    id: string;
-    name: string;
-    country: string;
-    type: string;
-  }> = [];
+  // Filter Qatar locations based on search input
+  const getFilteredLocations = () => {
+    if (!filters.location) return qatarLocations;
+    const searchTerm = filters.location.toLowerCase();
+    return qatarLocations.filter(location =>
+      location.name.toLowerCase().includes(searchTerm) ||
+      location.nameArabic.includes(filters.location) ||
+      location.description.toLowerCase().includes(searchTerm)
+    );
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -110,18 +213,9 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
   };
 
 
-  const handleLocationSelect = (location: any) => {
-    const locationString = `${location.name}, ${location.country}`;
-    updateFilter('location', locationString);
+  const handleLocationSelect = (location: typeof qatarLocations[0]) => {
+    updateFilter('location', location.name);
     setShowLocationDropdown(false);
-  };
-
-  const getFilteredLocationSuggestions = () => {
-    if (!filters.location) return locationSuggestions;
-    return locationSuggestions.filter(location =>
-      location.name.toLowerCase().includes(filters.location.toLowerCase()) ||
-      location.country.toLowerCase().includes(filters.location.toLowerCase())
-    );
   };
 
   const getTotalGuests = () => filters.adults + filters.children;
@@ -377,30 +471,51 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
         }}
       />
 
-      {/* Location Dropdown Portal */}
+      {/* Location Dropdown Portal - Qatar Only */}
       {showLocationDropdown && typeof window !== 'undefined' &&
         createPortal(
           <div
-            className="fixed bg-white shadow-xl rounded-xl border border-gray-200 z-[9999] max-h-80 overflow-y-auto min-w-[300px]"
+            className="fixed bg-white shadow-xl rounded-xl border border-gray-200 z-[9999] max-h-96 overflow-y-auto min-w-[350px]"
             style={{
               top: dropdownPosition.top,
               left: dropdownPosition.left,
-              width: Math.max(dropdownPosition.width, 300)
+              width: Math.max(dropdownPosition.width, 350)
             }}
           >
-            {getFilteredLocationSuggestions().map((location) => (
-              <div
-                key={location.id}
-                onClick={() => handleLocationSelect(location)}
-                className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-              >
-                <MapPin className="w-4 h-4 text-gray-400 mr-3 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-gray-900">{location.name}, {location.country}</div>
-                  <div className="text-sm text-gray-500 capitalize">{location.type}</div>
+            <div className="p-3 border-b border-gray-100 bg-gray-50">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Search in Qatar 🇶🇦
+              </p>
+            </div>
+            {getFilteredLocations().length > 0 ? (
+              getFilteredLocations().map((location) => (
+                <div
+                  key={location.id}
+                  onClick={() => handleLocationSelect(location)}
+                  className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                >
+                  <span className="text-xl mr-3 flex-shrink-0">{location.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900">{location.name}</span>
+                      <span className="text-sm text-gray-500 ml-2">{location.nameArabic}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-gray-400 capitalize bg-gray-100 px-2 py-0.5 rounded">
+                        {location.type}
+                      </span>
+                      <span className="text-xs text-gray-500 truncate">{location.description}</span>
+                    </div>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="px-4 py-6 text-center text-gray-500">
+                <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No locations found</p>
+                <p className="text-xs text-gray-400 mt-1">Try searching for a city in Qatar</p>
               </div>
-            ))}
+            )}
           </div>,
           document.body
         )
