@@ -84,8 +84,15 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
   // TODO: Fetch from user's search history
   const recentSearches: Array<{ location: string; type: string }> = [];
 
-  // TODO: Fetch from API based on location and popularity
-  const suggestedDestinations: Array<{ location: string; distance: string; icon: string }> = [];
+  // Qatar destinations
+  const suggestedDestinations: Array<{ location: string; distance: string; icon: string }> = [
+    { location: 'Ad Dawhah (Doha)', distance: 'Capital city', icon: '🏙️' },
+    { location: 'Lusail', distance: 'Modern city', icon: '✨' },
+    { location: 'The Pearl-Qatar', distance: 'Luxury island', icon: '💎' },
+    { location: 'West Bay', distance: 'Business district', icon: '🏢' },
+    { location: 'Al Wakrah', distance: 'Coastal city', icon: '🏖️' },
+    { location: 'Al Khor', distance: 'Northern coast', icon: '🐟' },
+  ];
 
   // Filter properties by category
   const filteredProperties = activeCategory === 'all'
