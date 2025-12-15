@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   MapPin,
@@ -129,10 +129,10 @@ interface EnhancedSearchProps {
 
 
 export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearchProps) {
+  const router = useRouter();
   const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const guestSelectorRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
 
@@ -234,7 +234,43 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
 
   const handleSearch = () => {
     console.log('Search button clicked!', filters);
-    onSearch(filters);
+
+    // Build search URL with query parameters
+    const searchParams = new URLSearchParams();
+
+    if (filters.location) {
+      searchParams.set('location', filters.location);
+    }
+    if (filters.checkIn) {
+      searchParams.set('checkin', filters.checkIn);
+    }
+    if (filters.checkOut) {
+      searchParams.set('checkout', filters.checkOut);
+    }
+
+    const totalGuests = filters.adults + filters.children;
+    if (totalGuests > 0) {
+      searchParams.set('guests', totalGuests.toString());
+    }
+    if (filters.adults > 0) {
+      searchParams.set('adults', filters.adults.toString());
+    }
+    if (filters.children > 0) {
+      searchParams.set('children', filters.children.toString());
+    }
+    if (filters.infants > 0) {
+      searchParams.set('infants', filters.infants.toString());
+    }
+
+    // Navigate to discover page with search params
+    const searchUrl = `/discover?${searchParams.toString()}`;
+    console.log('Navigating to:', searchUrl);
+    router.push(searchUrl);
+
+    // Also call onSearch if provided
+    if (onSearch) {
+      onSearch(filters);
+    }
     setShowFilterModal(false);
   };
 
@@ -272,35 +308,55 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
                   type="text"
                   value={filters.location}
                   onChange={(e) => {
-                    e.stopPropagation();
                     updateFilter('location', e.target.value);
                     setShowLocationDropdown(true);
                   }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                    if (locationRef.current) {
-                      const rect = locationRef.current.getBoundingClientRect();
-                      setDropdownPosition({
-                        top: rect.bottom + 8,
-                        left: rect.left,
-                        width: rect.width
-                      });
-                    }
-                    setShowLocationDropdown(true);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onFocus={() => setShowLocationDropdown(true)}
                   placeholder="Search destinations"
-                  className="w-full outline-none text-gray-900 text-sm bg-transparent relative z-30"
-                  style={{
-                    pointerEvents: 'auto',
-                    zIndex: 30
-                  }}
+                  className="w-full outline-none text-gray-900 text-sm bg-transparent"
                   autoComplete="off"
                 />
               </div>
 
+              {/* Location Dropdown - Inline */}
+              {showLocationDropdown && (
+                <div className="absolute top-full left-0 mt-2 bg-white shadow-xl rounded-xl border border-gray-200 z-50 max-h-96 overflow-y-auto w-[350px]">
+                  <div className="p-3 border-b border-gray-100 bg-gray-50">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Search in Qatar 🇶🇦
+                    </p>
+                  </div>
+                  {getFilteredLocations().length > 0 ? (
+                    getFilteredLocations().map((location) => (
+                      <div
+                        key={location.id}
+                        onClick={() => handleLocationSelect(location)}
+                        className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                      >
+                        <span className="text-xl mr-3 flex-shrink-0">{location.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-900">{location.name}</span>
+                            <span className="text-sm text-gray-500 ml-2">{location.nameArabic}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-gray-400 capitalize bg-gray-100 px-2 py-0.5 rounded">
+                              {location.type}
+                            </span>
+                            <span className="text-xs text-gray-500 truncate">{location.description}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-4 py-6 text-center text-gray-500">
+                      <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                      <p className="text-sm">No locations found</p>
+                      <p className="text-xs text-gray-400 mt-1">Try searching for a city in Qatar</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Check In */}
@@ -470,56 +526,6 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
           handleSearch();
         }}
       />
-
-      {/* Location Dropdown Portal - Qatar Only */}
-      {showLocationDropdown && typeof window !== 'undefined' &&
-        createPortal(
-          <div
-            className="fixed bg-white shadow-xl rounded-xl border border-gray-200 z-[9999] max-h-96 overflow-y-auto min-w-[350px]"
-            style={{
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              width: Math.max(dropdownPosition.width, 350)
-            }}
-          >
-            <div className="p-3 border-b border-gray-100 bg-gray-50">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Search in Qatar 🇶🇦
-              </p>
-            </div>
-            {getFilteredLocations().length > 0 ? (
-              getFilteredLocations().map((location) => (
-                <div
-                  key={location.id}
-                  onClick={() => handleLocationSelect(location)}
-                  className="flex items-center px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
-                >
-                  <span className="text-xl mr-3 flex-shrink-0">{location.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">{location.name}</span>
-                      <span className="text-sm text-gray-500 ml-2">{location.nameArabic}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-gray-400 capitalize bg-gray-100 px-2 py-0.5 rounded">
-                        {location.type}
-                      </span>
-                      <span className="text-xs text-gray-500 truncate">{location.description}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="px-4 py-6 text-center text-gray-500">
-                <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">No locations found</p>
-                <p className="text-xs text-gray-400 mt-1">Try searching for a city in Qatar</p>
-              </div>
-            )}
-          </div>,
-          document.body
-        )
-      }
     </>
   );
 }
