@@ -160,16 +160,17 @@ export default function AirbnbFilter({
   };
 
   const propertyTypes = [
+    { id: 'apartment_condo', label: 'Apartment / Condo', icon: Building },
     { id: 'house', label: 'House', icon: Home },
-    { id: 'apartment', label: 'Apartment', icon: Building },
     { id: 'villa', label: 'Villa', icon: Mountain },
-    { id: 'condo', label: 'Condo', icon: Building },
+    { id: 'studio_loft', label: 'Studio / Loft', icon: Building },
     { id: 'townhouse', label: 'Townhouse', icon: Home },
-    { id: 'studio', label: 'Studio', icon: Building },
-    { id: 'loft', label: 'Loft', icon: Building },
-    { id: 'cabin', label: 'Cabin', icon: Trees },
-    { id: 'cottage', label: 'Cottage', icon: Home },
-    { id: 'hotel_room', label: 'Hotel Room', icon: Building }
+    { id: 'guesthouse_annex', label: 'Guesthouse / Annex', icon: Home },
+    { id: 'serviced_apartment', label: 'Serviced apartment', icon: Building },
+    { id: 'aparthotel', label: 'Aparthotel', icon: Building },
+    { id: 'cabin_chalet', label: 'Cabin / Chalet', icon: Trees },
+    { id: 'farm_stay', label: 'Farm stay', icon: Trees },
+    { id: 'houseboat', label: 'Houseboat', icon: Building }
   ];
 
   const amenities = [

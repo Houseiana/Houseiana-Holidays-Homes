@@ -4,22 +4,22 @@ import { Home, Building, Mountain, Trees } from 'lucide-react';
 
 const propertyTypes = [
   {
-    icon: Home,
-    title: 'Entire Homes',
-    description: 'Complete privacy in a home away from home',
+    icon: Building,
+    title: 'Apartments & Condos',
+    description: 'Stylish apartments in the heart of cities',
     count: '500K+',
     color: 'bg-blue-500'
   },
   {
-    icon: Building,
-    title: 'Apartments',
-    description: 'Stylish apartments in the heart of cities',
+    icon: Home,
+    title: 'Houses & Villas',
+    description: 'Complete privacy in a home away from home',
     count: '300K+',
     color: 'bg-green-500'
   },
   {
     icon: Mountain,
-    title: 'Cabins',
+    title: 'Cabins & Chalets',
     description: 'Escape to nature in cozy mountain retreats',
     count: '150K+',
     color: 'bg-orange-500'
@@ -27,7 +27,7 @@ const propertyTypes = [
   {
     icon: Trees,
     title: 'Unique Stays',
-    description: "Extraordinary places you won't find anywhere else",
+    description: "Farm stays, houseboats & more unique experiences",
     count: '75K+',
     color: 'bg-purple-500'
   }
