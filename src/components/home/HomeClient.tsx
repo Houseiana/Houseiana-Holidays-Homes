@@ -149,6 +149,41 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
     }
   };
 
+  // Handle search navigation
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+
+    if (location) {
+      params.set('location', location);
+    }
+    if (checkIn) {
+      params.set('checkin', checkIn.toISOString().split('T')[0]);
+    }
+    if (checkOut) {
+      params.set('checkout', checkOut.toISOString().split('T')[0]);
+    }
+    if (guests.adults > 0) {
+      params.set('adults', guests.adults.toString());
+    }
+    if (guests.children > 0) {
+      params.set('children', guests.children.toString());
+    }
+    if (guests.infants > 0) {
+      params.set('infants', guests.infants.toString());
+    }
+    if (guests.pets > 0) {
+      params.set('pets', guests.pets.toString());
+    }
+    const totalGuests = guests.adults + guests.children;
+    if (totalGuests > 0) {
+      params.set('guests', totalGuests.toString());
+    }
+
+    const searchUrl = `/discover${params.toString() ? `?${params.toString()}` : ''}`;
+    router.push(searchUrl);
+    setSearchMode(null);
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -167,23 +202,32 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
 
             {/* Collapsed Search Bar (when not expanded) */}
             {!searchMode && (
-              <div
-                onClick={() => setSearchMode('where')}
-                className="hidden md:flex items-center border border-gray-300 rounded-full shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-              >
-                <button className="px-4 py-3 text-sm font-medium">
+              <div className="hidden md:flex items-center border border-gray-300 rounded-full shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                <button
+                  onClick={() => setSearchMode('where')}
+                  className="px-4 py-3 text-sm font-medium"
+                >
                   {location || 'Anywhere'}
                 </button>
                 <span className="h-6 w-px bg-gray-300" />
-                <button className="px-4 py-3 text-sm font-medium">
+                <button
+                  onClick={() => setSearchMode('checkin')}
+                  className="px-4 py-3 text-sm font-medium"
+                >
                   {checkIn ? formatDate(checkIn) : 'Any week'}
                 </button>
                 <span className="h-6 w-px bg-gray-300" />
-                <button className="px-4 py-3 text-sm text-gray-500 flex items-center gap-3 pr-2">
+                <button
+                  onClick={() => setSearchMode('who')}
+                  className="px-4 py-3 text-sm text-gray-500 flex items-center gap-3 pr-2"
+                >
                   {totalGuests > 0 ? guestText : 'Add guests'}
-                  <div className="bg-teal-500 p-2 rounded-full">
-                    <Search className="w-4 h-4 text-white" />
-                  </div>
+                </button>
+                <button
+                  onClick={handleSearch}
+                  className="bg-teal-500 p-2 rounded-full mr-2 hover:bg-teal-600 transition-colors"
+                >
+                  <Search className="w-4 h-4 text-white" />
                 </button>
               </div>
             )}
@@ -398,7 +442,7 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
                   {/* Who */}
                   <button
                     onClick={() => setSearchMode('who')}
-                    className={`flex-1 flex items-center justify-between px-6 py-3 rounded-full transition-colors ${searchMode === 'who' ? 'bg-white shadow-lg' : 'hover:bg-gray-200'}`}
+                    className={`flex-1 flex items-center px-6 py-3 rounded-full transition-colors ${searchMode === 'who' ? 'bg-white shadow-lg' : 'hover:bg-gray-200'}`}
                   >
                     <div>
                       <p className="text-xs font-semibold">Who</p>
@@ -406,10 +450,15 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
                         {guestText}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white px-4 py-3 rounded-full hover:from-teal-600 hover:to-teal-700 transition-all">
-                      <Search className="w-4 h-4" />
-                      <span className="font-medium">Search</span>
-                    </div>
+                  </button>
+
+                  {/* Search Button */}
+                  <button
+                    onClick={handleSearch}
+                    className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white px-4 py-3 rounded-full hover:from-teal-600 hover:to-teal-700 transition-all ml-2"
+                  >
+                    <Search className="w-4 h-4" />
+                    <span className="font-medium">Search</span>
                   </button>
                 </div>
 
@@ -581,7 +630,10 @@ export default function HomeClient({ initialProperties }: HomeClientProps) {
               </button>
 
               {/* Filter Button */}
-              <button className="ml-4 flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:border-gray-900 transition-colors">
+              <button
+                onClick={() => router.push('/discover')}
+                className="ml-4 flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:border-gray-900 transition-colors"
+              >
                 <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M5 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
                   <path fillRule="evenodd" d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5v-9zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-13z"/>
