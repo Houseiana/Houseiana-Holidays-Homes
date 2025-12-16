@@ -1,8 +1,9 @@
 import HomeClient from './HomeClient';
-import { PropertyAPI } from '@/lib/backend-api';
 
 // Revalidate every hour
 export const revalidate = 3600;
+
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app';
 
 interface Property {
   id: string;
@@ -21,23 +22,25 @@ export default async function HouseianaHome() {
   let properties: Property[] = [];
 
   try {
-    // Fetch properties from backend API
-    const response = await PropertyAPI.getAll({
-      status: 'PUBLISHED',
-      limit: 12,
+    // Fetch published properties from property-search endpoint
+    const response = await fetch(`${BACKEND_API_URL}/api/property-search?limit=12`, {
+      headers: { 'Content-Type': 'application/json' },
+      next: { revalidate: 3600 },
     });
 
-    if (response.success && response.data?.data) {
+    const data = await response.json();
+
+    if (data.success && data.properties) {
       // Map backend API response to expected format
-      properties = response.data.data.map((p: any) => ({
+      properties = data.properties.map((p: any) => ({
         id: p.id,
         title: p.title,
-        city: p.location?.split(',')[0]?.trim() || '',
-        country: p.location?.split(',')[1]?.trim() || '',
-        pricePerNight: p.price || 0,
-        coverPhoto: p.images?.[0] || undefined,
-        photos: p.images || [],
-        averageRating: p.rating || 0,
+        city: p.city || '',
+        country: p.country || '',
+        pricePerNight: p.pricePerNight || 0,
+        coverPhoto: p.coverPhoto || (p.photos?.[0]) || undefined,
+        photos: p.photos || [],
+        averageRating: p.averageRating || 0,
         bookingCount: 0,
         createdAt: p.createdAt || new Date().toISOString(),
       }));

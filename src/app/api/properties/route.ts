@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { PropertyAPI } from '@/lib/backend-api';
 
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app';
+
 // GET /api/properties - Get all properties or filter by ownerId/hostId
 export async function GET(request: NextRequest) {
   try {
@@ -16,42 +18,76 @@ export async function GET(request: NextRequest) {
 
     console.log('🏠 Fetching properties from backend API with filters:', { ownerId, status, searchQuery, page, limit });
 
-    // Use Backend API instead of direct Prisma call
-    const response = await PropertyAPI.getAll({
-      hostId: ownerId || undefined,
-      status: status || undefined,
-      searchQuery: searchQuery || undefined,
-      page,
-      limit,
+    // Use property-search endpoint for PUBLISHED properties (public view)
+    // Use /api/properties for host-specific or admin views
+    let apiUrl: string;
+    if (status === 'PUBLISHED' && !ownerId) {
+      // Public listing - use property-search endpoint
+      const params = new URLSearchParams();
+      params.set('page', page.toString());
+      params.set('limit', limit.toString());
+      if (searchQuery) params.set('location', searchQuery);
+      apiUrl = `${BACKEND_API_URL}/api/property-search?${params.toString()}`;
+    } else {
+      // Host/admin view - use properties endpoint
+      const params = new URLSearchParams();
+      params.set('page', page.toString());
+      params.set('limit', limit.toString());
+      if (status) params.set('status', status);
+      if (ownerId) params.set('hostId', ownerId);
+      if (searchQuery) params.set('searchQuery', searchQuery);
+      apiUrl = `${BACKEND_API_URL}/api/properties?${params.toString()}`;
+    }
+
+    const response = await fetch(apiUrl, {
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
     });
 
-    if (!response.success) {
-      console.error('❌ Backend API error:', response.error);
+    const data = await response.json();
+
+    if (!data.success) {
+      console.error('❌ Backend API error:', data.error || data.message);
       return NextResponse.json(
-        { success: false, error: response.error || 'Failed to fetch properties' },
+        { success: false, error: data.error || 'Failed to fetch properties' },
         { status: 500 }
       );
     }
 
     // Transform response data to match frontend expectations
-    const properties = response.data?.data || [];
-    const items = properties.map((property: any) => ({
-      id: property.id,
-      title: property.title,
-      city: property.location?.split(',')[0]?.trim() || '',
-      country: property.location?.split(',')[1]?.trim() || '',
-      pricePerNight: property.price || 0,
-      basePrice: property.price || 0,
-      coverPhoto: property.images?.[0] || null,
-      photos: property.images || [],
-      status: property.status,
-      averageRating: property.rating || 0,
-      totalReviews: property.reviews || 0,
-      occupancy: 0,
-      revenue: 0,
-      kycStatus: 'Pending',
-      _count: { bookings: 0, reviews: property.reviews || 0, favorites: 0 }
-    }));
+    // Handle both property-search format and /api/properties format
+    const rawProperties = data.properties || data.data || [];
+    const items = rawProperties.map((property: any) => {
+      // Parse photos if it's a JSON string
+      let photos: string[] = [];
+      if (typeof property.photos === 'string') {
+        try {
+          photos = JSON.parse(property.photos);
+        } catch {
+          photos = property.photos ? [property.photos] : [];
+        }
+      } else if (Array.isArray(property.photos)) {
+        photos = property.photos;
+      }
+
+      return {
+        id: property.id,
+        title: property.title,
+        city: property.city || '',
+        country: property.country || '',
+        pricePerNight: property.pricePerNight || property.price || 0,
+        basePrice: property.pricePerNight || property.price || 0,
+        coverPhoto: property.coverPhoto || photos[0] || null,
+        photos: photos,
+        status: property.status,
+        averageRating: property.averageRating || property.rating || 0,
+        totalReviews: property.reviewCount || property.reviews || 0,
+        occupancy: 0,
+        revenue: 0,
+        kycStatus: 'Pending',
+        _count: { bookings: 0, reviews: property.reviewCount || 0, favorites: 0 }
+      };
+    });
 
     console.log(`✅ Found ${items.length} properties from backend API`);
 
@@ -60,7 +96,7 @@ export async function GET(request: NextRequest) {
       count: items.length,
       properties: items,
       items,
-      pagination: response.data?.pagination,
+      pagination: data.pagination,
     });
   } catch (error) {
     console.error('❌ Error fetching properties:', error);
