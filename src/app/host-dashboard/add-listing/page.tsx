@@ -15,10 +15,10 @@ interface PropertyFormData {
   // Step 0: Property Type
   propertyType: string;
 
-  // Step 1: Place Type
+  // Place Type (default: entire)
   placeType: string;
 
-  // Step 2: Location
+  // Step 1: Location
   country: string;
   street: string;
   apt: string;
@@ -28,40 +28,40 @@ interface PropertyFormData {
   latitude: number;
   longitude: number;
 
-  // Step 3: Basics
+  // Step 2: Basics
   guests: number;
   bedrooms: number;
   beds: number;
   bathrooms: number;
 
-  // Step 4: Amenities
+  // Step 3: Amenities
   amenities: string[];
 
-  // Step 5: Photos
+  // Step 4: Photos
   photos: File[];
 
-  // Step 6: Title
+  // Step 5: Title
   title: string;
 
-  // Step 7: Description
+  // Step 6: Description
   description: string;
   highlights: string[];
 
-  // Step 8: Pricing
+  // Step 7: Pricing
   basePrice: number;
 
-  // Step 9: Discounts
+  // Step 8: Discounts
   weeklyDiscount: number;
   monthlyDiscount: number;
   newListingDiscount: number;
 
-  // Step 10: Legal
+  // Step 9: Legal
   instantBook: boolean;
   securityCamera: boolean;
   noiseMonitor: boolean;
   weapons: boolean;
 
-  // Step 11: House Rules
+  // Step 10: House Rules
   allowPets: boolean;
   allowSmoking: boolean;
   allowParties: boolean;
@@ -77,7 +77,7 @@ export default function AddListingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [listing, setListing] = useState<PropertyFormData>({
     propertyType: '',
-    placeType: '',
+    placeType: 'entire',
     country: 'Qatar',
     street: '',
     apt: '',
@@ -263,24 +263,23 @@ export default function AddListingPage() {
 
   const steps = [
     { id: 0, phase: 1, title: 'Tell us about your place', subtitle: 'Which of these best describes your place?' },
-    { id: 1, phase: 1, title: 'What type of place will guests have?', subtitle: 'Choose the type of space guests will have access to' },
-    { id: 2, phase: 1, title: "Where's your place located?", subtitle: 'Your address is only shared with guests after they book' },
-    { id: 3, phase: 1, title: 'Share some basics about your place', subtitle: 'You\'ll add more details later, like bed types' },
-    { id: 4, phase: 2, title: 'Tell guests what your place has to offer', subtitle: 'You can add more amenities after you publish' },
-    { id: 5, phase: 2, title: 'Add some photos of your place', subtitle: 'You\'ll need 5 photos to get started. You can add more or make changes later' },
-    { id: 6, phase: 3, title: "Now, let's give your place a title", subtitle: 'Short titles work best. Have fun with it—you can always change it later' },
-    { id: 7, phase: 3, title: 'Create your description', subtitle: 'Share what makes your place special' },
-    { id: 8, phase: 3, title: 'Now, set your price', subtitle: 'You can change it anytime' },
-    { id: 9, phase: 3, title: 'Add discounts', subtitle: 'Help your place stand out to get booked faster and earn your first reviews' },
-    { id: 10, phase: 3, title: 'Just a few last questions...', subtitle: 'These help us personalize your hosting experience' },
-    { id: 11, phase: 3, title: 'Set your house rules', subtitle: 'Guests must agree to your rules before they book' },
-    { id: 12, phase: 3, title: 'Review your listing', subtitle: 'Here\'s what we\'ll show to guests. Make sure everything looks good' },
+    { id: 1, phase: 1, title: "Where's your place located?", subtitle: 'Your address is only shared with guests after they book' },
+    { id: 2, phase: 1, title: 'Share some basics about your place', subtitle: 'You\'ll add more details later, like bed types' },
+    { id: 3, phase: 2, title: 'Tell guests what your place has to offer', subtitle: 'You can add more amenities after you publish' },
+    { id: 4, phase: 2, title: 'Add some photos of your place', subtitle: 'You\'ll need 5 photos to get started. You can add more or make changes later' },
+    { id: 5, phase: 3, title: "Now, let's give your place a title", subtitle: 'Short titles work best. Have fun with it—you can always change it later' },
+    { id: 6, phase: 3, title: 'Create your description', subtitle: 'Share what makes your place special' },
+    { id: 7, phase: 3, title: 'Now, set your price', subtitle: 'You can change it anytime' },
+    { id: 8, phase: 3, title: 'Add discounts', subtitle: 'Help your place stand out to get booked faster and earn your first reviews' },
+    { id: 9, phase: 3, title: 'Just a few last questions...', subtitle: 'These help us personalize your hosting experience' },
+    { id: 10, phase: 3, title: 'Set your house rules', subtitle: 'Guests must agree to your rules before they book' },
+    { id: 11, phase: 3, title: 'Review your listing', subtitle: 'Here\'s what we\'ll show to guests. Make sure everything looks good' },
   ];
 
   const phases = [
-    { id: 1, title: 'Tell us about your place', steps: [0, 1, 2, 3] },
-    { id: 2, title: 'Make it stand out', steps: [4, 5] },
-    { id: 3, title: 'Finish up and publish', steps: [6, 7, 8, 9, 10, 11, 12] },
+    { id: 1, title: 'Tell us about your place', steps: [0, 1, 2] },
+    { id: 2, title: 'Make it stand out', steps: [3, 4] },
+    { id: 3, title: 'Finish up and publish', steps: [5, 6, 7, 8, 9, 10, 11] },
   ];
 
   const propertyTypes = [
@@ -295,27 +294,6 @@ export default function AddListingPage() {
     { id: 'cabin_chalet', icon: TreePine, label: 'Cabin / Chalet' },
     { id: 'farm_stay', icon: TreePine, label: 'Farm stay' },
     { id: 'houseboat', icon: Ship, label: 'Houseboat' },
-  ];
-
-  const placeTypes = [
-    {
-      id: 'entire',
-      icon: HomeIcon,
-      title: 'An entire place',
-      description: 'Guests have the whole place to themselves.'
-    },
-    {
-      id: 'room',
-      icon: Bed,
-      title: 'A room',
-      description: 'Guests have their own room in a home, plus access to shared spaces.'
-    },
-    {
-      id: 'shared',
-      icon: Users,
-      title: 'A shared room',
-      description: 'Guests sleep in a room or common area that may be shared with you or others.'
-    },
   ];
 
   const amenitiesList = {
@@ -416,7 +394,7 @@ export default function AddListingPage() {
     // Validation
     if (!listing.title || !listing.description) {
       alert('Please provide a title and description for your property');
-      setCurrentStep(6);
+      setCurrentStep(5);
       return;
     }
 
@@ -428,7 +406,7 @@ export default function AddListingPage() {
 
     if (!listing.city || !listing.country) {
       alert('Please provide complete location information');
-      setCurrentStep(2);
+      setCurrentStep(1);
       return;
     }
 
@@ -697,31 +675,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 1: Place Type */}
+              {/* Step 1: Location */}
               {currentStep === 1 && (
-                <div className="space-y-4">
-                  {placeTypes.map((type) => (
-                    <button
-                      key={type.id}
-                      onClick={() => setListing({ ...listing, placeType: type.id })}
-                      className={`w-full p-6 rounded-xl border-2 transition-all text-left flex items-center gap-4 hover:border-gray-900 ${
-                        listing.placeType === type.id
-                          ? 'border-gray-900 bg-gray-50'
-                          : 'border-gray-200'
-                      }`}
-                    >
-                      <type.icon className="w-8 h-8 text-gray-900 flex-shrink-0" strokeWidth={1.5} />
-                      <div>
-                        <h4 className="font-medium text-gray-900 text-lg">{type.title}</h4>
-                        <p className="text-gray-500 mt-1">{type.description}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Step 2: Location */}
-              {currentStep === 2 && (
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -857,8 +812,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 3: Basics */}
-              {currentStep === 3 && (
+              {/* Step 2: Basics */}
+              {currentStep === 2 && (
                 <div>
                   <Counter label="Guests" value={listing.guests} field="guests" />
                   <Counter label="Bedrooms" value={listing.bedrooms} field="bedrooms" />
@@ -867,8 +822,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 4: Amenities */}
-              {currentStep === 4 && (
+              {/* Step 3: Amenities */}
+              {currentStep === 3 && (
                 <div className="space-y-10">
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4">What about these guest favorites?</h3>
@@ -932,8 +887,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 5: Photos */}
-              {currentStep === 5 && (
+              {/* Step 4: Photos */}
+              {currentStep === 4 && (
                 <div className="space-y-6">
                   <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center hover:border-gray-400 transition-colors cursor-pointer group">
                     <div className="flex flex-col items-center">
@@ -981,8 +936,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 6: Title */}
-              {currentStep === 6 && (
+              {/* Step 5: Title */}
+              {currentStep === 5 && (
                 <div>
                   <textarea
                     value={listing.title}
@@ -996,8 +951,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 7: Description */}
-              {currentStep === 7 && (
+              {/* Step 6: Description */}
+              {currentStep === 6 && (
                 <div className="space-y-8">
                   <div>
                     <textarea
@@ -1033,8 +988,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 8: Pricing */}
-              {currentStep === 8 && (
+              {/* Step 7: Pricing */}
+              {currentStep === 7 && (
                 <div className="space-y-8">
                   <div className="text-center py-8">
                     <div className="inline-flex items-center border-b-4 border-gray-900 pb-2">
@@ -1071,8 +1026,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 9: Discounts */}
-              {currentStep === 9 && (
+              {/* Step 8: Discounts */}
+              {currentStep === 8 && (
                 <div className="space-y-4">
                   <div className="p-6 border-2 border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
                     <div className="flex items-center justify-between">
@@ -1124,8 +1079,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 10: Legal/Safety */}
-              {currentStep === 10 && (
+              {/* Step 9: Legal/Safety */}
+              {currentStep === 9 && (
                 <div className="space-y-6">
                   <div className="p-6 border border-gray-200 rounded-xl">
                     <div className="flex items-start justify-between">
@@ -1177,8 +1132,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 11: House Rules */}
-              {currentStep === 11 && (
+              {/* Step 10: House Rules */}
+              {currentStep === 10 && (
                 <div className="space-y-6">
                   <div className="space-y-4">
                     {[
@@ -1239,8 +1194,8 @@ export default function AddListingPage() {
                 </div>
               )}
 
-              {/* Step 12: Review */}
-              {currentStep === 12 && (
+              {/* Step 11: Review */}
+              {currentStep === 11 && (
                 <div className="space-y-8">
                   {/* Preview Card */}
                   <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-lg">
