@@ -12,7 +12,7 @@ import {
   Phone, MapPin, Bed, Bath, Eye, Edit, Plus, ArrowUpRight,
   CheckCircle, MessageCircle, CalendarDays, X
 } from 'lucide-react';
-import HouseianaHeader from '@/components/layout/HouseianaHeader';
+import HouseianaHeader from '@/layout/Navbar/HouseianaHeader';
 
 function HostDashboardContent() {
   const router = useRouter();

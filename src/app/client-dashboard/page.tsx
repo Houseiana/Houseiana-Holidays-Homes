@@ -9,7 +9,7 @@ import {
   MessageCircle, Settings, Calendar, MapPin, X, Award,
   CreditCard, Shield, Bell, HelpCircle, FileText
 } from 'lucide-react';
-import HouseianaHeader from '@/components/layout/HouseianaHeader';
+import HouseianaHeader from '@/layout/Navbar/HouseianaHeader';
 
 // Type definitions
 interface Trip {

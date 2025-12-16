@@ -25,12 +25,19 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],
+      "@/components2/*": ["./src/components2/*"],
+      "@/animation/*": ["./src/components2/animation/*"],
+      "@/common/*": ["./src/components2/common/*"],
+      "@/ui/*": ["./src/components2/ui/*"],
+      "@/layout/*": ["./src/layout/*"],
       "@/lib/*": ["./src/lib/*"],
       "@/types/*": ["./src/types/*"],
       "@/hooks/*": ["./src/hooks/*"],
       "@/store/*": ["./src/store/*"],
       "@/services/*": ["./src/services/*"],
-      "@/utils/*": ["./src/utils/*"]
+      "@/utils/*": ["./src/utils/*"],
+      "@/middleware/*": ["./src/middleware/*"],
+      "@/assets/*": ["./src/assets/*"]
     }
   },
   "include": [

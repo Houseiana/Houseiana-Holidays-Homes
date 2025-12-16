@@ -15,7 +15,7 @@ import {
   Shield
 } from 'lucide-react';
 import { countries } from '@/lib/countries';
-import SadadPaymentForm from '@/components/shared/SadadPaymentForm';
+import SadadPaymentForm from '@/components2/common/forms/SadadPaymentForm';
 
 interface Property {
   id: string;

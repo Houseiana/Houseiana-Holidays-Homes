@@ -3,13 +3,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Filter, Grid, List, Map, Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
-import AirbnbFilter, { FilterState } from '@/components/search/airbnb-filter'
-import { PropertyCard } from '@/components/property/property-card'
-import { PropertyGridSkeleton, MapSkeleton } from '@/components/ui/skeleton'
-import { MobileNav } from '@/components/layout/mobile-nav'
+import AirbnbFilter, { FilterState } from '@/components2/common/filters/airbnb-filter'
+import { PropertyCard } from '@/components2/common/cards/property-card'
+import { PropertyGridSkeleton, MapSkeleton } from '@/components2/ui/loaders/skeleton'
+import { MobileNav } from '@/layout/Navbar/mobile-nav'
 
 // Dynamically import GoogleMapsMultiView to avoid SSR issues
-const GoogleMapsMultiView = dynamic(() => import('@/components/map/GoogleMapsMultiView'), {
+const GoogleMapsMultiView = dynamic(() => import('@/components2/ui/map/GoogleMapsMultiView'), {
   ssr: false,
   loading: () => <MapSkeleton />,
 })

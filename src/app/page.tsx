@@ -1,4 +1,4 @@
-import HomeClient from '@/components/home/HomeClient';
+import HomeClient from './HomeClient';
 import { PropertyAPI } from '@/lib/backend-api';
 
 // Revalidate every hour
