@@ -83,7 +83,7 @@ export default function IntercomMessenger({ conversationContext }: IntercomMesse
       user_id: user.id,
       name: `${user.firstName} ${user.lastName}`,
       email: user.emailAddresses[0]?.emailAddress,
-      created_at: Math.floor(new Date(user.createdAt).getTime() / 1000),
+      created_at: user.createdAt ? Math.floor(new Date(user.createdAt).getTime() / 1000) : Math.floor(Date.now() / 1000),
 
       // User role tags for team routing
       user_role: isAdmin ? 'admin' : isHost ? 'host' : 'client',
