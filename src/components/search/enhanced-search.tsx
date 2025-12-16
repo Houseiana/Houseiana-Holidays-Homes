@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Search,
   MapPin,
@@ -9,9 +9,41 @@ import {
   Users,
   Filter,
   Minus,
-  Plus
+  Plus,
+  Clock,
+  X
 } from 'lucide-react';
 import AirbnbFilter, { FilterState } from './airbnb-filter';
+
+// Recent search interface
+interface RecentSearch {
+  id: string;
+  location: string;
+  checkIn: string;
+  checkOut: string;
+  guests: number;
+  timestamp: number;
+}
+
+const RECENT_SEARCHES_KEY = 'houseiana_recent_searches';
+const MAX_RECENT_SEARCHES = 5;
+
+// Custom debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 // Qatar cities for location search
 const qatarLocations = [
@@ -120,6 +152,7 @@ interface SearchFilters extends FilterState {
   adults: number;
   children: number;
   infants: number;
+  pets: number;
 }
 
 interface EnhancedSearchProps {
@@ -130,30 +163,58 @@ interface EnhancedSearchProps {
 
 export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearchProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showGuestSelector, setShowGuestSelector] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const guestSelectorRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
 
-  const [filters, setFilters] = useState<SearchFilters>({
-    location: '',
-    checkIn: '',
-    checkOut: '',
-    adults: 2,
-    children: 0,
-    infants: 0,
-    propertyType: '',
-    priceMin: 0,
-    priceMax: 1000,
-    bedrooms: 0,
-    beds: 0,
-    bathrooms: 0,
-    maxGuests: 0,
-    minRating: 0,
-    amenities: [],
-    ...initialFilters
-  });
+  // Initialize filters from URL params
+  const getInitialFilters = useCallback((): SearchFilters => {
+    const fromUrl: Partial<SearchFilters> = {};
+    if (searchParams) {
+      const location = searchParams.get('location');
+      const checkIn = searchParams.get('checkin');
+      const checkOut = searchParams.get('checkout');
+      const adults = searchParams.get('adults');
+      const children = searchParams.get('children');
+      const infants = searchParams.get('infants');
+      const pets = searchParams.get('pets');
+
+      if (location) fromUrl.location = location;
+      if (checkIn) fromUrl.checkIn = checkIn;
+      if (checkOut) fromUrl.checkOut = checkOut;
+      if (adults) fromUrl.adults = parseInt(adults);
+      if (children) fromUrl.children = parseInt(children);
+      if (infants) fromUrl.infants = parseInt(infants);
+      if (pets) fromUrl.pets = parseInt(pets);
+    }
+    return {
+      location: '',
+      checkIn: '',
+      checkOut: '',
+      adults: 2,
+      children: 0,
+      infants: 0,
+      pets: 0,
+      propertyType: '',
+      priceMin: 0,
+      priceMax: 1000,
+      bedrooms: 0,
+      beds: 0,
+      bathrooms: 0,
+      maxGuests: 0,
+      minRating: 0,
+      amenities: [],
+      ...initialFilters,
+      ...fromUrl
+    };
+  }, [searchParams, initialFilters]);
+
+  const [filters, setFilters] = useState<SearchFilters>(getInitialFilters);
 
   const [filterState, setFilterState] = useState<FilterState>({
     propertyType: initialFilters.propertyType || '',
@@ -167,16 +228,70 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
     amenities: initialFilters.amenities || []
   });
 
-  // Filter Qatar locations based on search input
-  const getFilteredLocations = () => {
-    if (!filters.location) return qatarLocations;
-    const searchTerm = filters.location.toLowerCase();
+  // Debounced location for filtering
+  const debouncedLocation = useDebounce(filters.location, 300);
+
+  // Load recent searches from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (stored) {
+        setRecentSearches(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load recent searches:', error);
+    }
+  }, []);
+
+  // Filter Qatar locations based on debounced search input
+  const filteredLocations = useMemo(() => {
+    if (!debouncedLocation) return qatarLocations;
+    const searchTerm = debouncedLocation.toLowerCase();
     return qatarLocations.filter(location =>
       location.name.toLowerCase().includes(searchTerm) ||
-      location.nameArabic.includes(filters.location) ||
+      location.nameArabic.includes(debouncedLocation) ||
       location.description.toLowerCase().includes(searchTerm)
     );
-  };
+  }, [debouncedLocation]);
+
+  // Save recent search to localStorage
+  const saveRecentSearch = useCallback(() => {
+    if (!filters.location && !filters.checkIn) return;
+
+    const newSearch: RecentSearch = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      location: filters.location,
+      checkIn: filters.checkIn,
+      checkOut: filters.checkOut,
+      guests: filters.adults + filters.children,
+      timestamp: Date.now(),
+    };
+
+    setRecentSearches(prev => {
+      const filtered = prev.filter(s =>
+        s.location !== newSearch.location || s.checkIn !== newSearch.checkIn
+      );
+      const updated = [newSearch, ...filtered].slice(0, MAX_RECENT_SEARCHES);
+      try {
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch (error) {
+        console.error('Failed to save recent searches:', error);
+      }
+      return updated;
+    });
+  }, [filters.location, filters.checkIn, filters.checkOut, filters.adults, filters.children]);
+
+  // Apply a recent search
+  const applyRecentSearch = useCallback((search: RecentSearch) => {
+    setFilters(prev => ({
+      ...prev,
+      location: search.location,
+      checkIn: search.checkIn,
+      checkOut: search.checkOut,
+      adults: search.guests > 0 ? Math.max(search.guests, 1) : prev.adults,
+    }));
+    setShowLocationDropdown(false);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -196,9 +311,10 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const adjustGuests = (type: 'adults' | 'children' | 'infants', increment: boolean) => {
+  const adjustGuests = (type: 'adults' | 'children' | 'infants' | 'pets', increment: boolean) => {
     setFilters(prev => {
-      const newValue = Math.max(0, prev[type] + (increment ? 1 : -1));
+      const minValue = type === 'adults' ? 1 : 0;
+      const newValue = Math.max(minValue, prev[type] + (increment ? 1 : -1));
       const newFilters = { ...prev, [type]: newValue };
 
       // Auto-update maxGuests based on adults + children
@@ -229,41 +345,67 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
     if (filters.infants > 0) {
       text += `, ${filters.infants} infant${filters.infants > 1 ? 's' : ''}`;
     }
+    if (filters.pets > 0) {
+      text += `, ${filters.pets} pet${filters.pets > 1 ? 's' : ''}`;
+    }
     return text;
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     console.log('Search button clicked!', filters);
+    setIsSearching(true);
+
+    // Save to recent searches
+    saveRecentSearch();
 
     // Build search URL with query parameters
-    const searchParams = new URLSearchParams();
+    const params = new URLSearchParams();
 
     if (filters.location) {
-      searchParams.set('location', filters.location);
+      params.set('location', filters.location);
     }
     if (filters.checkIn) {
-      searchParams.set('checkin', filters.checkIn);
+      params.set('checkin', filters.checkIn);
     }
     if (filters.checkOut) {
-      searchParams.set('checkout', filters.checkOut);
+      params.set('checkout', filters.checkOut);
     }
 
     const totalGuests = filters.adults + filters.children;
     if (totalGuests > 0) {
-      searchParams.set('guests', totalGuests.toString());
+      params.set('guests', totalGuests.toString());
     }
     if (filters.adults > 0) {
-      searchParams.set('adults', filters.adults.toString());
+      params.set('adults', filters.adults.toString());
     }
     if (filters.children > 0) {
-      searchParams.set('children', filters.children.toString());
+      params.set('children', filters.children.toString());
     }
     if (filters.infants > 0) {
-      searchParams.set('infants', filters.infants.toString());
+      params.set('infants', filters.infants.toString());
+    }
+    if (filters.pets > 0) {
+      params.set('pets', filters.pets.toString());
+    }
+    // Add filter params
+    if (filters.propertyType) {
+      params.set('propertyType', filters.propertyType);
+    }
+    if (filters.priceMin > 0) {
+      params.set('minPrice', filters.priceMin.toString());
+    }
+    if (filters.priceMax < 1000) {
+      params.set('maxPrice', filters.priceMax.toString());
+    }
+    if (filters.bedrooms > 0) {
+      params.set('bedrooms', filters.bedrooms.toString());
+    }
+    if (filters.amenities.length > 0) {
+      params.set('amenities', filters.amenities.join(','));
     }
 
     // Navigate to discover page with search params
-    const searchUrl = `/discover?${searchParams.toString()}`;
+    const searchUrl = `/discover?${params.toString()}`;
     console.log('Navigating to:', searchUrl);
     router.push(searchUrl);
 
@@ -272,6 +414,7 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
       onSearch(filters);
     }
     setShowFilterModal(false);
+    setIsSearching(false);
   };
 
 
@@ -321,13 +464,39 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
               {/* Location Dropdown - Inline */}
               {showLocationDropdown && (
                 <div className="absolute top-full left-0 mt-2 bg-white shadow-xl rounded-xl border border-gray-200 z-50 max-h-96 overflow-y-auto w-[350px]">
+                  {/* Recent Searches */}
+                  {recentSearches.length > 0 && !filters.location && (
+                    <div className="p-3 border-b border-gray-100">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                        Recent searches
+                      </p>
+                      {recentSearches.slice(0, 3).map((search) => (
+                        <button
+                          key={search.id}
+                          onClick={() => applyRecentSearch(search)}
+                          className="flex items-center gap-3 w-full p-2 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-gray-500" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-medium text-gray-900">{search.location || 'Any location'}</p>
+                            <p className="text-xs text-gray-500">
+                              {search.checkIn ? `${search.checkIn} - ${search.checkOut}` : 'Any dates'}
+                              {search.guests > 0 && ` · ${search.guests} guests`}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="p-3 border-b border-gray-100 bg-gray-50">
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                       Search in Qatar 🇶🇦
                     </p>
                   </div>
-                  {getFilteredLocations().length > 0 ? (
-                    getFilteredLocations().map((location) => (
+                  {filteredLocations.length > 0 ? (
+                    filteredLocations.map((location) => (
                       <div
                         key={location.id}
                         onClick={() => handleLocationSelect(location)}
@@ -368,6 +537,7 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
                   type="date"
                   value={filters.checkIn}
                   onChange={(e) => updateFilter('checkIn', e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
                   className="w-full outline-none text-gray-600 text-sm"
                 />
               </div>
@@ -382,6 +552,7 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
                   type="date"
                   value={filters.checkOut}
                   onChange={(e) => updateFilter('checkOut', e.target.value)}
+                  min={filters.checkIn || new Date().toISOString().split('T')[0]}
                   className="w-full outline-none text-gray-600 text-sm"
                 />
               </div>
@@ -475,6 +646,30 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
                         </button>
                       </div>
                     </div>
+
+                    {/* Pets */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-gray-900">Pets</div>
+                        <div className="text-sm text-gray-500">Bringing a service animal?</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => adjustGuests('pets', false)}
+                          disabled={filters.pets <= 0}
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center">{filters.pets}</span>
+                        <button
+                          onClick={() => adjustGuests('pets', true)}
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:border-gray-400"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -501,11 +696,16 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
               <button
                 type="button"
                 onClick={handleSearch}
-                className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-5 lg:rounded-r-xl hover:from-pink-600 hover:to-rose-600 transition-all transform hover:scale-105 font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isSearching}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-8 py-5 lg:rounded-r-xl hover:from-pink-600 hover:to-rose-600 transition-all transform hover:scale-105 font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                 aria-label="Search"
               >
-                <Search className="w-5 h-5" />
-                <span className="hidden sm:inline">Search</span>
+                {isSearching ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Search className="w-5 h-5" />
+                )}
+                <span className="hidden sm:inline">{isSearching ? 'Searching...' : 'Search'}</span>
               </button>
             </div>
           </div>
