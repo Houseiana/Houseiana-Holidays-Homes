@@ -433,6 +433,71 @@ export const AccountAPI = {
       error: response.ok ? undefined : data.error,
     };
   },
+
+  /**
+   * Get user profile data
+   */
+  async getProfile(): Promise<ApiResponse<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    preferredName: string;
+    email: string;
+    emailMasked: string;
+    emailVerified: boolean;
+    phone: string;
+    phoneMasked: string;
+    phoneVerified: boolean;
+    imageUrl: string;
+    address: {
+      street: string;
+      apt: string;
+      city: string;
+      state: string;
+      zip: string;
+      country: string;
+    } | null;
+    emergencyContact: {
+      name: string;
+      relationship: string;
+      phone: string;
+      email: string;
+    } | null;
+    governmentId: {
+      verified: boolean;
+      type: string | null;
+    };
+  }>> {
+    const response = await fetch('/api/account/profile');
+    const data = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? data.data : undefined,
+      error: response.ok ? undefined : data.error,
+    };
+  },
+
+  /**
+   * Update user profile field
+   */
+  async updateProfile(field: string, data: Record<string, any>): Promise<ApiResponse<{
+    message: string;
+    requiresVerification?: boolean;
+    emailId?: string;
+    phoneId?: string;
+  }>> {
+    const response = await fetch('/api/account/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field, data }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
 };
 
 /**
