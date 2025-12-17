@@ -411,7 +411,7 @@ export default function AddListingPage() {
     }
 
     try {
-      // Upload photos to S3 first
+      // Upload photos to Cloudinary (with automatic S3 backup)
       const uploadedPhotoUrls: string[] = [];
       const failedPhotos: string[] = [];
 
@@ -425,7 +425,7 @@ export default function AddListingPage() {
             formData.append('file', photoFile);
             formData.append('folder', 'properties');
 
-            const uploadResponse = await fetch(`/api/upload-photo`, {
+            const uploadResponse = await fetch(`/api/upload-cloudinary`, {
               method: 'POST',
               body: formData,
             });
@@ -434,7 +434,7 @@ export default function AddListingPage() {
 
             if (uploadResponse.ok && uploadResult.success) {
               uploadedPhotoUrls.push(uploadResult.url);
-              console.log(`✅ Photo ${i + 1}/${listing.photos.length} uploaded successfully`);
+              console.log(`✅ Photo ${i + 1}/${listing.photos.length} uploaded to Cloudinary (S3 backup in progress)`);
             } else {
               const errorMsg = uploadResult.error || 'Unknown error';
               console.error(`❌ Photo ${i + 1} upload failed:`, errorMsg);
