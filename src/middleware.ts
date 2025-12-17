@@ -28,7 +28,15 @@ export default clerkMiddleware(
       const authObj = await auth()
 
       if (!authObj.userId) {
-        // User is not authenticated, redirect to sign-in
+        // For API routes, return JSON error instead of redirect
+        if (request.nextUrl.pathname.startsWith('/api/')) {
+          return NextResponse.json(
+            { error: 'Authentication required' },
+            { status: 401 }
+          )
+        }
+
+        // For page routes, redirect to sign-in
         const signInUrl = new URL('/sign-in', request.url)
         signInUrl.searchParams.set('redirect_url', request.url)
         return NextResponse.redirect(signInUrl)
