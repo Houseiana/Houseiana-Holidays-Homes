@@ -12,8 +12,14 @@ export * from './property';
 // Booking hooks
 export * from './booking';
 
-// Host hooks (add exports when hooks are created)
-// export * from './host';
+// Host hooks
+export * from './host';
+
+// Discover hooks
+export * from './discover';
+
+// Client hooks
+export * from './client';
 
 // Messages hooks (add exports when hooks are created)
 // export * from './messages';
