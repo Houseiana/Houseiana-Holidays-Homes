@@ -354,6 +354,88 @@ export const UserAPI = {
 };
 
 /**
+ * Account API
+ * For account management (sessions, deactivation, etc.)
+ * These call Next.js API routes which interface with Clerk
+ */
+export const AccountAPI = {
+  /**
+   * Get all active sessions for current user
+   */
+  async getSessions(): Promise<ApiResponse<{
+    sessions: Array<{
+      id: string;
+      device: string;
+      browser: string;
+      os: string;
+      location: string;
+      ipAddress: string;
+      lastActive: string;
+      lastActiveAt: number;
+      isCurrent: boolean;
+      icon: string;
+      createdAt: number;
+    }>;
+    totalSessions: number;
+  }>> {
+    const response = await fetch('/api/account/sessions');
+    const data = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? data : undefined,
+      error: response.ok ? undefined : data.error,
+    };
+  },
+
+  /**
+   * Revoke a specific session
+   */
+  async revokeSession(sessionId: string): Promise<ApiResponse> {
+    const response = await fetch(`/api/account/sessions?sessionId=${sessionId}`, {
+      method: 'DELETE',
+    });
+    const data = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? data : undefined,
+      error: response.ok ? undefined : data.error,
+    };
+  },
+
+  /**
+   * Revoke all sessions except current
+   */
+  async revokeAllOtherSessions(): Promise<ApiResponse<{ revokedCount: number }>> {
+    const response = await fetch('/api/account/sessions?all=true', {
+      method: 'DELETE',
+    });
+    const data = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? data : undefined,
+      error: response.ok ? undefined : data.error,
+    };
+  },
+
+  /**
+   * Deactivate account
+   */
+  async deactivateAccount(reason?: string): Promise<ApiResponse> {
+    const response = await fetch('/api/account/deactivate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const data = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? data : undefined,
+      error: response.ok ? undefined : data.error,
+    };
+  },
+};
+
+/**
  * Payment API
  */
 export const PaymentAPI = {
@@ -758,6 +840,7 @@ const BackendAPI = {
   Booking: BookingAPI,
   BookingExtended: BookingExtendedAPI,
   User: UserAPI,
+  Account: AccountAPI,
   Payment: PaymentAPI,
   PaymentMethods: PaymentMethodsAPI,
   Inventory: InventoryAPI,
