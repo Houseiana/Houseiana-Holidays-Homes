@@ -498,6 +498,413 @@ export const AccountAPI = {
       error: response.ok ? undefined : result.error,
     };
   },
+
+  // Payment Methods
+  async getPaymentMethods(): Promise<ApiResponse<any[]>> {
+    const response = await fetch('/api/account/payment-methods');
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async addPaymentMethod(data: {
+    cardNumber: string;
+    expiry: string;
+    cardholderName: string;
+    billingAddress?: { street: string; city: string; postalCode: string; country: string };
+    isDefault?: boolean;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch('/api/account/payment-methods', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async deletePaymentMethod(id: string): Promise<ApiResponse> {
+    const response = await fetch(`/api/account/payment-methods?id=${id}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async setDefaultPaymentMethod(id: string): Promise<ApiResponse> {
+    const response = await fetch('/api/account/payment-methods', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, setDefault: true }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Payout Methods
+  async getPayoutMethods(): Promise<ApiResponse<any[]>> {
+    const response = await fetch('/api/account/payout-methods');
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async addPayoutMethod(data: {
+    payoutType: 'bank' | 'paypal';
+    country: string;
+    accountHolderName: string;
+    iban?: string;
+    paypalEmail?: string;
+    isDefault?: boolean;
+  }): Promise<ApiResponse<any>> {
+    const response = await fetch('/api/account/payout-methods', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async deletePayoutMethod(id: string): Promise<ApiResponse> {
+    const response = await fetch(`/api/account/payout-methods?id=${id}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async setDefaultPayoutMethod(id: string): Promise<ApiResponse> {
+    const response = await fetch('/api/account/payout-methods', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, setDefault: true }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Payments History
+  async getPayments(page = 1, limit = 10): Promise<ApiResponse<{ data: any[]; total: number }>> {
+    const response = await fetch(`/api/account/payments?page=${page}&limit=${limit}`);
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async exportPayments(format = 'csv', startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
+    const response = await fetch('/api/account/payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ format, startDate, endDate }),
+    });
+
+    if (format === 'csv' && response.ok) {
+      const blob = await response.blob();
+      return { success: true, data: blob };
+    }
+
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Payouts History
+  async getPayouts(page = 1, limit = 10): Promise<ApiResponse<{ data: any[]; total: number }>> {
+    const response = await fetch(`/api/account/payouts?page=${page}&limit=${limit}`);
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async exportPayouts(format = 'csv', startDate?: string, endDate?: string): Promise<ApiResponse<any>> {
+    const response = await fetch('/api/account/payouts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ format, startDate, endDate }),
+    });
+
+    if (format === 'csv' && response.ok) {
+      const blob = await response.blob();
+      return { success: true, data: blob };
+    }
+
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Credits & Coupons
+  async getCredits(): Promise<ApiResponse<{
+    balance: number;
+    currency: string;
+    giftCards: any[];
+    coupons: any[];
+  }>> {
+    const response = await fetch('/api/account/credits');
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async redeemGiftCard(code: string): Promise<ApiResponse<any>> {
+    const response = await fetch('/api/account/credits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'giftcard', code }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      message: result.message,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async addCoupon(code: string): Promise<ApiResponse<any>> {
+    const response = await fetch('/api/account/credits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'coupon', code }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      message: result.message,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async removeCoupon(id: string): Promise<ApiResponse> {
+    const response = await fetch(`/api/account/credits?type=coupon&id=${id}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Privacy Settings
+  async getPrivacySettings(): Promise<ApiResponse<{
+    shareActivityWithPartners: boolean;
+    includeInSearchEngines: boolean;
+    showProfileToHosts: boolean;
+    shareLocationWithHosts: boolean;
+    personalizedRecommendations: boolean;
+    personalizedAds: boolean;
+    usageAnalytics: boolean;
+    shareWithThirdParties: boolean;
+  }>> {
+    const response = await fetch('/api/account/privacy-settings');
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async updatePrivacySetting(setting: string, value: boolean): Promise<ApiResponse> {
+    const response = await fetch('/api/account/privacy-settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setting, value }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async updateAllPrivacySettings(settings: Record<string, boolean>): Promise<ApiResponse> {
+    const response = await fetch('/api/account/privacy-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Connected Services
+  async getConnectedServices(): Promise<ApiResponse<Array<{
+    id: string;
+    name: string;
+    email: string | null;
+    connected: boolean;
+    icon: 'google' | 'facebook' | 'apple';
+    connectedAt?: string;
+  }>>> {
+    const response = await fetch('/api/account/connected-services');
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async connectService(serviceId: string): Promise<ApiResponse<{ oauthUrl: string; redirectTo: string }>> {
+    const response = await fetch('/api/account/connected-services', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serviceId }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async disconnectService(serviceId: string): Promise<ApiResponse> {
+    const response = await fetch(`/api/account/connected-services?serviceId=${serviceId}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Data Request (GDPR)
+  async getDataRequestStatus(): Promise<ApiResponse<{
+    id: string;
+    requestedAt: string;
+    status: 'pending' | 'processing' | 'ready' | 'expired';
+    estimatedReadyAt: string;
+    downloadUrl?: string;
+    expiresAt?: string;
+  } | null>> {
+    const response = await fetch('/api/account/data-request');
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async requestDataExport(): Promise<ApiResponse<{
+    id: string;
+    requestedAt: string;
+    status: string;
+    estimatedReadyAt: string;
+  }>> {
+    const response = await fetch('/api/account/data-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      message: result.message,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async cancelDataRequest(): Promise<ApiResponse> {
+    const response = await fetch('/api/account/data-request', {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  // Account Deletion
+  async getDeletionRequirements(): Promise<ApiResponse<{
+    canDelete: boolean;
+    blockers: string[];
+    requirements: string[];
+    warning: string;
+  }>> {
+    const response = await fetch('/api/account/delete-account');
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result.data : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
+
+  async deleteAccount(confirmText: string, reason?: string): Promise<ApiResponse> {
+    const response = await fetch('/api/account/delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmText, reason }),
+    });
+    const result = await response.json();
+    return {
+      success: response.ok,
+      data: response.ok ? result : undefined,
+      error: response.ok ? undefined : result.error,
+    };
+  },
 };
 
 /**
