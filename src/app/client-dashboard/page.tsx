@@ -50,6 +50,7 @@ export default function ClientDashboard() {
   const accountCards = [
     { icon: <User className="w-8 h-8" />, title: 'Personal info', description: 'Provide personal details and how we can reach you', path: '/account/personal-info' },
     { icon: <Shield className="w-8 h-8" />, title: 'Login & security', description: 'Update your password and secure your account', path: '/account/security' },
+    { icon: <Shield className="w-8 h-8 text-teal-600" />, title: 'KYC Verification', description: 'Verify your identity to unlock all platform features', path: '/account/kyc' },
     { icon: <CreditCard className="w-8 h-8" />, title: 'Payments & payouts', description: 'Review payments, payouts, coupons, and gift cards', path: '/account/payments' },
     { icon: <Bell className="w-8 h-8" />, title: 'Notifications', description: 'Choose notification preferences and how you want to be contacted', path: '/account/notifications' },
     { icon: <FileText className="w-8 h-8" />, title: 'Privacy & sharing', description: 'Manage your personal data and connected services', path: '/account/privacy' },
