@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-
-const prisma = new PrismaClient();
 
 /**
  * GET /api/me
- * Fetches the current user's complete profile with stats
+ * Fetches the current user's profile from Clerk
+ * Database integration pending
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,187 +17,65 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get Clerk user for latest info
+    // Get Clerk user info
     const clerk = await clerkClient();
     const clerkUser = await clerk.users.getUser(clerkId);
 
-    // Find or create user in database
-    let user = await prisma.user.findUnique({
-      where: { clerkId },
-      include: {
-        guestProfile: true,
-        hostProfile: true,
-        hostSettings: true,
-        favorites: true,
-        bookingsAsGuest: {
-          where: {
-            status: {
-              in: ['CONFIRMED', 'COMPLETED', 'CHECKED_IN'],
-            },
-          },
-        },
-        propertiesAsHost: {
-          where: {
-            isActive: true,
-            deleted_at: null,
-          },
-        },
-        reviews: true,
-        paymentMethods: true,
-        payoutMethods: true,
-      },
-    });
+    const primaryEmail = clerkUser.emailAddresses.find(
+      (e: { id: string; emailAddress: string; verification?: { status: string } }) => e.id === clerkUser.primaryEmailAddressId
+    );
 
-    // If user doesn't exist in DB, create them
-    if (!user) {
-      const primaryEmail = clerkUser.emailAddresses.find(
-        (e) => e.id === clerkUser.primaryEmailAddressId
-      );
-
-      user = await prisma.user.create({
-        data: {
-          clerkId,
-          email: primaryEmail?.emailAddress || '',
-          firstName: clerkUser.firstName || '',
-          lastName: clerkUser.lastName || '',
-          profilePhoto: clerkUser.imageUrl,
-          emailVerified: primaryEmail?.verification?.status === 'verified',
-          isGuest: true,
-          isHost: false,
-        },
-        include: {
-          guestProfile: true,
-          hostProfile: true,
-          hostSettings: true,
-          favorites: true,
-          bookingsAsGuest: true,
-          propertiesAsHost: true,
-          reviews: true,
-          paymentMethods: true,
-          payoutMethods: true,
-        },
-      });
-
-      // Create guest profile
-      await prisma.guestProfile.create({
-        data: {
-          userId: user.id,
-        },
-      });
-    }
-
-    // Calculate stats
-    const guestStats = {
-      totalTrips: user.bookingsAsGuest.filter((b) => b.status === 'COMPLETED').length,
-      upcomingTrips: user.bookingsAsGuest.filter(
-        (b) => b.status === 'CONFIRMED' && new Date(b.checkIn) > new Date()
-      ).length,
-      totalSpent: user.bookingsAsGuest.reduce((sum, b) => sum + b.totalPrice, 0),
-      travelPoints: user.guestProfile?.travelPoints || 0,
-      loyaltyTier: user.guestProfile?.loyaltyTier || 'BRONZE',
-      savedProperties: user.favorites.length,
-      reviewsWritten: user.reviews.length,
-    };
-
-    const hostStats = user.isHost
-      ? {
-          totalEarnings: user.hostProfile?.totalRevenue || 0,
-          pendingPayouts: 0, // Would need to calculate from payouts table
-          activeListings: user.propertiesAsHost.filter((p) => p.status === 'PUBLISHED').length,
-          totalListings: user.propertiesAsHost.length,
-          upcomingReservations: 0, // Would need to calculate from bookings
-          responseRate: user.hostProfile?.responseRate || 0,
-          averageRating: user.hostProfile?.averageRating || 0,
-          totalReviews: user.hostProfile?.totalReviews || 0,
-          superHostStatus: user.hostProfile?.isVerifiedHost || false,
-        }
-      : null;
-
-    // Build verifications
-    const verifications = [
-      {
-        type: 'identity',
-        status: user.kycStatus === 'APPROVED' ? 'verified' : user.kycStatus === 'PENDING' ? 'pending' : 'not_verified',
-        verifiedAt: user.kycVerifiedAt?.toISOString(),
-      },
-      {
-        type: 'email',
-        status: user.emailVerified ? 'verified' : 'not_verified',
-      },
-      {
-        type: 'phone',
-        status: user.phoneVerified ? 'verified' : 'not_verified',
-      },
-      {
-        type: 'government_id',
-        status: user.qidNumber || user.passportNumber ? 'verified' : 'not_verified',
-      },
-    ];
-
-    // Response
+    // Build profile from Clerk data
     const profile = {
-      id: user.id,
-      clerkId: user.clerkId,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone,
-      profilePhoto: user.profilePhoto || clerkUser.imageUrl,
-      nationality: user.nationality,
-      preferredLanguage: user.preferredLanguage,
-      preferredCurrency: user.preferredCurrency,
-      birthDate: user.birthDate?.toISOString(),
+      id: clerkId,
+      clerkId: clerkId,
+      firstName: clerkUser.firstName || '',
+      lastName: clerkUser.lastName || '',
+      email: primaryEmail?.emailAddress || '',
+      profilePhoto: clerkUser.imageUrl,
+      emailVerified: primaryEmail?.verification?.status === 'verified',
 
-      // Role info
-      isGuest: user.isGuest,
-      isHost: user.isHost,
-      isAdmin: user.isAdmin,
+      // Role info (defaults - would come from database)
+      isGuest: true,
+      isHost: false,
+      isAdmin: false,
 
       // Verification status
-      kycStatus: user.kycStatus,
-      emailVerified: user.emailVerified,
-      phoneVerified: user.phoneVerified,
-      verifications,
+      kycStatus: 'NOT_STARTED',
+      phoneVerified: false,
+      verifications: [
+        {
+          type: 'email',
+          status: primaryEmail?.verification?.status === 'verified' ? 'verified' : 'not_verified',
+        },
+        {
+          type: 'phone',
+          status: 'not_verified',
+        },
+        {
+          type: 'identity',
+          status: 'not_verified',
+        },
+      ],
 
       // Member info
-      memberSince: user.createdAt.toISOString(),
-      lastLoginAt: user.lastLoginAt?.toISOString(),
+      memberSince: clerkUser.createdAt,
 
-      // Stats
-      guestStats,
-      hostStats,
-
-      // Guest profile data
-      guestProfile: user.guestProfile
-        ? {
-            travelPurpose: user.guestProfile.travelPurpose,
-            favoriteDestinations: user.guestProfile.favoriteDestinations,
-            loyaltyTier: user.guestProfile.loyaltyTier,
-            travelPoints: user.guestProfile.travelPoints,
-            emailNotifications: user.guestProfile.emailNotifications,
-            smsNotifications: user.guestProfile.smsNotifications,
-            pushNotifications: user.guestProfile.pushNotifications,
-          }
-        : null,
-
-      // Host profile data
-      hostProfile: user.hostProfile
-        ? {
-            hostType: user.hostProfile.hostType,
-            businessName: user.hostProfile.businessName,
-            businessDescription: user.hostProfile.businessDescription,
-            isVerifiedHost: user.hostProfile.isVerifiedHost,
-            verificationLevel: user.hostProfile.verificationLevel,
-            responseRate: user.hostProfile.responseRate,
-            responseTime: user.hostProfile.responseTime,
-            autoAcceptBookings: user.hostProfile.autoAcceptBookings,
-            instantBookEnabled: user.hostProfile.instantBookEnabled,
-          }
-        : null,
-
-      // Payment info summary
-      hasPaymentMethods: user.paymentMethods.length > 0,
-      hasPayoutMethods: user.payoutMethods.length > 0,
+      // Stats (defaults - would come from database)
+      guestStats: {
+        totalTrips: 0,
+        upcomingTrips: 0,
+        totalSpent: 0,
+        travelPoints: 0,
+        loyaltyTier: 'BRONZE',
+        savedProperties: 0,
+        reviewsWritten: 0,
+      },
+      hostStats: null,
+      guestProfile: null,
+      hostProfile: null,
+      hasPaymentMethods: false,
+      hasPayoutMethods: false,
     };
 
     return NextResponse.json({
@@ -218,6 +94,7 @@ export async function GET(request: NextRequest) {
 /**
  * PATCH /api/me
  * Updates the current user's profile
+ * Database integration pending
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -231,46 +108,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const {
-      firstName,
-      lastName,
-      phone,
-      nationality,
-      preferredLanguage,
-      preferredCurrency,
-      birthDate,
-      profilePhoto,
-    } = body;
+    const { firstName, lastName } = body;
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        ...(firstName && { firstName }),
-        ...(lastName && { lastName }),
-        ...(phone && { phone }),
-        ...(nationality && { nationality }),
-        ...(preferredLanguage && { preferredLanguage }),
-        ...(preferredCurrency && { preferredCurrency }),
-        ...(birthDate && { birthDate: new Date(birthDate) }),
-        ...(profilePhoto && { profilePhoto }),
-        updatedAt: new Date(),
-      },
-    });
-
-    // Also update Clerk if name changed
+    // Update Clerk user if name changed
     if (firstName || lastName) {
       const clerk = await clerkClient();
       await clerk.users.updateUser(clerkId, {
@@ -283,9 +123,9 @@ export async function PATCH(request: NextRequest) {
       success: true,
       message: 'Profile updated successfully',
       data: {
-        id: updatedUser.id,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
+        id: clerkId,
+        firstName,
+        lastName,
       },
     });
   } catch (error: any) {

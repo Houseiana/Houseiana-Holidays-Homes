@@ -26,7 +26,7 @@ export default function ProfileProperties({ properties, hostName }: ProfilePrope
   return (
     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
       <h3 className="text-lg font-bold text-gray-900 mb-4">
-        {hostName}'s Listings
+        {hostName}&apos;s Listings
       </h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
