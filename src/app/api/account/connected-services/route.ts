@@ -194,7 +194,7 @@ export async function DELETE(request: NextRequest) {
     if (accountToRemove) {
       try {
         // Delete external account from Clerk
-        await clerk.users.deleteUserExternalAccount(userId, accountToRemove.id);
+        await clerk.users.deleteUserExternalAccount(accountToRemove.id);
       } catch (clerkError) {
         console.warn('Could not delete Clerk external account:', clerkError);
         // Continue to update metadata
