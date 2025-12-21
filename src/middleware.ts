@@ -19,6 +19,7 @@ const isPublicRoute = createRouteMatcher([
   '/become-host',
   '/api/webhooks(.*)',
   '/api/properties(.*)',
+  '/clerk(.*)',
 ])
 
 export default clerkMiddleware(

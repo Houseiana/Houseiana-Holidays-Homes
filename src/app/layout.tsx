@@ -35,7 +35,10 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
-      clerkJSUrl={process.env.NEXT_PUBLIC_CLERK_JS_URL}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
     >
       <html lang="en">
         <body className={`${inter.variable} font-sans antialiased`}>
