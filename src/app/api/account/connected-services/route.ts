@@ -71,8 +71,8 @@ export async function GET() {
           ...connectedServices[serviceIndex],
           email: account.emailAddress || null,
           connected: true,
-          connectedAt: account.verification?.verifiedAtClient
-            ? new Date(account.verification.verifiedAtClient).toISOString()
+          connectedAt: (account.verification as any)?.verifiedAtClient
+            ? new Date((account.verification as any).verifiedAtClient).toISOString()
             : undefined,
         };
       }
