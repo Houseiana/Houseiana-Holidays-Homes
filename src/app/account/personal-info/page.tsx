@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Shield, AlertCircle, Eye, EyeOff, Loader2, Upload, X, FileText, Image as ImageIcon } from 'lucide-react';
 import {
-  AccountHeader,
+
   AccountFooter,
   AccountBreadcrumb,
   InfoRow,
   EditFormActions
-} from '@/components/account';
+} from '@/features/auth/components';
 import { AccountAPI } from '@/lib/backend-api';
 
 interface PassportInfo {
@@ -852,9 +852,9 @@ export default function PersonalInfoPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <AccountHeader userAvatar={userAvatar} />
 
-      <main className="max-w-3xl mx-auto px-6 py-10">
+
+      <main className="max-w-7xl mx-auto px-6 py-10">
         <AccountBreadcrumb />
 
         <h1 className="text-3xl font-semibold text-gray-900 mb-2">Personal info</h1>

@@ -10,7 +10,7 @@
 export * from './property';
 
 // Booking hooks
-export * from './booking';
+export * from '@/features/booking/hooks';
 
 // Host hooks
 export * from './host';

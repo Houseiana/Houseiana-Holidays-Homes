@@ -15,7 +15,8 @@ import {
   DeleteAccountModal,
   SavedToast,
   ConnectedService,
-} from '@/components/account';
+  AccountFooter,
+} from '@/features/auth/components';
 import { AccountAPI } from '@/lib/backend-api';
 
 type PrivacySettings = {
@@ -227,46 +228,10 @@ export default function PrivacyPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
-                <Home className="w-6 h-6 text-white" strokeWidth={2.5} />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">houseiana</span>
-            </Link>
 
-            <div className="flex items-center gap-2">
-              <Link href="/host-dashboard/add-listing">
-                <button className="hidden md:block text-sm font-medium hover:bg-gray-100 px-4 py-3 rounded-full transition-colors">
-                  List your home
-                </button>
-              </Link>
-              <button className="p-3 hover:bg-gray-100 rounded-full transition-colors">
-                <Globe className="w-5 h-5" />
-              </button>
-
-              <div className="relative">
-                <button className="flex items-center gap-3 border border-gray-300 rounded-full p-1 pl-3 hover:shadow-md transition-shadow">
-                  <Menu className="w-4 h-4 text-gray-600" />
-                  {userDisplay.imageUrl ? (
-                    <img src={userDisplay.imageUrl} alt="" className="w-8 h-8 rounded-full" />
-                  ) : (
-                    <div className="bg-teal-500 rounded-full w-8 h-8 flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">{userDisplay.avatar}</span>
-                    </div>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-10">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm mb-6">
           <Link href="/client-dashboard?tab=account" className="text-gray-500 hover:text-gray-900 flex items-center gap-1">
@@ -438,26 +403,7 @@ export default function PrivacyPage() {
       <SavedToast isVisible={showSavedToast} message={toastMessage} />
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-gray-50 mt-auto">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>© 2024 Houseiana, Inc.</span>
-              <span>·</span>
-              <a href="#" className="hover:underline">Privacy</a>
-              <span>·</span>
-              <a href="#" className="hover:underline">Terms</a>
-            </div>
-            <div className="flex items-center gap-6">
-              <button className="flex items-center gap-2 text-sm font-medium hover:underline">
-                <Globe className="w-4 h-4" />
-                English (US)
-              </button>
-              <span className="text-sm font-medium">$ USD</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <AccountFooter />
     </div>
   );
 }

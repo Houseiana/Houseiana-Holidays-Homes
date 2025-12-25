@@ -20,6 +20,20 @@ export interface Property {
   bathrooms: number;
 }
 
+// Flat structure used for listing cards (Home, Search Results)
+export interface PropertySummary {
+  id: string;
+  title: string;
+  city: string;
+  country: string;
+  pricePerNight: number;
+  coverPhoto?: string;
+  photos?: string | any[];
+  averageRating?: number;
+  bookingCount?: number;
+  createdAt?: string;
+}
+
 export interface PropertyPhoto {
   id: string;
   url: string;

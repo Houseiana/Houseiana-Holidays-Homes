@@ -14,9 +14,10 @@ import {
   Check,
   Shield
 } from 'lucide-react';
+import Image from 'next/image';
 import { countries } from '@/lib/countries';
-import SadadPaymentForm from '@/components2/common/forms/SadadPaymentForm';
-import { useBookingConfirm, BookingData, GuestForm } from '@/hooks';
+import SadadPaymentForm from '@/components/common/forms/SadadPaymentForm';
+import { useBookingConfirm, BookingData, GuestForm } from '@/features/booking/hooks';
 
 // =============================================================================
 // PRESENTATIONAL COMPONENTS
@@ -32,7 +33,7 @@ function PropertySummary({ property, booking, displayImage }: PropertySummaryPro
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex items-start space-x-4">
-        <img src={displayImage} alt={property.title} className="w-24 h-24 rounded-lg object-cover" />
+        <Image src={displayImage} alt={property.title} width={96} height={96} className="rounded-lg object-cover" />
         <div>
           <h3 className="font-semibold text-gray-900 text-lg">{property.title}</h3>
           <p className="text-gray-600">{property.location}</p>
@@ -301,7 +302,7 @@ function BookingConfirmContent() {
 
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
             <div className="flex items-center space-x-4 mb-6 pb-6 border-b">
-              <img src={displayImage} alt={bookingData.property.title} className="w-20 h-20 rounded-lg object-cover" />
+              <Image src={displayImage} alt={bookingData.property.title} width={80} height={80} className="rounded-lg object-cover" />
               <div>
                 <h3 className="font-semibold text-gray-900">{bookingData.property.title}</h3>
                 <p className="text-gray-600 text-sm">
@@ -333,7 +334,7 @@ function BookingConfirmContent() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button onClick={() => router.back()} className="flex items-center text-gray-600 hover:text-gray-900">
               <ArrowLeft className="w-5 h-5 mr-2" />
@@ -350,7 +351,7 @@ function BookingConfirmContent() {
 
       {/* Error Message */}
       {error && (
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
             <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
             <p className="text-red-700">{error}</p>
@@ -358,7 +359,7 @@ function BookingConfirmContent() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Left: Form */}
           <div className="lg:col-span-3 space-y-6">

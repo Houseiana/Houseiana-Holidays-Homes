@@ -1,26 +1,15 @@
-import HomeClient from './HomeClient';
+import { HomeClient } from '@/features/home';
 
 // Revalidate every hour
 export const revalidate = 3600;
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'https://houseiana-user-backend-production.up.railway.app';
 
-interface Property {
-  id: string;
-  title: string;
-  city: string;
-  country: string;
-  pricePerNight: number;
-  coverPhoto?: string;
-  photos?: string | any[];
-  averageRating?: number;
-  bookingCount?: number;
-  createdAt?: string;
-}
+import { PropertySummary } from '@/types/property';
 
 export default async function HouseianaHome() {
-  let properties: Property[] = [];
-
+  let properties: PropertySummary[] = [];
+ 
   try {
     // Fetch published properties from property-search endpoint
     const response = await fetch(`${BACKEND_API_URL}/api/property-search?limit=12`, {

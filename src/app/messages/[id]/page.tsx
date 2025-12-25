@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { MessageHeader, MessageBubble, MessageInput, EmptyMessages } from '@/components/messages';
+import { MessageHeader, MessageBubble, MessageInput, EmptyMessages } from '@/features/chat/components/legacy';
 
 interface Message {
   id: string;

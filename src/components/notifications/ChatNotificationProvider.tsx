@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import ChatNotification, { ChatNotificationData } from '@/components/chat/ChatNotification';
+import ChatNotification, { ChatNotificationData } from '@/features/chat/components/ChatNotification';
 import { useMessageNotifications } from '@/lib/socket/client';
 
 interface ChatNotificationContextType {

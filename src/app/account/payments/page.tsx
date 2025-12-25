@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import {
-  AccountHeader,
+
   AccountFooter,
   AccountBreadcrumb,
   PaymentsTabs,
@@ -26,7 +26,7 @@ import {
   type PayoutRecord,
   type PaymentFormData,
   type PayoutFormData,
-} from '@/components/account';
+} from '@/features/auth/components';
 import { AccountAPI } from '@/lib/backend-api';
 import { Gift, Receipt, DollarSign, X } from 'lucide-react';
 
@@ -366,10 +366,10 @@ export default function PaymentsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <AccountHeader userAvatar={userAvatar} />
+
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-10">
         <AccountBreadcrumb />
 
         {/* Page Title */}

@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { Shield, ExternalLink } from 'lucide-react';
 import {
-  AccountHeader,
+
   AccountFooter,
   AccountBreadcrumb,
   SecuritySection,
   DeviceSessionItem,
   SocialAccountItem,
   ConfirmModal,
-} from '@/components/account';
+} from '@/features/auth/components';
 import { AccountAPI } from '@/lib/backend-api';
 
 interface Session {
@@ -145,10 +145,10 @@ export default function LoginSecurityPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <AccountHeader userAvatar={userAvatar} />
+
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-10">
         <AccountBreadcrumb />
 
         {/* Page Title */}

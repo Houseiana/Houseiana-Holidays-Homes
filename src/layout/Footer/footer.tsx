@@ -29,16 +29,7 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-4">Legal</h3>
-            <ul className="space-y-2">
-              <li><Link href="/terms" className="text-gray-600 hover:text-gray-900">Terms of Service</Link></li>
-              <li><Link href="/privacy" className="text-gray-600 hover:text-gray-900">Privacy Policy</Link></li>
-              <li><Link href="/cookies" className="text-gray-600 hover:text-gray-900">Cookie Policy</Link></li>
-              <li><Link href="/sitemap" className="text-gray-600 hover:text-gray-900">Sitemap</Link></li>
-            </ul>
-          </div>
+          
         </div>
 
         <div className="mt-8 pt-8 border-t border-gray-200">

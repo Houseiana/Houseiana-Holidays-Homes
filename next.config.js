@@ -62,7 +62,10 @@ const nextConfig = {
   experimental: {
     // Only external packages actually used by frontend
     // Note: pg, bcryptjs removed - database access is via Railway API only
-    serverComponentsExternalPackages: ['@vercel/blob', 'nodemailer', 'twilio', '@sendgrid/mail', '@aws-sdk/client-s3', '@aws-sdk/s3-request-presigner']
+    serverComponentsExternalPackages: ['@vercel/blob', 'nodemailer', 'twilio', '@sendgrid/mail', '@aws-sdk/client-s3', '@aws-sdk/s3-request-presigner'],
+    serverActions: {
+      allowedOrigins: ['localhost:3000', '127.0.0.1:3000', 'houseiana.net', 'www.houseiana.net'],
+    },
   },
   // Environment variables that should be available on the client
   env: {

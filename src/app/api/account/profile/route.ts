@@ -134,14 +134,12 @@ export async function PATCH(request: NextRequest) {
             emailAddress: data.email,
           });
 
-          // Prepare verification
-          await clerk.emailAddresses.prepareVerification(newEmail.id, {
-            strategy: 'email_code',
-          });
+          // Note: Verification must be triggered from the client side or via a different flow
+          // as the backend API does not support prepareVerification directly in this context.
 
           return NextResponse.json({
             success: true,
-            message: 'Verification email sent. Please check your inbox.',
+            message: 'Email added. Please verify it in your account settings.',
             requiresVerification: true,
             emailId: newEmail.id,
           });
@@ -162,14 +160,12 @@ export async function PATCH(request: NextRequest) {
             phoneNumber: data.phone,
           });
 
-          // Prepare verification
-          await clerk.phoneNumbers.prepareVerification(newPhone.id, {
-            strategy: 'phone_code',
-          });
+          // Note: Verification must be triggered from the client side or via a different flow
+          // as the backend API does not support prepareVerification directly in this context.
 
           return NextResponse.json({
             success: true,
-            message: 'Verification code sent to your phone.',
+            message: 'Phone number added. Please verify it in your account settings.',
             requiresVerification: true,
             phoneId: newPhone.id,
           });

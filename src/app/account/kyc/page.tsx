@@ -14,11 +14,11 @@ import {
   Check,
 } from 'lucide-react';
 import {
-  AccountHeader,
+
   AccountFooter,
   AccountBreadcrumb,
   SecuritySection,
-} from '@/components/account';
+} from '@/features/auth/components';
 
 type KycStatus = 'not_started' | 'pending' | 'verified' | 'rejected';
 
@@ -138,10 +138,10 @@ export default function KycVerificationPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <AccountHeader userAvatar={userAvatar} />
+
 
       {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-10">
         <AccountBreadcrumb />
 
         {/* Page Title */}

@@ -8,9 +8,8 @@ import {
   MessageCircle, Settings, Calendar,
   CreditCard, Shield, Bell, HelpCircle, FileText, Award
 } from 'lucide-react';
-import HouseianaHeader from '@/layout/Navbar/HouseianaHeader';
 import { useClientDashboard, DashboardTab, TripFilter } from '@/hooks';
-import { TripCard, WishlistCard, MessageItem, AccountCard } from '@/components/client-dashboard';
+import { TripCard, WishlistCard, MessageItem, AccountCard } from '@/features/client-dashboard';
 
 export default function ClientDashboard() {
   const router = useRouter();
@@ -62,7 +61,7 @@ export default function ClientDashboard() {
     switch (activeTab) {
       case 'trips':
         return (
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             {/* Trip Filters */}
             <div className="flex gap-3 mb-8 border-b border-gray-200">
               {tripFilterTabs.map((tab) => (
@@ -79,7 +78,6 @@ export default function ClientDashboard() {
                 </button>
               ))}
             </div>
-
             {/* Trip Cards */}
             {trips.length > 0 ? (
               <div className="space-y-6">
@@ -156,7 +154,7 @@ export default function ClientDashboard() {
 
       case 'messages':
         return (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             {messages.length > 0 ? (
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 {messages.map((message, idx) => (
@@ -187,7 +185,7 @@ export default function ClientDashboard() {
 
       case 'account':
         return (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {accountCards.map((card) => (
                 <AccountCard
@@ -230,9 +228,6 @@ export default function ClientDashboard() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <HouseianaHeader unreadMessages={unreadMessagesCount} notifications={0} />
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Page Title */}

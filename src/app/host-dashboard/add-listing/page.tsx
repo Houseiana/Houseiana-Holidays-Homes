@@ -557,7 +557,7 @@ export default function AddListingPage() {
   const phaseProgress = currentPhase ? ((currentPhase.steps.indexOf(currentStep) + 1) / currentPhase.steps.length) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="max-w-7xl mx-auto min-h-screen bg-white flex flex-col">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
@@ -582,7 +582,7 @@ export default function AddListingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 pt-16 lg:pt-20 pb-24">
+      <main className="flex-1 pt-16 lg:pt-10 pb-24">
         <div className="h-full flex flex-col lg:flex-row">
           {/* Left Side - Visual/Title (Desktop only) */}
           <div className="hidden lg:flex lg:w-1/2 bg-black text-white sticky top-20 h-[calc(100vh-5rem-6rem)] items-center justify-center p-12">
@@ -1335,7 +1335,7 @@ export default function AddListingPage() {
       {/* Footer Navigation */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         {/* Progress bar */}
-        <div className="h-1 bg-gray-100">
+        <div className="max-w-7xl mx-auto h-1 bg-gray-100">
           <div
             className="h-full bg-gray-900 transition-all duration-500"
             style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}

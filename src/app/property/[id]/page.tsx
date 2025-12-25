@@ -14,7 +14,7 @@ import {
   AmenitiesSection,
   LocationSection,
   BookingCard,
-} from '@/components/property';
+} from '@/features/property/components';
 
 export default function PropertyDetailPage() {
   const params = useParams();
@@ -71,7 +71,7 @@ export default function PropertyDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50">
+    <div className="max-w-7xl mx-auto min-h-screen">
       {showLightbox && (
         <Lightbox
           images={property.images}

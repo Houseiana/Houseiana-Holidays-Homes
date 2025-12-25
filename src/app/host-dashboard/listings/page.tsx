@@ -336,54 +336,6 @@ export default function HouseianaHostListings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="px-6">
-          <div className="flex items-center justify-between h-16">
-            <a href="/" className="flex items-center gap-2">
-              <Home className="w-8 h-8 text-teal-600" strokeWidth={2.5} />
-              <span className="text-xl font-bold text-teal-600">Houseiana</span>
-            </a>
-
-            <nav className="hidden md:flex items-center gap-1">
-              <a href="/host-dashboard" className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full">
-                Today
-              </a>
-              <a href="/host-dashboard/calendar" className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full">
-                Calendar
-              </a>
-              <a href="/host-dashboard/listings" className="px-4 py-2 text-sm font-medium text-gray-900 bg-gray-100 rounded-full">
-                Listings
-              </a>
-              <a href="/host-dashboard/messages" className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full relative">
-                Messages
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  2
-                </span>
-              </a>
-            </nav>
-
-            <div className="flex items-center gap-2">
-              <a href="/client-dashboard" className="hidden lg:flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-full">
-                Switch to traveling
-              </a>
-              <button className="p-2 hover:bg-gray-100 rounded-full">
-                <Globe className="w-5 h-5 text-gray-700" />
-              </button>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="flex items-center gap-2 p-1 pl-3 border border-gray-300 rounded-full hover:shadow-md"
-              >
-                <Menu className="w-4 h-4 text-gray-600" />
-                <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white font-medium text-sm">
-                  M
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Page Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">

@@ -12,7 +12,7 @@ import {
   Phone, MapPin, Bed, Bath, Eye, Edit, Plus, ArrowUpRight,
   CheckCircle, MessageCircle, CalendarDays, X
 } from 'lucide-react';
-import HouseianaHeader from '@/layout/Navbar/HouseianaHeader';
+
 
 function HostDashboardContent() {
   const router = useRouter();
@@ -213,9 +213,6 @@ function HostDashboardContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <HouseianaHeader unreadMessages={2} notifications={1} />
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Today Tab */}
