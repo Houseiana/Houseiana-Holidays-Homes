@@ -97,8 +97,6 @@ export default function RootLayout({
             <HouseianaHeader />
             {children}
             <ToastContainer />
-            {/* The Footer handles its own sticky logic or can be placed here globally */}
-            <HouseianaFooter />
           </body>
         </html>
       </QueryProvider>
