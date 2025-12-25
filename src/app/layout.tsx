@@ -4,7 +4,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 import QueryProvider from "@/providers/query-provider";
-import { Header as HouseianaHeader } from "@/layout";
+import { Header as HouseianaHeader, Footer as HouseianaFooter } from "@/layout";
+import { ToastContainer } from "@/components/ui/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -95,6 +96,9 @@ export default function RootLayout({
           <body className={`${inter.variable} font-sans antialiased`}>
             <HouseianaHeader />
             {children}
+            <ToastContainer />
+            {/* The Footer handles its own sticky logic or can be placed here globally */}
+            <HouseianaFooter />
           </body>
         </html>
       </QueryProvider>
