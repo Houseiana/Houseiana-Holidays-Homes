@@ -293,7 +293,13 @@ export function useBookingConfirm({
 
                     // Map the response fields to Sadad expected field names
                     if (formData.merchant_id) addField('merchant_id', formData.merchant_id);
-                    if (formData.ORDER_ID) addField('ORDER_ID', formData.ORDER_ID);
+
+                    // Sanitize ORDER_ID - only letters and numbers allowed
+                    if (formData.ORDER_ID) {
+                        const sanitizedOrderId = formData.ORDER_ID.replace(/[^a-zA-Z0-9]/g, '');
+                        addField('ORDER_ID', sanitizedOrderId);
+                    }
+
                     if (formData.WEBSITE) addField('WEBSITE', formData.WEBSITE);
                     if (formData.TXN_AMOUNT) addField('TXN_AMOUNT', formData.TXN_AMOUNT);
                     if (formData.email) addField('email', formData.email);
@@ -302,9 +308,18 @@ export function useBookingConfirm({
                     if (formData.txnDate) addField('txnDate', formData.txnDate);
                     if (formData.signature) addField('signature', formData.signature);
 
-                    // Add product details as JSON string
-                    if (formData.productdetail) {
-                        addField('productdetail', JSON.stringify(formData.productdetail));
+                    // Add product details as array fields (not JSON string)
+                    // Sadad expects: productdetail[0][order_id], productdetail[0][amount], productdetail[0][quantity]
+                    if (formData.productdetail && Array.isArray(formData.productdetail)) {
+                        formData.productdetail.forEach((product: any, index: number) => {
+                            if (product.order_id) {
+                                // Sanitize order_id in product details too
+                                const sanitizedProductOrderId = product.order_id.replace(/[^a-zA-Z0-9]/g, '');
+                                addField(`productdetail[${index}][order_id]`, sanitizedProductOrderId);
+                            }
+                            if (product.amount) addField(`productdetail[${index}][amount]`, product.amount);
+                            if (product.quantity) addField(`productdetail[${index}][quantity]`, product.quantity);
+                        });
                     }
 
                     // Append form to body and submit
