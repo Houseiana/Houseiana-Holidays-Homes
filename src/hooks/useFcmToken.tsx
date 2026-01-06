@@ -54,6 +54,21 @@ const useFcmToken = () => {
         console.log('Foreground message received:', payload);
         if (payload.notification) {
           const { title, body } = payload.notification;
+
+          // If the app is in the background (tab not focused), show a system notification
+          if (document.visibilityState === 'hidden') {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(title || 'New Notification', {
+                  body: body,
+                  icon: '/logo.svg',
+                  requireInteraction: true,
+                  data: payload.data ? { url: payload.data.url } : undefined,
+                });
+              });
+            }
+            return;
+          }
           
           toast((t) => (
             <div className="flex gap-4 min-w-[340px] max-w-[400px]">
