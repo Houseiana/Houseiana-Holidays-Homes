@@ -292,14 +292,10 @@ export function useBookingConfirm({
                     };
 
                     // Map the response fields to Sadad expected field names
+                    // IMPORTANT: Don't modify values here - backend must provide sanitized data
+                    // because signature is calculated on backend with these exact values
                     if (formData.merchant_id) addField('merchant_id', formData.merchant_id);
-
-                    // Sanitize ORDER_ID - only letters and numbers allowed
-                    if (formData.ORDER_ID) {
-                        const sanitizedOrderId = formData.ORDER_ID.replace(/[^a-zA-Z0-9]/g, '');
-                        addField('ORDER_ID', sanitizedOrderId);
-                    }
-
+                    if (formData.ORDER_ID) addField('ORDER_ID', formData.ORDER_ID);
                     if (formData.WEBSITE) addField('WEBSITE', formData.WEBSITE);
                     if (formData.TXN_AMOUNT) addField('TXN_AMOUNT', formData.TXN_AMOUNT);
                     if (formData.email) addField('email', formData.email);
@@ -312,11 +308,7 @@ export function useBookingConfirm({
                     // Sadad expects: productdetail[0][order_id], productdetail[0][amount], productdetail[0][quantity]
                     if (formData.productdetail && Array.isArray(formData.productdetail)) {
                         formData.productdetail.forEach((product: any, index: number) => {
-                            if (product.order_id) {
-                                // Sanitize order_id in product details too
-                                const sanitizedProductOrderId = product.order_id.replace(/[^a-zA-Z0-9]/g, '');
-                                addField(`productdetail[${index}][order_id]`, sanitizedProductOrderId);
-                            }
+                            if (product.order_id) addField(`productdetail[${index}][order_id]`, product.order_id);
                             if (product.amount) addField(`productdetail[${index}][amount]`, product.amount);
                             if (product.quantity) addField(`productdetail[${index}][quantity]`, product.quantity);
                         });
