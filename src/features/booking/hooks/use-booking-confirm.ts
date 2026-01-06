@@ -265,33 +265,65 @@ export function useBookingConfirm({
 
            if (sadadResponse.success && sadadResponse.data) {
                 const data = sadadResponse.data as any;
-                let redirectUrl = null;
 
-               // Try multiple possible URL fields from the response
-               if (typeof data === 'string' && data.startsWith('http')) {
-                    redirectUrl = data;
-               } else if (data.formAction) {
-                    redirectUrl = data.formAction;
-               } else if (data.transactionUrl) {
-                    redirectUrl = data.transactionUrl;
-               } else if (data.url) {
-                    redirectUrl = data.url;
-               } else if (data.redirectUrl) {
-                    redirectUrl = data.redirectUrl;
-               } else if (data.paymentUrl) {
-                    redirectUrl = data.paymentUrl;
-               }
+                // Check if we have formAction and formData for POST submission
+                if (data.formAction && data.formData) {
+                    console.log('🔗 Sadad Form Action:', data.formAction);
+                    console.log('📋 Sadad Form Data:', data.formData);
 
-               console.log('🔗 Sadad Redirect URL:', redirectUrl);
+                    toast.success('Redirecting to payment page...');
 
-               if (redirectUrl) {
-                   toast.success('Redirecting to payment page...');
-                   // Use same-tab redirect for better compatibility with payment gateways
-                   window.location.href = redirectUrl;
-               } else {
-                   console.error('❌ No valid redirect URL found in Sadad response:', data);
-                   throw new Error('Invalid Sadad response format - no redirect URL found');
-               }
+                    // Create and submit a hidden form (POST request required by Sadad)
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = data.formAction;
+                    form.style.display = 'none';
+
+                    // Add all form fields from the response
+                    const formData = data.formData;
+
+                    // Add standard fields
+                    const addField = (name: string, value: string) => {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = name;
+                        input.value = value;
+                        form.appendChild(input);
+                    };
+
+                    // Map the response fields to Sadad expected field names
+                    if (formData.merchant_id) addField('merchant_id', formData.merchant_id);
+                    if (formData.ORDER_ID) addField('ORDER_ID', formData.ORDER_ID);
+                    if (formData.WEBSITE) addField('WEBSITE', formData.WEBSITE);
+                    if (formData.TXN_AMOUNT) addField('TXN_AMOUNT', formData.TXN_AMOUNT);
+                    if (formData.email) addField('email', formData.email);
+                    if (formData.MOBILE_NO) addField('MOBILE_NO', formData.MOBILE_NO);
+                    if (formData.CALLBACK_URL) addField('CALLBACK_URL', formData.CALLBACK_URL);
+                    if (formData.txnDate) addField('txnDate', formData.txnDate);
+                    if (formData.signature) addField('signature', formData.signature);
+
+                    // Add product details as JSON string
+                    if (formData.productdetail) {
+                        addField('productdetail', JSON.stringify(formData.productdetail));
+                    }
+
+                    // Append form to body and submit
+                    document.body.appendChild(form);
+                    console.log('📤 Submitting Sadad form...');
+                    form.submit();
+                } else {
+                    // Fallback: try direct URL redirect
+                    let redirectUrl = data.formAction || data.transactionUrl || data.url || data.redirectUrl;
+
+                    if (redirectUrl) {
+                        console.log('🔗 Sadad Redirect URL (fallback):', redirectUrl);
+                        toast.success('Redirecting to payment page...');
+                        window.location.href = redirectUrl;
+                    } else {
+                        console.error('❌ No valid form data or redirect URL found:', data);
+                        throw new Error('Invalid Sadad response format');
+                    }
+                }
            } else {
                console.error('❌ Sadad payment failed:', sadadResponse.error);
                throw new Error(sadadResponse.error || 'Failed to initiate Sadad payment');
