@@ -9,7 +9,11 @@ const useFcmToken = () => {
   const [notificationPermissionStatus, setNotificationPermissionStatus] = useState<NotificationPermission>('default');
 
   useEffect(() => {
-    // ... (rest of the first useEffect remains unchanged)
+    // Skip if Firebase is not configured
+    if (!app) {
+      return;
+    }
+
     const retrieveToken = async () => {
       try {
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -48,6 +52,11 @@ const useFcmToken = () => {
   }, []);
 
   useEffect(() => {
+    // Skip if Firebase is not configured
+    if (!app) {
+      return;
+    }
+
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const messaging = getMessaging(app);
       const unsubscribe = onMessage(messaging, (payload) => {
