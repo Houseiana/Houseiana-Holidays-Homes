@@ -1,5 +1,5 @@
-export { default as ProfileHeader } from './ProfileHeader';
-export { default as ProfileVerification } from './ProfileVerification';
-export { default as ProfileStats } from './ProfileStats';
-export { default as ProfileReviews } from './ProfileReviews';
-export { default as ProfileProperties } from './ProfileProperties';
+export { default as ProfileHeader } from '@/features/auth/components/ProfileHeader';
+export { default as ProfileVerification } from '@/features/auth/components/ProfileVerification';
+export { default as ProfileStats } from '@/features/auth/components/ProfileStats';
+export { default as ProfileReviews } from '@/features/auth/components/ProfileReviews';
+export { default as ProfileProperties } from '@/features/auth/components/ProfileProperties';
