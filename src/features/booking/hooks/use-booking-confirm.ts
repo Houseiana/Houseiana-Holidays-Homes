@@ -246,6 +246,13 @@ export function useBookingConfirm({
         }
 
       } else if (paymentMethod === 'sadad') {
+          console.log('📤 Initiating Sadad payment:', {
+              amount,
+              orderId,
+              email: guestForm.email,
+              mobileNo: guestForm.phoneCode.replace('+', '') + guestForm.phone,
+          });
+
           const sadadResponse = await BackendAPI.Payment.createSadadPayment({
               amount: amount,
               orderId: orderId,
@@ -253,32 +260,40 @@ export function useBookingConfirm({
               mobileNo: guestForm.phoneCode.replace('+', '') + guestForm.phone,
               description: `Booking for ${bookingData.property.title}`
           });
-          
+
+          console.log('📥 Sadad API Response:', JSON.stringify(sadadResponse, null, 2));
+
            if (sadadResponse.success && sadadResponse.data) {
-                const data = sadadResponse.data as any; 
+                const data = sadadResponse.data as any;
                 let redirectUrl = null;
 
+               // Try multiple possible URL fields from the response
                if (typeof data === 'string' && data.startsWith('http')) {
                     redirectUrl = data;
                } else if (data.formAction) {
                     redirectUrl = data.formAction;
+               } else if (data.transactionUrl) {
+                    redirectUrl = data.transactionUrl;
+               } else if (data.url) {
+                    redirectUrl = data.url;
+               } else if (data.redirectUrl) {
+                    redirectUrl = data.redirectUrl;
+               } else if (data.paymentUrl) {
+                    redirectUrl = data.paymentUrl;
                }
 
+               console.log('🔗 Sadad Redirect URL:', redirectUrl);
+
                if (redirectUrl) {
-                   window.open(redirectUrl);
-                   toast.success('Opening payment page...');
+                   toast.success('Redirecting to payment page...');
+                   // Use same-tab redirect for better compatibility with payment gateways
+                   window.location.href = redirectUrl;
                } else {
-                    // Fallback or specific handling if needed.
-                   console.log('Sadad response:', sadadResponse);
-                   const fallbackUrl = sadadResponse.data.transactionUrl || sadadResponse.data.url;
-                   if (fallbackUrl && typeof fallbackUrl === 'string') {
-                        window.open(fallbackUrl, '_blank');
-                        toast.success('Opening payment page...');
-                   } else {
-                        throw new Error('Invalid Sadad response format');
-                   }
+                   console.error('❌ No valid redirect URL found in Sadad response:', data);
+                   throw new Error('Invalid Sadad response format - no redirect URL found');
                }
            } else {
+               console.error('❌ Sadad payment failed:', sadadResponse.error);
                throw new Error(sadadResponse.error || 'Failed to initiate Sadad payment');
            }
       }
