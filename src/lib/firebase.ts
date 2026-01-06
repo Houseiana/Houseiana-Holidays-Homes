@@ -14,8 +14,8 @@ const firebaseConfig = {
 // Check if Firebase is properly configured
 const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
 
-let app: FirebaseApp | null = null;
-let messaging: Messaging | null = null;
+let app: FirebaseApp | undefined = undefined;
+let messaging: Messaging | undefined = undefined;
 
 try {
   if (isFirebaseConfigured) {
