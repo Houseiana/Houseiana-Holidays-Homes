@@ -1,0 +1,12 @@
+export { Hero } from './components/hero';
+export { PropertyTypes } from './components/property-types';
+export { TrendingDestinations } from './components/trending-destinations';
+export { WhyChooseUs } from './components/why-choose-us';
+export { Testimonials } from './components/testimonials';
+export { TrustAndSafety } from './components/trust-and-safety';
+export { MobileAppCta } from './components/mobile-app-cta';
+export { NewsletterSignup } from './components/newsletter-signup';
+export { BecomeAHost } from './components/become-a-host';
+export { default as HomeClient } from './components/HomeClient';
+export { default as CategoryTabs } from './components/CategoryTabs';
+export { default as PropertyGrid } from './components/PropertyGrid';

@@ -1,0 +1,27 @@
+{
+  "name": "Houseiana - Find Your Perfect Stay",
+  "short_name": "Houseiana",
+  "description": "Discover and book unique properties around the world",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E74C3C",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["travel", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Search Properties",
+      "short_name": "Search",
+      "description": "Find your perfect stay",
+      "url": "/discover"
+    },
+    {
+      "name": "My Trips",
+      "short_name": "Trips",
+      "description": "View your bookings",
+      "url": "/trips"
+    }
+  ]
+}
