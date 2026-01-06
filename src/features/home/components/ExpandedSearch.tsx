@@ -1,13 +1,14 @@
-'use client';
-
 import Link from 'next/link';
 import { Search, X, Clock, Home } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { Dispatch, SetStateAction, RefObject } from 'react';
+import { Dispatch, SetStateAction, RefObject, useState, useRef, useEffect } from 'react';
+import { useLoadScript } from '@react-google-maps/api';
 
 // Lazy load heavy components
 const GuestCounter = dynamic(() => import('./GuestCounter'), { ssr: false });
 const CalendarView = dynamic(() => import('./CalendarView'), { ssr: false });
+
+const libraries: ("places")[] = ["places"];
 
 export interface GuestCounts {
   adults: number;
@@ -31,21 +32,11 @@ interface ExpandedSearchProps {
   setCalendarMonth: Dispatch<SetStateAction<Date>>;
   totalGuests: number;
   guestText: string;
-  handleDateClick: (day: number) => void;
+  handleDateClick: (date: Date) => void;
   handleSearch: () => void;
   formatDate: (date: Date | null) => string;
   searchRef: RefObject<HTMLDivElement>;
 }
-
-// Static Data
-const suggestedDestinations = [
-  { location: 'Ad Dawhah (Doha)', distance: 'Capital city', icon: '🏙️' },
-  { location: 'Lusail', distance: 'Modern city', icon: '✨' },
-  { location: 'The Pearl-Qatar', distance: 'Luxury island', icon: '💎' },
-  { location: 'West Bay', distance: 'Business district', icon: '🏢' },
-  { location: 'Al Wakrah', distance: 'Coastal city', icon: '🏖️' },
-  { location: 'Al Khor', distance: 'Northern coast', icon: '🐟' },
-];
 
 const recentSearches: Array<{ location: string; type: string }> = [];
 
@@ -63,12 +54,39 @@ export default function ExpandedSearch({
   formatDate,
   searchRef
 }: ExpandedSearchProps) {
+  
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries,
+  });
+
+  const placeInputRef = useRef<HTMLInputElement>(null);
+  const placeAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+  useEffect(() => {
+    if (isLoaded && placeInputRef.current && !placeAutocompleteRef.current) {
+      const autocomplete = new google.maps.places.Autocomplete(placeInputRef.current, {
+        types: ['geocode'],
+        fields: ['formatted_address', 'name'],
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.formatted_address || place.name) {
+          setLocation(place.formatted_address || place.name || '');
+          setSearchMode('checkin');
+        }
+      });
+
+      placeAutocompleteRef.current = autocomplete;
+    }
+  }, [isLoaded, setLocation, setSearchMode]);
 
   return (
     <div className="absolute left-0 right-0 top-0 bg-white border-b border-gray-200 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4">
         {/* Top row with logo and close */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-1">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
               <Home className="w-6 h-6 text-white" strokeWidth={2.5} />
@@ -92,20 +110,22 @@ export default function ExpandedSearch({
 
         {/* Search Bar Fields */}
         <div ref={searchRef} className="relative">
-          <div className="flex items-center bg-gray-100 rounded-full p-2">
+          <div className="flex items-center gap-2 bg-gray-100 rounded-3xl p-2">
             {/* Where */}
             <button
               onClick={() => setSearchMode('where')}
-              className={`flex-1 text-left px-6 py-3 rounded-full transition-colors ${searchMode === 'where' ? 'bg-white shadow-lg' : 'hover:bg-gray-200'}`}
+              className={`flex-1 text-left px-4 py-0 rounded-3xl transition-colors ${searchMode === 'where' ? 'bg-white shadow-lg' : 'hover:bg-gray-200'}`}
             >
-              <p className="text-xs font-semibold">Where</p>
+              <p className="text-xs font-semibold mt-2">Where</p>
               <input
+                ref={placeInputRef}
                 type="text"
-                placeholder="Search destinations"
+                placeholder={isLoaded ? "Search destinations" : "Loading..."}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full text-sm bg-transparent outline-none text-gray-900 placeholder-gray-500"
                 onFocus={() => setSearchMode('where')}
+                disabled={!isLoaded}
               />
             </button>
 
@@ -114,7 +134,7 @@ export default function ExpandedSearch({
             {/* Check in */}
             <button
               onClick={() => setSearchMode('checkin')}
-              className={`px-6 py-3 rounded-full transition-colors ${searchMode === 'checkin' ? 'bg-white shadow-lg' : 'hover:bg-gray-200'}`}
+              className={`px-6 py-3 rounded-2xl transition-colors ${searchMode === 'checkin' ? 'bg-white shadow-lg' : 'hover:bg-gray-200'}`}
             >
               <p className="text-xs font-semibold">Check in</p>
               <p className={`text-sm ${checkIn ? 'text-gray-900' : 'text-gray-500'}`}>
@@ -153,7 +173,7 @@ export default function ExpandedSearch({
             {/* Search Button */}
             <button
               onClick={handleSearch}
-              className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white px-4 py-3 rounded-full hover:from-teal-600 hover:to-teal-700 transition-all ml-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white px-4 py-3 rounded-2xl hover:from-teal-600 hover:to-teal-700 transition-all ml-2"
             >
               <Search className="w-4 h-4" />
               <span className="font-medium">Search</span>
@@ -183,26 +203,6 @@ export default function ExpandedSearch({
                   ))}
                 </div>
               )}
-              <div className="p-6">
-                <h3 className="text-xs font-semibold text-gray-500 mb-3">Suggested destinations</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {suggestedDestinations.map((item, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setLocation(item.location); setSearchMode('checkin'); }}
-                      className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors"
-                    >
-                      <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-2xl">
-                        {item.icon}
-                      </div>
-                      <div className="text-left">
-                        <p className="font-medium text-gray-900 text-sm">{item.location}</p>
-                        <p className="text-xs text-gray-500">{item.distance}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -247,29 +247,33 @@ export default function ExpandedSearch({
                 label="Adults"
                 description="Ages 13 or above"
                 count={guests.adults}
-                onIncrease={() => setGuests({...guests, adults: guests.adults + 1})}
+                onIncrease={() => setGuests({...guests, adults: Math.min(15, guests.adults + 1)})}
                 onDecrease={() => setGuests({...guests, adults: Math.max(0, guests.adults - 1)})}
+                maxValue={15}
               />
               <GuestCounter
                 label="Children"
                 description="Ages 2-12"
                 count={guests.children}
-                onIncrease={() => setGuests({...guests, children: guests.children + 1})}
+                onIncrease={() => setGuests({...guests, children: Math.min(5, guests.children + 1)})}
                 onDecrease={() => setGuests({...guests, children: Math.max(0, guests.children - 1)})}
+                maxValue={5}
               />
               <GuestCounter
                 label="Infants"
                 description="Under 2"
                 count={guests.infants}
-                onIncrease={() => setGuests({...guests, infants: guests.infants + 1})}
+                onIncrease={() => setGuests({...guests, infants: Math.min(5, guests.infants + 1)})}
                 onDecrease={() => setGuests({...guests, infants: Math.max(0, guests.infants - 1)})}
+                maxValue={5}
               />
               <GuestCounter
                 label="Pets"
                 description="Bringing a service animal?"
                 count={guests.pets}
-                onIncrease={() => setGuests({...guests, pets: guests.pets + 1})}
+                onIncrease={() => setGuests({...guests, pets: Math.min(2, guests.pets + 1)})}
                 onDecrease={() => setGuests({...guests, pets: Math.max(0, guests.pets - 1)})}
+                maxValue={2}
               />
             </div>
           )}

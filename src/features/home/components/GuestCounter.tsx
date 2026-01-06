@@ -1,6 +1,7 @@
 import React from 'react';
 import { Minus, Plus } from 'lucide-react';
 
+
 interface GuestCounterProps {
   label: string;
   description: string;
@@ -8,6 +9,7 @@ interface GuestCounterProps {
   onIncrease: () => void;
   onDecrease: () => void;
   minValue?: number;
+  maxValue?: number;
 }
 
 export const GuestCounter = ({
@@ -16,7 +18,8 @@ export const GuestCounter = ({
   count,
   onIncrease,
   onDecrease,
-  minValue = 0
+  minValue = 0,
+  maxValue
 }: GuestCounterProps) => (
   <div className="flex items-center justify-between py-4 border-b border-gray-200 last:border-0">
     <div>
@@ -36,7 +39,10 @@ export const GuestCounter = ({
       <span className="w-6 text-center font-medium">{count}</span>
       <button
         onClick={onIncrease}
-        className="w-8 h-8 rounded-full border border-gray-400 text-gray-600 hover:border-gray-900 flex items-center justify-center transition-colors"
+        disabled={maxValue !== undefined && count >= maxValue}
+        className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${
+          (maxValue !== undefined && count >= maxValue) ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-400 text-gray-600 hover:border-gray-900'
+        }`}
       >
         <Plus className="w-4 h-4" />
       </button>

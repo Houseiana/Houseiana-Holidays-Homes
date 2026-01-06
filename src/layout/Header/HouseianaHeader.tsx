@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import {
   Home, Search, Heart, MessageSquare, User, Globe, Menu, X,
@@ -12,6 +12,10 @@ import {
   ArrowLeftRight, UserCircle, CreditCard, Shield, Gift
 } from 'lucide-react';
 import Image from 'next/image';
+
+import { getMessaging, onMessage } from 'firebase/messaging';
+import { app } from '@/lib/firebase';
+import toast from 'react-hot-toast';
 
 interface HouseianaHeaderProps {
   unreadMessages?: number;
@@ -24,9 +28,25 @@ export default function HouseianaHeader({
 }: HouseianaHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab');
   const { user, isSignedIn, isLoaded } = useUser();
 
-
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  //     const messaging = getMessaging(app);
+  //     const unsubscribe = onMessage(messaging, (payload) => {
+  //       console.log('Foreground message received:', payload);
+  //       toast(payload.notification?.title || 'New Notification', {
+  //           icon: '🔔', 
+  //           duration: 10000
+  //       });
+  //     });
+  //     return () => {
+  //       unsubscribe(); 
+  //     };
+  //   }
+  // }, []);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
@@ -136,9 +156,15 @@ export default function HouseianaHeader({
 
   // Don't show this header on the home page as it has its own specialized header
   // Also hide on auth pages for a cleaner experience
-  if (pathname === '/' || pathname?.startsWith('/sign-in') || pathname?.startsWith('/sign-up')) {
+  if (pathname === '/' || pathname?.startsWith('/sign-in') || pathname?.startsWith('/sign-up') || pathname?.startsWith('/properties')) {
     return null;
   }
+
+  // Helper to check active state
+  const isTripsActive = (pathname === '/client-dashboard' && (!currentTab || currentTab === 'trips')) || pathname?.startsWith('/client-dashboard/');
+  const isWishlistsActive = pathname?.startsWith('/wishlists') || (pathname === '/client-dashboard' && currentTab === 'wishlists');
+  const isMessagesActive = pathname?.startsWith('/messages') || (pathname === '/client-dashboard' && currentTab === 'messages');
+  const isAccountActive = pathname?.startsWith('/account') || (pathname === '/client-dashboard' && currentTab === 'account');
 
   return (
     <>
@@ -148,109 +174,159 @@ export default function HouseianaHeader({
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <a href="/" className="flex items-center gap-2 flex-shrink-0">
-              <Home className="w-8 h-8 text-teal-600" strokeWidth={2.5} />
+              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <Home className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
               <span className="text-xl font-bold text-teal-600 hidden sm:block">Houseiana</span>
             </a>
 
             {/* Center Navigation - Guest Mode */}
             {currentMode === 'guest' && (
-              <nav className="hidden md:flex items-center gap-1">
-                <a
-                  href="/client-dashboard/trips"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full ${
-                    pathname?.includes('/trips')
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+              <nav className="hidden md:flex items-center gap-6">
+                <Link
+                  href="/client-dashboard"
+                  className={`text-sm font-medium transition-colors min-h-0 ${
+                    isTripsActive
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Trips
-                </a>
-                <a
+                  <span className={`pb-2 border-b-2 ${
+                    isTripsActive
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Trips
+                  </span>
+                </Link>
+                <Link
                   href="/wishlists"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full ${
-                    pathname?.includes('/wishlists')
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+                  className={`text-sm font-medium transition-colors min-h-0 ${
+                    isWishlistsActive
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Wishlists
-                </a>
-                <a
+                  <span className={`pb-2 border-b-2 ${
+                    isWishlistsActive
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Wishlists
+                  </span>
+                </Link>
+                <Link
                   href="/messages"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full relative ${
-                    pathname?.includes('/messages')
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+                  className={`text-sm font-medium transition-colors relative min-h-0 ${
+                    isMessagesActive
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Messages
+                  <span className={`pb-2 border-b-2 ${
+                    isMessagesActive
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Messages
+                  </span>
                   {unreadMessages > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-3 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                       {unreadMessages}
                     </span>
                   )}
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/account"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full ${
-                    pathname?.includes('/account')
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+                  className={`text-sm font-medium transition-colors min-h-0 ${
+                    isAccountActive
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Account
-                </a>
+                  <span className={`pb-2 border-b-2 ${
+                    isAccountActive
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Account
+                  </span>
+                </Link>
               </nav>
             )}
 
             {/* Center Navigation - Host Mode */}
             {currentMode === 'host' && (
-              <nav className="hidden md:flex items-center gap-1">
-                <a
+              <nav className="hidden md:flex items-center gap-6">
+                <Link
                   href="/host-dashboard"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full ${
+                  className={`text-sm font-medium transition-colors min-h-0 ${
                     pathname === '/host-dashboard'
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Today
-                </a>
-                <a
+                  <span className={`pb-2 border-b-2 ${
+                    pathname === '/host-dashboard'
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Today
+                  </span>
+                </Link>
+                <Link
                   href="/host-dashboard/calendar"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full ${
-                    pathname?.includes('/calendar')
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+                  className={`text-sm font-medium transition-colors min-h-0 ${
+                    pathname?.startsWith('/host-dashboard/calendar')
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Calendar
-                </a>
-                <a
+                  <span className={`pb-2 border-b-2 ${
+                    pathname?.startsWith('/host-dashboard/calendar')
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Calendar
+                  </span>
+                </Link>
+                <Link
                   href="/host-dashboard/listings"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full ${
-                    pathname?.includes('/listings')
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+                  className={`text-sm font-medium transition-colors min-h-0 ${
+                    pathname?.startsWith('/host-dashboard/listings')
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Listings
-                </a>
-                <a
+                  <span className={`pb-2 border-b-2 ${
+                    pathname?.startsWith('/host-dashboard/listings')
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Listings
+                  </span>
+                </Link>
+                <Link
                   href="/messages"
-                  className={`px-4 py-2 text-sm font-medium hover:bg-gray-100 rounded-full relative ${
-                    pathname?.includes('/messages')
-                      ? 'text-gray-900 border-b-2 border-gray-900'
-                      : 'text-gray-600'
+                  className={`text-sm font-medium transition-colors relative min-h-0 ${
+                    pathname?.startsWith('/messages')
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
                   }`}
                 >
-                  Messages
+                  <span className={`pb-2 border-b-2 ${
+                    pathname?.startsWith('/messages')
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Messages
+                  </span>
                   {unreadMessages > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-3 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                       {unreadMessages}
                     </span>
                   )}
-                </a>
+                </Link>
                 <div className="relative group">
                   <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full flex items-center gap-1">
                     Menu
@@ -301,6 +377,14 @@ export default function HouseianaHeader({
                   Switch to traveling
                 </a>
               )}
+
+              {/* Notification Bell */}
+              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors relative">
+                <Bell className="w-5 h-5 text-gray-700" />
+                {notifications > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
 
               {/* Currency Selector */}
               <div className="relative" ref={currencyMenuRef}>
@@ -469,19 +553,39 @@ export default function HouseianaHeader({
         <div className="flex items-center justify-around py-2">
           {currentMode === 'guest' ? (
             <>
-              <a href="/discover" className="flex flex-col items-center gap-1 p-2 text-gray-500">
+              <Link 
+                href="/discover" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors ${
+                  pathname === '/discover' || pathname?.startsWith('/properties') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <Search className="w-6 h-6" />
                 <span className="text-xs">Explore</span>
-              </a>
-              <a href="/wishlists" className="flex flex-col items-center gap-1 p-2 text-gray-500">
+              </Link>
+              <Link 
+                href="/wishlists" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors ${
+                  pathname?.startsWith('/wishlists') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <Heart className="w-6 h-6" />
                 <span className="text-xs">Wishlists</span>
-              </a>
-              <a href="/client-dashboard/trips" className="flex flex-col items-center gap-1 p-2 text-teal-600">
+              </Link>
+              <Link 
+                href="/client-dashboard" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors ${
+                  pathname === '/client-dashboard' || pathname?.startsWith('/client-dashboard/') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <CalendarDays className="w-6 h-6" />
                 <span className="text-xs font-medium">Trips</span>
-              </a>
-              <a href="/messages" className="flex flex-col items-center gap-1 p-2 text-gray-500 relative">
+              </Link>
+              <Link 
+                href="/messages" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors relative ${
+                  pathname?.startsWith('/messages') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <MessageSquare className="w-6 h-6" />
                 <span className="text-xs">Messages</span>
                 {unreadMessages > 0 && (
@@ -489,27 +593,50 @@ export default function HouseianaHeader({
                     {unreadMessages}
                   </span>
                 )}
-              </a>
-              <button onClick={() => setIsMenuOpen(true)} className="flex flex-col items-center gap-1 p-2 text-gray-500">
+              </Link>
+              <button 
+                onClick={() => setIsMenuOpen(true)} 
+                className="flex flex-col items-center gap-1 p-2 text-gray-500 hover:text-gray-900"
+              >
                 <Menu className="w-6 h-6" />
                 <span className="text-xs">Menu</span>
               </button>
             </>
           ) : (
             <>
-              <a href="/host-dashboard" className="flex flex-col items-center gap-1 p-2 text-teal-600">
+              <Link 
+                href="/host-dashboard" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors ${
+                  pathname === '/host-dashboard' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <Home className="w-6 h-6" />
                 <span className="text-xs font-medium">Today</span>
-              </a>
-              <a href="/host-dashboard/calendar" className="flex flex-col items-center gap-1 p-2 text-gray-500">
+              </Link>
+              <Link 
+                href="/host-dashboard/calendar" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors ${
+                  pathname?.startsWith('/host-dashboard/calendar') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <CalendarDays className="w-6 h-6" />
                 <span className="text-xs">Calendar</span>
-              </a>
-              <a href="/host-dashboard/listings" className="flex flex-col items-center gap-1 p-2 text-gray-500">
+              </Link>
+              <Link 
+                href="/host-dashboard/listings" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors ${
+                  pathname?.startsWith('/host-dashboard/listings') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <Building2 className="w-6 h-6" />
                 <span className="text-xs">Listings</span>
-              </a>
-              <a href="/messages" className="flex flex-col items-center gap-1 p-2 text-gray-500 relative">
+              </Link>
+              <Link 
+                href="/messages" 
+                className={`flex flex-col items-center gap-1 p-2 transition-colors relative ${
+                  pathname?.startsWith('/messages') ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
                 <MessageSquare className="w-6 h-6" />
                 <span className="text-xs">Messages</span>
                 {unreadMessages > 0 && (
@@ -517,8 +644,11 @@ export default function HouseianaHeader({
                     {unreadMessages}
                   </span>
                 )}
-              </a>
-              <button onClick={() => setIsMenuOpen(true)} className="flex flex-col items-center gap-1 p-2 text-gray-500">
+              </Link>
+              <button 
+                onClick={() => setIsMenuOpen(true)} 
+                className="flex flex-col items-center gap-1 p-2 text-gray-500 hover:text-gray-900"
+              >
                 <Menu className="w-6 h-6" />
                 <span className="text-xs">Menu</span>
               </button>

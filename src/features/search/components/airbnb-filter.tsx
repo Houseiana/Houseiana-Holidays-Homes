@@ -315,7 +315,7 @@ export default function AirbnbFilter({
                   <FilterSection title="Amenities">
                     <p className="text-sm text-gray-500 mb-4">What does your place offer?</p>
                     <div className="grid grid-cols-4 gap-3">
-                      {amenities.map((amenity) => (
+                      {amenities?.map((amenity) => (
                         <AmenityButton
                           key={amenity.id}
                           label={amenity.label}

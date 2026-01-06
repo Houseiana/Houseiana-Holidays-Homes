@@ -12,7 +12,7 @@ export function MobileNav() {
   const navItems = [
     { href: '/', icon: Home, label: 'Home', show: true },
     { href: '/discover', icon: Search, label: 'Explore', show: true },
-    { href: '/saved-properties', icon: Heart, label: 'Saved', show: true },
+    { href: '/client-dashboard?tab=wishlists', icon: Heart, label: 'Saved', show: true },
     { href: '/my-trips', icon: User, label: 'Trips', show: true },
   ];
 

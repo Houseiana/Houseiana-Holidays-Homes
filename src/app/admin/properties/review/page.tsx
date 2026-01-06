@@ -38,7 +38,6 @@ interface Property {
   coverPhoto?: string;
   photos: any;
   propertyType: string;
-  roomType: string;
   city: string;
   country: string;
   state?: string;

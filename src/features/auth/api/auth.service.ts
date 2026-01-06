@@ -34,15 +34,28 @@ export const AccountService = {
     });
   },
 
-  getProfile: async () => {
-    const response = await backendFetch<any>('/api/account/profile');
-    return { ...response, data: response.data?.data };
+  getProfile: async (id: string) => {
+    const response = await backendFetch<any>(`/users/${id}`);
+    return { ...response, data: response.data };
   },
 
-  updateProfile: async (field: string, data: Record<string, any>) => {
-    return backendFetch<any>('/api/account/profile', {
-      method: 'PATCH',
-      body: JSON.stringify({ field, data }),
+  updateProfile: async (id: string, data: any) => {
+    return backendFetch<any>(`/users/${id}/profile`, {
+      method: 'PUT',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    });
+  },
+
+  // Identity Documents
+  getPassport: async (id: string) => {
+    const response = await backendFetch<any>(`/users/${id}/passport`);
+    return { ...response, data: response.data };
+  },
+
+  updatePassport: async (id: string, data: any) => {
+    return backendFetch<any>(`/users/${id}/passport`, {
+      method: 'POST',
+      body: data instanceof FormData ? data : JSON.stringify(data),
     });
   },
 

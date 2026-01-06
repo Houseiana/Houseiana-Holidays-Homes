@@ -13,7 +13,7 @@ import {
   Clock,
   X
 } from 'lucide-react';
-import AirbnbFilter, { FilterState } from './airbnb-filter';
+import PropertyFilter, { FilterState } from '@/components/common/filters/property-filter/PropertyFilter';
 
 export type { FilterState };
 
@@ -714,8 +714,8 @@ export function EnhancedSearch({ onSearch, initialFilters = {} }: EnhancedSearch
         </div>
       </div>
 
-      {/* Airbnb-style Filter Component */}
-      <AirbnbFilter
+      {/* Property Filter Component */}
+      <PropertyFilter
         isOpen={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         filters={filterState}

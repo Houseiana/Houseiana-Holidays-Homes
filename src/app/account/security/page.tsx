@@ -310,12 +310,6 @@ export default function LoginSecurityPage() {
               <p className="text-sm text-gray-600 leading-relaxed mb-3">
                 We&apos;re always working on ways to increase safety in our community. That&apos;s why we look at every account to make sure it&apos;s as secure as possible.
               </p>
-              <button
-                onClick={handleOpenUserProfile}
-                className="text-sm font-semibold text-gray-900 underline hover:text-gray-600"
-              >
-                Learn more about security
-              </button>
             </div>
           </div>
         </div>

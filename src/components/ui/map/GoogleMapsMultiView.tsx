@@ -43,6 +43,7 @@ const GoogleMapsMultiView: React.FC<GoogleMapsMultiViewProps> = ({
   zoom = 12,
   onPropertyClick
 }) => {
+  console.log(properties);
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
   });

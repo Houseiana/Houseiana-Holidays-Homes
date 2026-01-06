@@ -9,7 +9,9 @@ import {
   CreditCard, Shield, Bell, HelpCircle, FileText, Award
 } from 'lucide-react';
 import { useClientDashboard, DashboardTab, TripFilter } from '@/hooks';
-import { TripCard, WishlistCard, MessageItem, AccountCard } from '@/features/client-dashboard';
+import { TripCard, MessageItem, AccountCard } from '@/features/client-dashboard';
+import PropertyCard from '@/features/home/components/PropertyCard';
+import { PropertyGridSkeleton } from '@/components/ui/loaders/skeleton';
 
 export default function ClientDashboard() {
   const router = useRouter();
@@ -28,6 +30,8 @@ export default function ClientDashboard() {
     formatDate,
     calculateNights,
     handlePayBalance,
+    fetchWishlists,
+    loadingWishlists,
   } = useClientDashboard(isSignedIn || false);
 
   // Page titles
@@ -101,7 +105,7 @@ export default function ClientDashboard() {
                   {tripFilter === 'past' && "You haven't completed any trips yet"}
                   {tripFilter === 'cancelled' && "No cancelled trips"}
                 </p>
-                <Link href="/discover">
+                <Link href="/properties">
                   <button className="px-6 py-3 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors">
                     Start searching
                   </button>
@@ -113,19 +117,22 @@ export default function ClientDashboard() {
 
       case 'wishlists':
         return (
-          <div className="max-w-6xl mx-auto">
-            {wishlists.length > 0 ? (
+          <div className="max-w-7xl mx-auto">
+            {loadingWishlists ? (
+              <PropertyGridSkeleton count={3} />
+            ) : wishlists.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {wishlists.map((wishlist) => (
-                  <WishlistCard
-                    key={wishlist.id}
-                    wishlist={wishlist}
-                    onClick={() => router.push(`/wishlists/${wishlist.id}`)}
+                {wishlists?.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    onToggle={fetchWishlists}
                   />
                 ))}
 
                 {/* Create New Wishlist Card */}
-                <div
+                <Link
+                  href="/"
                   className="bg-white border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center h-96 hover:border-gray-400 transition-colors cursor-pointer"
                 >
                   <div className="text-center">
@@ -133,7 +140,7 @@ export default function ClientDashboard() {
                     <p className="text-lg font-medium text-gray-900 mb-1">Create wishlist</p>
                     <p className="text-sm text-gray-600">Save your favorite homes</p>
                   </div>
-                </div>
+                </Link>
               </div>
             ) : (
               <div className="text-center py-16">
@@ -142,7 +149,7 @@ export default function ClientDashboard() {
                 <p className="text-gray-600 mb-6">
                   As you search, click the heart icon to save your favorite places to stay or things to do
                 </p>
-                <Link href="/discover">
+                <Link href="/properties">
                   <button className="px-6 py-3 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors">
                     Start exploring
                   </button>
@@ -173,7 +180,7 @@ export default function ClientDashboard() {
                 <p className="text-gray-600 mb-6">
                   When you contact a Host or send a reservation request, you&apos;ll see your messages here
                 </p>
-                <Link href="/discover">
+                <Link href="/properties">
                   <button className="px-6 py-3 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors">
                     Explore properties
                   </button>

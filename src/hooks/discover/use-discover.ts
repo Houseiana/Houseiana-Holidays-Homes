@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import BackendAPI from '@/lib/api/backend-api';
+import Swal from 'sweetalert2';
 
 // Types
 export interface DiscoverListing {
@@ -103,7 +107,7 @@ const DEFAULT_FILTERS: DiscoverFilters = {
 
 const DEFAULT_AIRBNB_FILTERS: AirbnbFilterState = {
   propertyType: '',
-  priceMin: 0,
+  priceMin: 20,
   priceMax: 1000,
   bedrooms: 0,
   beds: 0,
@@ -133,39 +137,89 @@ export function useDiscover(): UseDiscoverReturn {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Fetch properties from API
+  // Sync filters from URL Search Params
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Only update if the URL params differ from current filters to avoid loops
+    // Ideally we assume URL is source of truth if it changes
+    // But we also have local state.
+    // Let's parse URL and set filters.
+    
+    // NOTE: This implementation assumes URL is the driver.
+    // If updateFilter updates state directly, we might double-update if we also push to URL.
+    // But HomeHeader pushes to URL.
+    
+    // We'll read from searchParams every time they change.
+    const initialFilters = { ...DEFAULT_FILTERS };
+    
+    if (searchParams.get('location')) initialFilters.destination = searchParams.get('location')!;
+    if (searchParams.get('guests')) initialFilters.adults = parseInt(searchParams.get('guests')!) || 1;
+    if (searchParams.get('adults')) initialFilters.adults = parseInt(searchParams.get('adults')!);
+    if (searchParams.get('children')) initialFilters.children = parseInt(searchParams.get('children')!);
+    if (searchParams.get('infants')) initialFilters.infants = parseInt(searchParams.get('infants')!);
+    if (searchParams.get('propertyType')) initialFilters.propertyType = searchParams.get('propertyType')!;
+    if (searchParams.get('priceMin')) initialFilters.priceMin = parseInt(searchParams.get('priceMin')!);
+    if (searchParams.get('priceMax')) initialFilters.priceMax = parseInt(searchParams.get('priceMax')!);
+    
+    if (searchParams.get('bedrooms')) initialFilters.bedrooms = parseInt(searchParams.get('bedrooms')!);
+    if (searchParams.get('beds')) initialFilters.beds = parseInt(searchParams.get('beds')!);
+    if (searchParams.get('bathrooms')) initialFilters.bathrooms = parseInt(searchParams.get('bathrooms')!);
+    
+    // We only set filters if they are significantly different to avoid resetting transient state
+    // For now, simpler is: Set filters from URL always.
+    setFilters(initialFilters);
+    
+    setAirbnbFilters(prev => ({
+      ...prev,
+      propertyType: initialFilters.propertyType,
+      priceMin: initialFilters.priceMin || prev.priceMin,
+      priceMax: initialFilters.priceMax || prev.priceMax,
+      bedrooms: initialFilters.bedrooms,
+      beds: initialFilters.beds,
+      bathrooms: initialFilters.bathrooms,
+    }));
+
+  }, [searchParams]);
+
+  // Fetch properties from API
   useEffect(() => {
     const fetchProperties = async () => {
       try {
         setLoading(true);
 
-        // Get search params from URL
-        const params = new URLSearchParams(window.location.search);
-        const location = params.get('location') || '';
-        const checkin = params.get('checkin') || '';
-        const checkout = params.get('checkout') || '';
-        const guests = params.get('guests') || '';
+        const checkin = searchParams.get('checkin') || undefined;
+        const checkout = searchParams.get('checkout') || undefined;
+        
+        // We still read checkin/checkout from URL as they are not in our main filters object yet?
+        // Wait, filters object doesn't have dates. We should add them or keep reading from URL?
+        // If we clear filters, we probably want to clear dates too. 
+        // But the current implementation of filters interface doesn't have dates.
+        // Let's assume dates stick to URL for now, but other filters shouldn't fallback.
+        // Actually, if clearAllFilters is called, we should likely clear the URL to remove dates too.
+        
+        const response = await BackendAPI.Property.publicSearchFilter({
+          location: filters.destination || undefined,
+          checkIn: checkin, 
+          checkOut: checkout,
+          guests: (filters.adults + filters.children) || undefined,
+          adults: filters.adults || undefined,
+          children: filters.children || undefined,
+          infants: filters.infants || undefined,
+          minPrice: filters.priceMin > 0 ? filters.priceMin : undefined,
+          maxPrice: filters.priceMax < 1000 ? filters.priceMax : undefined,
+          propertyType: filters.propertyType || undefined,
+          bedrooms: filters.bedrooms || undefined,
+          beds: filters.beds || undefined,
+          bathrooms: filters.bathrooms || undefined,
+          minRating: filters.minRating || undefined,
+          amenities: filters.amenities,
+          page: currentPage,
+          limit: itemsPerPage,
+        });
 
-        // Build API URL with query parameters
-        const queryParams = new URLSearchParams();
-        if (location) queryParams.append('location', location);
-        if (checkin) queryParams.append('checkin', checkin);
-        if (checkout) queryParams.append('checkout', checkout);
-        if (guests) queryParams.append('guests', guests);
-
-        const apiUrl = '/api/properties/search?' + queryParams.toString();
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-
-        if (data.success && data.properties) {
-          setAllListings(data.properties);
-
-          // Update filters with URL params
-          if (location) {
-            setFilters(prev => ({ ...prev, destination: location }));
-          }
-          if (guests) {
-            setFilters(prev => ({ ...prev, adults: parseInt(guests) || 2 }));
-          }
+        if (response.success && response.data?.properties) {
+          setAllListings(response.data.properties);
         } else {
           setAllListings([]);
         }
@@ -178,7 +232,7 @@ export function useDiscover(): UseDiscoverReturn {
     };
 
     fetchProperties();
-  }, []);
+  }, [filters, currentPage]);
 
   // Filter and sort listings
   const filteredListings = useMemo(() => {
@@ -187,9 +241,10 @@ export function useDiscover(): UseDiscoverReturn {
 
     // Apply destination filter
     if (filters.destination) {
+      const searchTerm = filters.destination.toLowerCase();
       filtered = filtered.filter(listing =>
-        listing.location.toLowerCase().includes(filters.destination.toLowerCase()) ||
-        listing.title.toLowerCase().includes(filters.destination.toLowerCase())
+        (listing.location || '').toLowerCase().includes(searchTerm) ||
+        (listing.title || '').toLowerCase().includes(searchTerm)
       );
     }
 
@@ -261,7 +316,11 @@ export function useDiscover(): UseDiscoverReturn {
   // Clear all filters
   const clearAllFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS);
+    setAirbnbFilters(DEFAULT_AIRBNB_FILTERS);
     setCurrentPage(1);
+    
+    // Clear URL params without refresh
+    window.history.pushState({}, '', window.location.pathname);
   }, []);
 
   // Sync airbnb filters with main filters
@@ -280,7 +339,19 @@ export function useDiscover(): UseDiscoverReturn {
   }, []);
 
   // Toggle favorite
-  const toggleFavorite = useCallback((propertyId: string) => {
+  const { userId } = useAuth();
+
+  const toggleFavorite = useCallback(async (propertyId: string) => {
+    if (!userId) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'You must be logged in to toggle a favorite.',
+      });
+      return;
+    };
+
+    // Optimistic update
     setFavorites(prev => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(propertyId)) {
@@ -290,7 +361,23 @@ export function useDiscover(): UseDiscoverReturn {
       }
       return newFavorites;
     });
-  }, []);
+
+    try {
+      await BackendAPI.User.toggleFavorite(userId, propertyId);
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      // Revert on error
+      setFavorites(prev => {
+        const newFavorites = new Set(prev);
+        if (newFavorites.has(propertyId)) {
+          newFavorites.delete(propertyId);
+        } else {
+          newFavorites.add(propertyId);
+        }
+        return newFavorites;
+      });
+    }
+  }, [userId]);
 
   return {
     // Data

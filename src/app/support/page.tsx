@@ -8,6 +8,7 @@ import {
   Phone, Mail, CreditCard, Calendar, Key, Shield, Star, Heart, DollarSign,
   BookOpen, Headphones, FileText, Users, XCircle, Home as HomeIcon, User
 } from 'lucide-react';
+import { AccountFooter } from '@/features/auth/components';
 
 interface Topic {
   icon: any;
@@ -182,46 +183,6 @@ export default function SupportPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/20">
-                <Home className="w-6 h-6 text-white" strokeWidth={2.5} />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-teal-500 bg-clip-text text-transparent">houseiana</span>
-            </Link>
-
-            <div className="flex items-center gap-2">
-              <Link href="/host-dashboard/add-listing">
-                <button className="hidden md:block text-sm font-medium hover:bg-gray-100 px-4 py-3 rounded-full transition-colors">
-                  List your home
-                </button>
-              </Link>
-              <button className="p-3 hover:bg-gray-100 rounded-full transition-colors">
-                <Globe className="w-5 h-5" />
-              </button>
-
-              <div className="relative">
-                <button className="flex items-center gap-3 border border-gray-300 rounded-full p-1 pl-3 hover:shadow-md transition-shadow">
-                  <Menu className="w-4 h-4 text-gray-600" />
-                  {isSignedIn ? (
-                    <div className="bg-teal-500 rounded-full w-8 h-8 flex items-center justify-center">
-                      <span className="text-white text-sm font-semibold">{userAvatar}</span>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-500 rounded-full w-8 h-8 flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section with Search */}
       <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white">
         <div className="max-w-4xl mx-auto px-6 py-16 text-center">
@@ -241,8 +202,8 @@ export default function SupportPage() {
           </div>
 
           {/* Popular searches */}
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            <span className="text-teal-200 text-sm">Popular:</span>
+          <div className="mt-6 flex align-center flex-wrap justify-center gap-2">
+            <span className="text-teal-200 flex align-center justify-center">Popular:</span>
             {['Cancel booking', 'Refund', 'Payment', 'Check-in'].map((term) => (
               <button
                 key={term}
@@ -258,91 +219,9 @@ export default function SupportPage() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-12">
-        {/* User Type Tabs */}
-        <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-gray-100 rounded-full p-1">
-            <button
-              onClick={() => setActiveTab('guest')}
-              className={`px-8 py-3 rounded-full text-sm font-semibold transition-all ${
-                activeTab === 'guest'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Guest
-            </button>
-            <button
-              onClick={() => setActiveTab('host')}
-              className={`px-8 py-3 rounded-full text-sm font-semibold transition-all ${
-                activeTab === 'host'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Host
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Links - Popular Articles */}
-        {activeTab === 'guest' && (
-          <section className="mb-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Popular articles</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {popularArticles.map((article, index) => (
-                <button
-                  key={index}
-                  className="flex flex-col items-center gap-3 p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors group"
-                >
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:shadow transition-shadow">
-                    <article.icon className="w-6 h-6 text-teal-500" />
-                  </div>
-                  <span className="text-sm text-gray-700 text-center font-medium">{article.title}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Browse Topics */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Browse {activeTab === 'guest' ? 'guest' : 'host'} topics
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {currentTopics.map((topic, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-xl p-6 hover:border-teal-300 hover:shadow-md transition-all cursor-pointer group"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-teal-100 transition-colors">
-                    <topic.icon className="w-6 h-6 text-teal-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-teal-600 transition-colors">
-                      {topic.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-3">{topic.description}</p>
-                    <ul className="space-y-1">
-                      {topic.articles.slice(0, 3).map((article, i) => (
-                        <li key={i}>
-                          <Link href="#" className="text-sm text-gray-600 hover:text-teal-600 hover:underline flex items-center gap-1">
-                            <ChevronRight className="w-3 h-3" />
-                            {article}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* FAQs */}
-        <section className="mb-12">
+        <section className="mb-12 hidden">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Frequently asked questions</h2>
           <div className="space-y-3">
             {currentFaqs.map((faq, index) => (
@@ -425,75 +304,6 @@ export default function SupportPage() {
           </div>
         </section>
 
-        {/* Resources Section */}
-        <section>
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Resources</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Community */}
-            <Link href="#" className="flex items-start gap-4 p-6 border border-gray-200 rounded-xl hover:border-teal-300 hover:shadow-md transition-all">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Community Center</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Connect with other guests and hosts. Share stories, ask questions, and get advice from the community.
-                </p>
-                <span className="text-sm font-medium text-teal-600 flex items-center gap-1">
-                  Visit Community <ChevronRight className="w-4 h-4" />
-                </span>
-              </div>
-            </Link>
-
-            {/* Host Resources */}
-            <Link href="#" className="flex items-start gap-4 p-6 border border-gray-200 rounded-xl hover:border-teal-300 hover:shadow-md transition-all">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <BookOpen className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Resource Center</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Tips, guides, and best practices for hosts. Learn how to improve your listings and grow your business.
-                </p>
-                <span className="text-sm font-medium text-teal-600 flex items-center gap-1">
-                  Explore Resources <ChevronRight className="w-4 h-4" />
-                </span>
-              </div>
-            </Link>
-
-            {/* Safety */}
-            <Link href="#" className="flex items-start gap-4 p-6 border border-gray-200 rounded-xl hover:border-teal-300 hover:shadow-md transition-all">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Trust & Safety</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Learn about our safety policies, verification process, and how we protect both guests and hosts.
-                </p>
-                <span className="text-sm font-medium text-teal-600 flex items-center gap-1">
-                  Learn More <ChevronRight className="w-4 h-4" />
-                </span>
-              </div>
-            </Link>
-
-            {/* Policies */}
-            <Link href="#" className="flex items-start gap-4 p-6 border border-gray-200 rounded-xl hover:border-teal-300 hover:shadow-md transition-all">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Policies & Guidelines</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Review our terms of service, cancellation policies, and community guidelines.
-                </p>
-                <span className="text-sm font-medium text-teal-600 flex items-center gap-1">
-                  View Policies <ChevronRight className="w-4 h-4" />
-                </span>
-              </div>
-            </Link>
-          </div>
-        </section>
       </main>
 
       {/* Contact Modal */}
@@ -565,60 +375,7 @@ export default function SupportPage() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Support</h4>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Help Center</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Safety information</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Cancellation options</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Report a concern</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Hosting</h4>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">List your home</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Host resources</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Community forum</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Responsible hosting</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Travel Services</h4>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Meet & Assist</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">VIP Lounge Access</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Airport Transfers</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 hover:underline">Travel Insurance</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200 pt-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>© 2024 Houseiana, Inc.</span>
-                <span>·</span>
-                <Link href="#" className="hover:underline">Privacy</Link>
-                <span>·</span>
-                <Link href="#" className="hover:underline">Terms</Link>
-                <span>·</span>
-                <Link href="#" className="hover:underline">Sitemap</Link>
-              </div>
-              <div className="flex items-center gap-6">
-                <button className="flex items-center gap-2 text-sm font-medium hover:underline">
-                  <Globe className="w-4 h-4" />
-                  English (US)
-                </button>
-                <span className="text-sm font-medium">$ USD</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <AccountFooter />
     </div>
   );
 }

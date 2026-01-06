@@ -26,7 +26,7 @@ export function AmenitiesSection({ amenities }: AmenitiesSectionProps) {
     <div className="p-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
       <h2 className="text-xl font-bold text-gray-900 mb-4">What this place offers</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {amenities.map((amenity) => (
+        {amenities?.map((amenity) => (
           <div key={amenity} className="flex items-center gap-3 text-gray-800">
             {getAmenityIcon(amenity)}
             <span className="font-medium capitalize">{amenity}</span>

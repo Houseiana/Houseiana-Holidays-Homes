@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { PropertyAPI } from '@/lib/api/backend-api';
 
 // Types
 export interface PropertyHost {
@@ -69,13 +70,18 @@ interface UsePropertyDetailReturn {
   ratingLabel: string;
 
   // Navigation helper
-  getBookingUrl: () => string;
+  getBookingUrl: (bookingId?: string) => string;
+
+  // Availability
+  isDateBlocked: (date: Date) => boolean;
+  bookedDates: { from: string; to: string }[];
 }
 
 export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
   // Data state
   const [property, setProperty] = useState<PropertyDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bookedDates, setBookedDates] = useState<{ from: string; to: string }[]>([]);
 
   // UI state
   const [isLiked, setIsLiked] = useState(false);
@@ -93,43 +99,57 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
   const loadProperty = useCallback(async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/properties/' + id);
-      const data = await response.json();
+      const [propertyResponse, bookedDatesResponse] = await Promise.all([
+        PropertyAPI.getPropertyById(id),
+        PropertyAPI.getBookedDates(id)
+      ]);
 
-      if (data.success && data.property) {
+      if (propertyResponse.success && propertyResponse.data) {
+        // Cast to any to handle potential backend wrapper mismatch
+        const p = (propertyResponse.data as any).data || propertyResponse.data as any;
+
+        // Map backend property to UI model
         const mappedProperty: PropertyDetail = {
-          id: data.property.id,
-          title: data.property.title,
-          type: data.property.type,
-          location: data.property.location,
-          latitude: data.property.latitude,
-          longitude: data.property.longitude,
-          price: data.property.price,
-          rating: data.property.rating,
-          reviews: data.property.reviews,
-          images: data.property.images.length > 0
-            ? data.property.images
+          id: p.id,
+          title: p.title,
+          type: p.type,
+          location: p.location,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          price: p.pricePerNight || p.price,
+          rating: p.rating || 0,
+          reviews: p.reviews || 0,
+          images: p.images && p.images.length > 0
+            ? p.images
             : ['https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800'],
-          amenities: data.property.amenities,
-          bedrooms: data.property.bedrooms,
-          bathrooms: data.property.bathrooms,
-          guests: data.property.guests,
-          host: data.property.host || {
-            name: 'Host',
-            avatar: '',
+          amenities: Array.isArray(p.amenities) 
+            ? p.amenities 
+            : (typeof p.amenities === 'string' ? tryParseJSON(p.amenities) : []),
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          guests: p.guests,
+          host: {
+            name: p.host?.name || 'Host',
+            avatar: p.host?.avatar || '',
             joinDate: 'Recently joined',
-            verified: false,
+            verified: p.host?.verified || false,
           },
-          description: data.property.description,
-          isRareFind: data.property.isRareFind || false,
-          guestFavorite: data.property.guestFavorite || false,
+          description: p.description,
+          isRareFind: false, // Not in API yet
+          guestFavorite: false, // Not in API yet
           perks: ['Flexible check-in', 'Self check-in'],
         };
 
         setProperty(mappedProperty);
       } else {
-        console.error('Failed to load property:', data.error);
+        console.error('Failed to load property:', propertyResponse.error);
       }
+
+      if (bookedDatesResponse.success && bookedDatesResponse.data) {
+          const dates = (bookedDatesResponse.data as any).booked_Ranges || [];
+          setBookedDates(dates);
+      }
+
     } catch (error) {
       console.error('Error loading property:', error);
     } finally {
@@ -137,26 +157,56 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
     }
   }, []);
 
+  // Check if date is blocked
+  const isDateBlocked = useCallback((date: Date) => {
+      const dateString = date.toISOString().split('T')[0];
+      return bookedDates.some(range => {
+          return dateString >= range.from && dateString <= range.to;
+      });
+  }, [bookedDates]);
+
   // Set default dates
   const setDefaultDates = useCallback(() => {
+    // Find next available 2-night slot
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 2);
+    let checkIn = new Date(today);
+    
+    // Simple lookahead for 30 days
+    for (let i = 0; i < 30; i++) {
+        if (!isDateBlocked(checkIn)) {
+            const nextDay = new Date(checkIn);
+            nextDay.setDate(nextDay.getDate() + 1);
+            if (!isDateBlocked(nextDay)) {
+                // Found a slot
+                break;
+            }
+        }
+        checkIn.setDate(checkIn.getDate() + 1);
+    }
+    
+    const checkOut = new Date(checkIn);
+    checkOut.setDate(checkOut.getDate() + 1);
 
     setBookingForm({
-      checkIn: today.toISOString().split('T')[0],
-      checkOut: tomorrow.toISOString().split('T')[0],
+      checkIn: checkIn.toISOString().split('T')[0],
+      checkOut: checkOut.toISOString().split('T')[0],
       guests: 1,
     });
-  }, []);
+  }, [isDateBlocked]);
 
   // Initial load
   useEffect(() => {
     if (propertyId) {
       loadProperty(propertyId);
-      setDefaultDates();
     }
-  }, [propertyId, loadProperty, setDefaultDates]);
+  }, [propertyId, loadProperty]);
+  
+  // Set default dates ONLY after booked dates are loaded
+  useEffect(() => {
+      if (bookedDates.length > 0 || !loading) {
+          setDefaultDates();
+      }
+  }, [bookedDates, loading, setDefaultDates]);
 
   // Calculate nights
   const calculateNights = useCallback(() => {
@@ -170,10 +220,13 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
   const calculateTotal = useCallback(() => {
     const nights = calculateNights();
     if (!nights || !property) return { base: 0, total: 0, service: 0, cleaning: 0 };
-    const base = property.price * nights;
+    
+    const price = Number(property.price) || 0;
+    const base = price * nights;
     const service = Math.round(base * 0.08);
     const cleaning = 35;
     const total = base + service + cleaning;
+    
     return { base, service, cleaning, total };
   }, [calculateNights, property]);
 
@@ -222,7 +275,7 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
   }, [isNewListing, property?.rating, reviewLabel]);
 
   // Get booking URL
-  const getBookingUrl = useCallback(() => {
+  const getBookingUrl = useCallback((bookingId?: string) => {
     if (!property) return '';
     const params = new URLSearchParams({
       propertyId: property.id,
@@ -233,6 +286,9 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
       children: '0',
       infants: '0',
     });
+    if (bookingId) {
+      params.append('bookingId', bookingId);
+    }
     return '/booking/confirm?' + params.toString();
   }, [property, bookingForm]);
 
@@ -268,5 +324,18 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
 
     // Navigation helper
     getBookingUrl,
+    
+    // Availability
+    isDateBlocked,
+    bookedDates,
   };
+}
+
+function tryParseJSON(jsonString: string) {
+  try {
+    const parsed = JSON.parse(jsonString);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
 }

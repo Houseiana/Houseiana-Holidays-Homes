@@ -12,13 +12,14 @@ export function HostInfo({ host }: HostInfoProps) {
   return (
     <div className="flex items-center gap-3">
       <Image
-        src={host.avatar}
+        src={host.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(host.name)}&background=random`}
         alt={host.name}
         width={48}
         height={48}
         className="w-12 h-12 rounded-full object-cover border-2 border-emerald-100"
         onError={(e) => {
-          e.currentTarget.src = 'https://via.placeholder.com/50';
+          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(host.name)}&background=random`;
+          e.currentTarget.srcset = `https://ui-avatars.com/api/?name=${encodeURIComponent(host.name)}&background=random`;
         }}
       />
       <div>

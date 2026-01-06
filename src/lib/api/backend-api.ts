@@ -104,7 +104,8 @@ async function backendFetch<T>(
 ): Promise<ApiResponse<T>> {
   const url = `${BACKEND_API_URL}${endpoint}`;
 
-  const defaultHeaders: HeadersInit = {
+  const isFormData = options.body instanceof FormData;
+  const defaultHeaders: HeadersInit = isFormData ? {} : {
     'Content-Type': 'application/json',
   };
 
@@ -143,10 +144,8 @@ async function backendFetch<T>(
  * Property API
  */
 export const PropertyAPI = {
-  /**
-   * Get all properties with optional filters
-   * Endpoint: GET /api/properties
-   */
+  // ... (previous methods remain unchanged)
+
   async getAll(params?: {
     page?: number;
     limit?: number;
@@ -171,6 +170,10 @@ export const PropertyAPI = {
    */
   async getById(id: string): Promise<ApiResponse<Property>> {
     return backendFetch(`/api/properties/${id}`);
+  },
+
+  async getPropertyById(id: string): Promise<ApiResponse<Property>> {
+    return backendFetch(`/api/property-search/${id}`);
   },
 
   /**
@@ -204,6 +207,97 @@ export const PropertyAPI = {
   },
 
   /**
+   * Public property search
+   * Endpoint: GET /api/property-search
+   */
+  async publicSearch(params: {
+    page?: number;
+    limit?: number;
+    latitude?: number;
+    longitude?: number;
+    radius?: number; // in km
+    searchQuery?: string;
+    propertyType?: string;
+    userId?: string;
+  }): Promise<ApiResponse<{ properties: any[]; total: number; page: number; limit: number }>> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+    if (params.latitude) searchParams.set('latitude', params.latitude.toString());
+    if (params.longitude) searchParams.set('longitude', params.longitude.toString());
+    if (params.radius) searchParams.set('radius', params.radius.toString());
+    if (params.searchQuery) searchParams.set('searchQuery', params.searchQuery);
+    if (params.propertyType && params.propertyType !== 'all') searchParams.set('propertyType', params.propertyType);
+    if (params.userId) searchParams.set('userId', params.userId.toString());
+
+    const query = searchParams.toString();
+    return backendFetch(`/api/property-search/search?${query}`);
+  },
+
+  /**
+   * Public property search
+   * Endpoint: GET /api/property-search
+   */
+  async publicSearchFilter(params: {
+    page?: number;
+    limit?: number;
+    latitude?: number;
+    longitude?: number;
+    radius?: number; // in km
+    searchQuery?: string;
+    propertyType?: string;
+    userId?: string;
+    location?: string;
+    checkIn?: string;
+    checkOut?: string;
+    guests?: number;
+    adults?: number;
+    children?: number;
+    infants?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    bedrooms?: number;
+    beds?: number;
+    bathrooms?: number;
+    minRating?: number;
+    amenities?: string[];
+  }): Promise<ApiResponse<{ properties: any[]; total: number; page: number; limit: number }>> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+    if (params.latitude) searchParams.set('latitude', params.latitude.toString());
+    if (params.longitude) searchParams.set('longitude', params.longitude.toString());
+    if (params.radius) searchParams.set('radius', params.radius.toString());
+    if (params.searchQuery) searchParams.set('searchQuery', params.searchQuery);
+    if (params.propertyType && params.propertyType !== 'all') searchParams.set('propertyType', params.propertyType);
+    if (params.userId) searchParams.set('userId', params.userId.toString());
+    if (params.location) searchParams.set('location', params.location);
+    if (params.checkIn) searchParams.set('checkIn', params.checkIn);
+    if (params.checkOut) searchParams.set('checkOut', params.checkOut);
+    if (params.guests) searchParams.set('guests', params.guests.toString());
+    if (params.minPrice) searchParams.set('minPrice', params.minPrice.toString());
+    if (params.maxPrice) searchParams.set('maxPrice', params.maxPrice.toString());
+    if (params.bedrooms) searchParams.set('bedrooms', params.bedrooms.toString());
+    if (params.beds) searchParams.set('beds', params.beds.toString());
+    if (params.bathrooms) searchParams.set('bathrooms', params.bathrooms.toString());
+    if (params.minRating) searchParams.set('minRating', params.minRating.toString());
+    if (params.amenities && params.amenities.length > 0) {
+      params.amenities.forEach(a => searchParams.append('amenities', a));
+    }
+
+    const query = searchParams.toString();
+    return backendFetch(`/api/property-search?${query}`);
+  },
+
+  /**
+   * Get booked dates for a property
+   * Endpoint: GET /api/property-search/{id}/booked-dates
+   */
+  async getBookedDates(propertyId: string): Promise<ApiResponse<{ booked_Ranges: { from: string; to: string }[] }>> {
+    return backendFetch(`/api/property-search/${propertyId}/booked-dates`);
+  },
+
+  /**
    * Approve property (admin)
    * Endpoint: POST /inventory/properties/{id}/approve
    */
@@ -229,7 +323,7 @@ export const PropertyAPI = {
    * Create a new property
    * Endpoint: POST /api/properties
    */
-  async create(data: {
+  async create(data: FormData | {
     hostId: string;
     title: string;
     description: string;
@@ -241,13 +335,21 @@ export const PropertyAPI = {
     guests?: number;
     bedrooms?: number;
     bathrooms?: number;
-    amenities?: string[];
+    amenities?: number[];
+    safetyItem?: number[];
+    guestFavorites?: number[];
+    propertyHighlight?: number[];
     photos?: string[];
     [key: string]: any;
-  }): Promise<ApiResponse<Property>> {
+  }, token?: string): Promise<ApiResponse<Property>> {
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
     return backendFetch('/api/properties', {
       method: 'POST',
-      body: JSON.stringify(data),
+      headers,
+      body: data instanceof FormData ? data : JSON.stringify(data),
     });
   },
 
@@ -339,6 +441,13 @@ export const BookingAPI = {
       body: JSON.stringify({ userId, reason }),
     });
   },
+
+  /**
+   * Get guest trips
+   */
+  async getGuestTrips(filter: 'upcoming' | 'past' | 'cancelled'): Promise<ApiResponse<any>> {
+    return backendFetch(`/api/guest/trips?filter=${filter}`);
+  },
 };
 
 /**
@@ -351,6 +460,16 @@ export const UserAPI = {
   async getById(id: string): Promise<ApiResponse<User>> {
     return backendFetch(`/users/${id}`);
   },
+
+  /**
+   * Toggle favorite
+   */
+  async toggleFavorite(userId: string, propertyId: string): Promise<ApiResponse> {
+    return backendFetch('/users/favorites', {
+      method: 'POST',
+      body: JSON.stringify({ userId, propertyId }),
+    });
+  },
 };
 
 /**
@@ -359,12 +478,18 @@ export const UserAPI = {
 export const PaymentAPI = {
   /**
    * Create Sadad payment
-   * Endpoint: POST /api/sadadpayment/initiate
+   * Endpoint: POST /users/sadad/payment
    */
-  async createSadadPayment(bookingId: string, customerEmail?: string, customerMobile?: string): Promise<ApiResponse> {
-    return backendFetch('/api/sadadpayment/initiate', {
+  async createSadadPayment(data: {
+    amount: number;
+    orderId: string;
+    email: string;
+    mobileNo: string;
+    description: string;
+  }): Promise<ApiResponse> {
+    return backendFetch('/users/sadad/payment', {
       method: 'POST',
-      body: JSON.stringify({ bookingId, customerEmail, customerMobile }),
+      body: JSON.stringify(data),
     });
   },
 
@@ -373,10 +498,10 @@ export const PaymentAPI = {
    * Backend validates booking ownership and creates payment record
    * Endpoint: POST /create-order
    */
-  async createPayPalOrderForBooking(bookingId: string, userId: string): Promise<ApiResponse> {
+  async createPayPalOrderForBooking(orderId: string,  amount: number): Promise<ApiResponse> {
     return backendFetch('/create-order', {
       method: 'POST',
-      body: JSON.stringify({ bookingId, userId }),
+      body: JSON.stringify({ orderId, amount }),
     });
   },
 
@@ -581,8 +706,8 @@ export const FavoritesAPI = {
   /**
    * Get user's favorite properties
    */
-  async getUserFavorites(userId: string): Promise<ApiResponse<any[]>> {
-    return backendFetch(`/api/favorites?userId=${userId}`);
+  async getUserFavorites(userId: string, page: number = 1, limit: number = 20): Promise<ApiResponse<{ properties: any[], pagination: any }>> {
+    return backendFetch(`/users/${userId}/favorites?page=${page}&limit=${limit}`);
   },
 
   /**
@@ -675,6 +800,59 @@ export const PaymentMethodsAPI = {
 };
 
 /**
+ * Lookups API
+ */
+export const LookupsAPI = {
+  /**
+   * Get property types
+   * Endpoint: GET /api/Lookups/PropertyType
+   */
+  async getPropertyTypes(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/PropertyType');
+  },
+
+  /**
+   * Get genders
+   * Endpoint: GET /api/Lookups/Gender
+   */
+  async getGenders(): Promise<ApiResponse<any>> {
+    return backendFetch('/api/Lookups/Gender');
+  },
+
+  /**
+   * Get guest favorites amenities
+   * Endpoint: GET /api/Lookups/GuestFavorites
+   */
+  async getGuestFavorites(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/GuestFavorites');
+  },
+
+  /**
+   * Get standout amenities
+   * Endpoint: GET /api/Lookups/StandoutAmenities
+   */
+  async getStandoutAmenities(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/StandoutAmenities');
+  },
+
+  /**
+   * Get safety items
+   * Endpoint: GET /api/Lookups/SafetyItems
+   */
+  async getSafetyItems(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/SafetyItems');
+  },
+
+  /**
+   * Get property highlights
+   * Endpoint: GET /api/Lookups/PropertyHighlight
+   */
+  async getPropertyHighlights(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/PropertyHighlight');
+  },
+};
+
+/**
  * Support API
  */
 export const SupportAPI = {
@@ -760,6 +938,7 @@ const BackendAPI = {
   User: UserAPI,
   Payment: PaymentAPI,
   PaymentMethods: PaymentMethodsAPI,
+  Lookups: LookupsAPI,
   Inventory: InventoryAPI,
   Messaging: MessagingAPI,
   Webhook: WebhookAPI,

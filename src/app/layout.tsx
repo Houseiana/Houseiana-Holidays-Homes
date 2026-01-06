@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 import QueryProvider from "@/providers/query-provider";
 import { Header as HouseianaHeader, Footer as HouseianaFooter } from "@/layout";
 import { ToastContainer } from "@/components/ui/toast";
+import NotificationListener from "@/components/NotificationListener";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -74,8 +76,12 @@ export const metadata: Metadata = {
     title: 'Houseiana',
   },
   icons: {
-    icon: '/logo.svg',
-    apple: '/logo.svg',
+    icon: [
+      { url: '/logo.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/logo.svg' },
+    ],
   },
 };
 
@@ -92,11 +98,13 @@ export default function RootLayout({
       afterSignUpUrl="/"
     >
       <QueryProvider>
+        <NotificationListener />
         <html lang="en">
           <body className={`${inter.variable} font-sans antialiased`}>
             <HouseianaHeader />
             {children}
             <ToastContainer />
+            <Toaster position="top-center" />
           </body>
         </html>
       </QueryProvider>

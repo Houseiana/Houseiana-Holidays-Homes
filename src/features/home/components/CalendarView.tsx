@@ -6,7 +6,7 @@ interface CalendarViewProps {
   setCalendarMonth: (date: Date) => void;
   checkIn: Date | null;
   checkOut: Date | null;
-  onDateClick: (day: number) => void;
+  onDateClick: (date: Date) => void;
 }
 
 export const CalendarView = ({
@@ -45,7 +45,7 @@ export const CalendarView = ({
       <button
         key={day}
         disabled={isPast}
-        onClick={() => onDateClick(day)}
+        onClick={() => onDateClick(date)}
         className={`w-10 h-10 rounded-full flex items-center justify-center text-sm transition-colors ${
           isPast ? 'text-gray-300 cursor-not-allowed' :
           isCheckIn || isCheckOut ? 'bg-gray-900 text-white' :

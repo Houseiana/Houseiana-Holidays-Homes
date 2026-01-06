@@ -6,20 +6,9 @@ import { Home, ArrowLeft } from 'lucide-react';
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="px-6">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <Home className="w-8 h-8 text-teal-600" strokeWidth={2.5} />
-              <span className="text-xl font-bold text-teal-600">Houseiana</span>
-            </Link>
-          </div>
-        </div>
-      </header>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="max-w-7xl mx-auto px-6 py-12">
         <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8">
           <ArrowLeft className="w-4 h-4" />
           Back to home

@@ -17,6 +17,7 @@ import { TripsService } from '@/features/trips/api/trips.service';
 import { SupportService } from '@/features/support/api/support.service';
 import { AuditService } from '@/features/audit/api/audit.service';
 import { CronService } from '@/features/cron/api/cron.service';
+import { LookupsAPI as LegacyLookupsAPI } from './api/backend-api';
 
 // Re-export types
 export * from '@/types/api';
@@ -37,6 +38,7 @@ export const FavoritesAPI = FavoritesService;
 export const TripsAPI = TripsService;
 export const SupportAPI = SupportService;
 export const AuditAPI = AuditService;
+export const LookupsAPI = LegacyLookupsAPI;
 
 // Default export acting as a unified namespace
 const BackendAPI = {
@@ -55,6 +57,7 @@ const BackendAPI = {
   Trips: TripsAPI,
   Support: SupportAPI,
   Audit: AuditAPI,
+  Lookups: LookupsAPI,
 };
 
 export default BackendAPI;

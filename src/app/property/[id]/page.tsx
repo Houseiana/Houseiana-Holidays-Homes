@@ -16,9 +16,14 @@ import {
   BookingCard,
 } from '@/features/property/components';
 
+import { useUser } from '@clerk/nextjs';
+import BackendAPI from '@/lib/api/backend-api';
+import toast from 'react-hot-toast';
+
 export default function PropertyDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useUser();
   const propertyId = params.id as string;
 
   const {
@@ -42,6 +47,8 @@ export default function PropertyDetailPage() {
     reviewLabel,
     ratingLabel,
     getBookingUrl,
+    isDateBlocked,
+    bookedDates,
   } = usePropertyDetail(propertyId);
 
   const handleImageClick = (index: number) => {
@@ -53,9 +60,33 @@ export default function PropertyDetailPage() {
     setBookingForm(prev => ({ ...prev, ...updates }));
   };
 
-  const handleReserve = () => {
+  const handleReserve = async () => {
     if (calculateNights() > 0 && property) {
-      router.push(getBookingUrl());
+      try {
+        if (user) {
+          const response = await BackendAPI.Booking.create({
+            propertyId: property.id,
+            guestId: user.id,
+            checkIn: bookingForm.checkIn,
+            checkOut: bookingForm.checkOut,
+            guests: bookingForm.guests,
+            totalPrice: calculateTotal().total
+          });
+          if (response.success && response.data) {
+             // Handle nested data response from backend (e.g. { data: { id: ... } })
+             const bookingData = response.data as any;
+             const bookingId = bookingData.data?.id || bookingData.id;
+             router.push(getBookingUrl(bookingId));
+          } else {
+             // Fallback if create failed or no data (should handle better but keeping flow)
+             toast.error(response.error || 'Failed to create booking');
+          }
+        } else {
+          toast.error('You must be logged in to reserve a property');
+        }
+      } catch (error) {
+        console.error('Failed to create booking:', error);
+      }
     }
   };
 
@@ -139,6 +170,8 @@ export default function PropertyDetailPage() {
               calculateTotal={calculateTotal}
               isNewListing={isNewListing}
               reviewLabel={reviewLabel}
+              isDateBlocked={isDateBlocked}
+              bookedDates={bookedDates}
             />
           </div>
         </div>

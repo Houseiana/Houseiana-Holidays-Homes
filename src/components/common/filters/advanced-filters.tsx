@@ -255,7 +255,7 @@ export default function AdvancedFilters({
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Amenities</h3>
             <div className="grid grid-cols-1 gap-2">
-              {amenities.map((amenity) => {
+              {amenities?.map((amenity) => {
                 const Icon = amenity.icon;
                 const isSelected = filters.amenities.includes(amenity.id);
                 return (

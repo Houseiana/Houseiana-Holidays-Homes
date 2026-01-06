@@ -1,6 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import BackendAPI from '@/lib/api/backend-api';
+
+import { PropertySummary } from '@/types/property';
 
 // Types
 export interface Trip {
@@ -19,12 +24,7 @@ export interface Trip {
   amountPaid?: number;
 }
 
-export interface Wishlist {
-  id: string;
-  name: string;
-  savedCount: number;
-  previewImages: string[];
-}
+export type Wishlist = PropertySummary;
 
 export interface Message {
   id: string;
@@ -58,14 +58,17 @@ interface UseClientDashboardReturn {
 
   // Loading state
   loading: boolean;
+  loadingWishlists: boolean;
 
   // Utility functions
   formatDate: (dateString: string) => string;
   calculateNights: (checkIn: string, checkOut: string) => number;
   handlePayBalance: (bookingId: string, paymentProvider?: string) => Promise<void>;
+  fetchWishlists: () => Promise<void>;
 }
 
 export function useClientDashboard(isSignedIn: boolean): UseClientDashboardReturn {
+  const {userId} = useAuth();
   // Tab state
   const [activeTab, setActiveTab] = useState<DashboardTab>('trips');
   const [tripFilter, setTripFilter] = useState<TripFilter>('upcoming');
@@ -73,26 +76,28 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
   // Data state
   const [trips, setTrips] = useState<Trip[]>([]);
   const [wishlists, setWishlists] = useState<Wishlist[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Check URL params for initial tab selection
+  // Check URL params for tab selection
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get('tab');
-      if (tab && ['trips', 'wishlists', 'messages', 'account'].includes(tab)) {
-        setActiveTab(tab as DashboardTab);
-      }
+    if (tabParam && ['trips', 'wishlists', 'messages', 'account'].includes(tabParam)) {
+      setActiveTab(tabParam as DashboardTab);
+    } else {
+      setActiveTab('trips');
     }
-  }, []);
+  }, [tabParam]);
 
   // Fetch trips
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const response = await fetch('/api/guest/trips?filter=' + tripFilter);
-        const result = await response.json();
+        const result = await BackendAPI.Booking.getGuestTrips(tripFilter);
         if (result.success) {
           setTrips(result.data);
         }
@@ -106,24 +111,35 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
     }
   }, [tripFilter, isSignedIn, activeTab]);
 
-  // Fetch wishlists
-  useEffect(() => {
-    const fetchWishlists = async () => {
-      try {
-        const response = await fetch('/api/guest/wishlists');
-        const result = await response.json();
-        if (result.success) {
-          setWishlists(result.data);
-        }
-      } catch (error) {
-        console.error('Error fetching wishlists:', error);
-      }
-    };
+  const [loadingWishlists, setLoadingWishlists] = useState(true);
 
+  // Fetch wishlists
+  const fetchWishlists = useCallback(async () => {
+    try {
+      if (!userId) return;
+      setLoadingWishlists(true);
+      const result = await BackendAPI.Favorites.getUserFavorites(userId, page);
+      
+      if (result.success) {
+        setWishlists(result.data?.properties || []);
+        if (result.data?.pagination) {
+          setPagination(result.data.pagination);
+        }
+      } else {
+        console.error('Error fetching wishlists:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching wishlists:', error);
+    } finally {
+      setLoadingWishlists(false);
+    }
+  }, [userId, page]);
+
+  useEffect(() => {
     if (isSignedIn && activeTab === 'wishlists') {
       fetchWishlists();
     }
-  }, [isSignedIn, activeTab]);
+  }, [isSignedIn, activeTab, fetchWishlists]);
 
   // Fetch messages/conversations
   useEffect(() => {
@@ -215,10 +231,12 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
 
     // Loading state
     loading,
+    loadingWishlists,
 
     // Utility functions
     formatDate,
     calculateNights,
     handlePayBalance,
+    fetchWishlists,
   };
 }

@@ -27,14 +27,14 @@ export * from './forms';
 // Filters
 export * from './filters';
 
-// Search
-export * from './search';
+// Search (add exports when components are created)
+// export * from './search';
 
-// Chat
-export * from './chat';
+// Chat (add exports when components are created)
+// export * from './chat';
 
 // Messaging
 export * from './messaging';
 
-// Dashboard
-export * from './dashboard';
+// Dashboard (add exports when components are created)
+// export * from './dashboard';

@@ -17,7 +17,6 @@ import {
   XCircle
 } from 'lucide-react';
 import { BookingCardSkeleton } from '@/components/ui/loaders/loading-skeleton';
-import PropertyCard from '@/components/common/cards/property-card';
 import { NoTripsEmptyState, NoFavoritesEmptyState, PastTripsEmptyState } from '@/components/common/empty-states/empty-state';
 
 interface Booking {

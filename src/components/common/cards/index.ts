@@ -1,2 +1,2 @@
 // Card components
-export { PropertyCard } from './property-card';
+export { PropertyCard } from '@/features/property/components/property-card';

@@ -32,6 +32,13 @@ export interface PropertySummary {
   averageRating?: number;
   bookingCount?: number;
   createdAt?: string;
+  isFavorite?: boolean;
+  weeklyDiscount?: number;
+  smallBookingDiscount?: number;
+  priceWithoutDiscount?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  guestCount?: number;
 }
 
 export interface PropertyPhoto {

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
+import BackendAPI from '@/lib/api/backend-api';
 
 // Types
 export interface BookingProperty {
@@ -74,7 +76,7 @@ interface UseBookingConfirmReturn {
 
   // Actions
   isFormValid: () => boolean;
-  handlePayment: () => Promise<void>;
+  handlePayment: (paymentMethod: 'sadad' | 'paypal') => Promise<void>;
   handlePaymentSuccess: () => void;
   handlePaymentError: (errorMessage: string) => void;
   closePaymentFrame: () => void;
@@ -206,9 +208,11 @@ export function useBookingConfirm({
   }, [guestForm]);
 
   // Handle payment
-  const handlePayment = useCallback(async () => {
+  const handlePayment = useCallback(async (paymentMethod: 'sadad' | 'paypal') => {
     if (!isFormValid() || !bookingData || !isSignedIn) {
-      setError('Please fill in all required fields');
+      const msg = 'Please fill in all required fields';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -218,43 +222,75 @@ export function useBookingConfirm({
     try {
       const token = await getToken();
 
-      // Create booking
-      const bookingResponse = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
-        },
-        body: JSON.stringify({
-          propertyId: bookingData.property.id,
-          checkIn: bookingData.booking.checkIn,
-          checkOut: bookingData.booking.checkOut,
-          guests: bookingData.booking.guests,
-          adults: bookingData.booking.adults,
-          children: bookingData.booking.children,
-          infants: bookingData.booking.infants,
-          specialRequests: guestForm.specialRequests,
-        }),
-      });
-
-      if (!bookingResponse.ok) {
-        const errorData = await bookingResponse.json();
-        throw new Error(errorData.error || 'Failed to create booking');
+      const orderId = pendingBookingId || searchParams?.get('bookingId');
+      const amount = bookingData.pricing.total;
+      if (!orderId) {
+          throw new Error('Booking ID not found. Please try reserving again.');
       }
 
-      const booking = await bookingResponse.json();
+      // 2. Process Payment based on method
+      if (paymentMethod === 'paypal') {
+        const paypalResponse = await BackendAPI.Payment.createPayPalOrderForBooking(orderId, amount);
+        
+         if (paypalResponse.success && paypalResponse.data?.links) {
+             // Find approval link
+             const approveLink = paypalResponse.data.links.find((l: any) => l.rel === 'approve');
+             if (approveLink) {
+                 window.open(approveLink.href);
+                 toast.success('Opening PayPal...');
+             } else {
+                 throw new Error('PayPal approval link not found');
+             }
+        } else {
+             throw new Error(paypalResponse.error || 'Failed to initiate PayPal payment');
+        }
 
-      // Store booking ID and show payment frame
-      setPendingBookingId(booking.id);
-      setShowPaymentFrame(true);
-      setProcessing(false);
+      } else if (paymentMethod === 'sadad') {
+          const sadadResponse = await BackendAPI.Payment.createSadadPayment({
+              amount: amount,
+              orderId: orderId,
+              email: guestForm.email,
+              mobileNo: guestForm.phoneCode.replace('+', '') + guestForm.phone,
+              description: `Booking for ${bookingData.property.title}`
+          });
+          
+           if (sadadResponse.success && sadadResponse.data) {
+                const data = sadadResponse.data as any; 
+                let redirectUrl = null;
+
+               if (typeof data === 'string' && data.startsWith('http')) {
+                    redirectUrl = data;
+               } else if (data.formAction) {
+                    redirectUrl = data.formAction;
+               }
+
+               if (redirectUrl) {
+                   window.open(redirectUrl);
+                   toast.success('Opening payment page...');
+               } else {
+                    // Fallback or specific handling if needed.
+                   console.log('Sadad response:', sadadResponse);
+                   const fallbackUrl = sadadResponse.data.transactionUrl || sadadResponse.data.url;
+                   if (fallbackUrl && typeof fallbackUrl === 'string') {
+                        window.open(fallbackUrl, '_blank');
+                        toast.success('Opening payment page...');
+                   } else {
+                        throw new Error('Invalid Sadad response format');
+                   }
+               }
+           } else {
+               throw new Error(sadadResponse.error || 'Failed to initiate Sadad payment');
+           }
+      }
 
     } catch (err: any) {
       console.error('Error:', err);
-      setError(err.message || 'Payment failed. Please try again.');
+      const msg = err.message || 'Payment failed. Please try again.';
+      setError(msg);
+      toast.error(msg);
       setProcessing(false);
     }
-  }, [isFormValid, bookingData, isSignedIn, getToken, guestForm.specialRequests]);
+  }, [isFormValid, bookingData, isSignedIn, getToken, guestForm, user, searchParams, pendingBookingId]);
 
   // Handle payment success
   const handlePaymentSuccess = useCallback(() => {

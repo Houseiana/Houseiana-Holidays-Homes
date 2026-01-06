@@ -11,21 +11,50 @@ import {
   User,
   Globe,
   Home,
-  X
+  X,
+  Bell,
+  Filter
 } from 'lucide-react';
-import { PropertySummary } from '@/types/property';
 import CategoryTabs from './CategoryTabs';
 import ExpandedSearch, { GuestCounts } from './ExpandedSearch';
+import { getMessaging, onMessage } from 'firebase/messaging';
+import { app } from '@/lib/firebase';
+import toast from 'react-hot-toast';
 
 interface HomeHeaderProps {
   activeCategory: string;
   setActiveCategory: (category: string) => void;
+  notifications?: number;
+  showCategories?: boolean;
+  onShowFilters?: () => void;
 }
 
-export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHeaderProps) {
+export default function HomeHeader({ 
+  activeCategory, 
+  setActiveCategory, 
+  notifications = 0,
+  showCategories = true,
+  onShowFilters
+}: HomeHeaderProps) {
   const router = useRouter();
   const { isSignedIn, user } = useUser();
   const [searchMode, setSearchMode] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  //     const messaging = getMessaging(app);
+  //     const unsubscribe = onMessage(messaging, (payload) => {
+  //       console.log('Foreground message received:', payload);
+  //       toast(payload.notification?.title || 'New Notification', {
+  //           icon: '🔔', 
+  //           duration: 10000
+  //       });
+  //     });
+  //     return () => {
+  //       unsubscribe(); 
+  //     };
+  //   }
+  // }, []);
   
   // Menus state
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -53,8 +82,7 @@ export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHe
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const handleDateClick = (day: number) => {
-    const selectedDate = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
+  const handleDateClick = (selectedDate: Date) => {
     if (searchMode === 'checkin') {
       setCheckIn(selectedDate);
       setSearchMode('checkout');
@@ -80,7 +108,7 @@ export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHe
     const total = guests.adults + guests.children;
     if (total > 0) params.set('guests', total.toString());
 
-    const searchUrl = `/discover${params.toString() ? `?${params.toString()}` : ''}`;
+    const searchUrl = `/properties${params.toString() ? `?${params.toString()}` : ''}`;
     router.push(searchUrl);
     setSearchMode(null);
   };
@@ -88,11 +116,7 @@ export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHe
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      // Note: We don't check searchRef here because ExpandedSearch handles its own clicks,
-      // and having it here might conflict or be redundant.
-      // But if searchMode is active, the overlay is present. 
-      // The overlay click-outside is handled in ExpandedSearch usually or covered by the overlay itself.
-      
+      // Close other menus
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setShowUserMenu(false);
       }
@@ -101,6 +125,11 @@ export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHe
       }
       if (currencyMenuRef.current && !currencyMenuRef.current.contains(e.target as Node)) {
         setShowCurrencyMenu(false);
+      }
+
+      // Close ExpandedSearch (and CalendarView) if clicking outside
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchMode(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -124,43 +153,63 @@ export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHe
 
           {/* Collapsed Search Bar (when not expanded) */}
           {!searchMode && (
-            <div className="hidden md:flex items-center border border-gray-300 rounded-full shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-              <button
-                onClick={() => setSearchMode('where')}
-                className="px-4 py-3 text-sm font-medium"
-              >
-                {location || 'Anywhere'}
-              </button>
-              <span className="h-6 w-px bg-gray-300" />
-              <button
-                onClick={() => setSearchMode('checkin')}
-                className="px-4 py-3 text-sm font-medium"
-              >
-                {checkIn ? formatDate(checkIn) : 'Any week'}
-              </button>
-              <span className="h-6 w-px bg-gray-300" />
-              <button
-                onClick={() => setSearchMode('who')}
-                className="px-4 py-3 text-sm text-gray-500 flex items-center gap-3 pr-2"
-              >
-                {totalGuests > 0 ? guestText : 'Add guests'}
-              </button>
-              <button
-                onClick={handleSearch}
-                className="bg-teal-500 p-2 rounded-full mr-2 hover:bg-teal-600 transition-colors"
-              >
-                <Search className="w-4 h-4 text-white" />
-              </button>
-            </div>
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center border border-gray-300 rounded-full shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                <button
+                  onClick={() => setSearchMode('where')}
+                  className="px-4 py-3 text-sm font-medium"
+                >
+                  {location || 'Anywhere'}
+                </button>
+                <span className="h-6 w-px bg-gray-300" />
+                <button
+                  onClick={() => setSearchMode('checkin')}
+                  className="px-4 py-3 text-sm font-medium"
+                >
+                  {checkIn ? formatDate(checkIn) : 'Any week'}
+                </button>
+                <span className="h-6 w-px bg-gray-300" />
+                <button
+                  onClick={() => setSearchMode('who')}
+                  className="px-4 py-3 text-sm text-gray-500 flex items-center gap-3 pr-2"
+                >
+                  {totalGuests > 0 ? guestText : 'Add guests'}
+                </button>
+                <button
+                  onClick={handleSearch}
+                  className="bg-teal-500 rounded-full hover:bg-teal-600 transition-colors flex items-center justify-center"
+                >
+                  <Search className="w-4 h-4 text-white" />
+                </button>
+              </div>
+              {/* Optional Filter Button (Desktop) - Only shows when searchMode is off (collapsed) */}
+              {!searchMode && onShowFilters && (
+                <button
+                  onClick={onShowFilters}
+                  className="hidden md:flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-full hover:bg-gray-100 transition-colors ml-4"
+                >
+                  <Filter className="w-4 h-4" />
+                  <span className="text-sm font-medium">Filters</span>
+                </button>
+              )}
+            </div>  
           )}
+
+
 
           {/* Right Menu */}
           <div className="flex items-center gap-2">
-            <Link href="/host-dashboard/add-listing">
-              <button className="hidden md:block text-sm font-medium hover:bg-gray-100 px-4 py-3 rounded-full transition-colors">
-                List your home
-              </button>
+            <Link href="/host-dashboard/add-listing" className="hidden md:block text-sm font-medium hover:bg-gray-100 px-4 py-3 rounded-full transition-colors">
+              List your home
             </Link>
+
+            {/* Notification Bell */}
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors relative">
+              <Bell className="w-5 h-5 text-gray-700" />
+              {notifications > 0 && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+              )}
+            </button>
 
             {/* Language Selector */}
             <div className="relative" ref={langMenuRef}>
@@ -271,7 +320,7 @@ export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHe
                         <Link href="/client-dashboard">
                           <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">Dashboard</button>
                         </Link>
-                        <Link href="/saved-properties">
+                        <Link href="/client-dashboard?tab=wishlists">
                           <button className="w-full text-left px-4 py-3 hover:bg-gray-50 font-semibold">Wishlists</button>
                         </Link>
                       </div>
@@ -339,7 +388,9 @@ export default function HomeHeader({ activeCategory, setActiveCategory }: HomeHe
       )}
 
       {/* Category Tabs */}
-      <CategoryTabs activeCategory={activeCategory} onSelect={setActiveCategory} />
+      {showCategories && (
+        <CategoryTabs activeCategory={activeCategory} onSelect={setActiveCategory} />
+      )}
     </header>
   );
 }

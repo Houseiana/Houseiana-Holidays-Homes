@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PropertyAPI } from '@/lib/backend-api';
+import { PropertyAPI } from '@/lib/api/backend-api';
 
-// GET /api/properties/search - Search properties for discover page
+// GET /api/property-search - Search properties for discover page
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -25,13 +25,15 @@ export async function GET(request: NextRequest) {
       limit,
     });
 
-    // Use Backend API instead of direct Prisma call
-    const response = await PropertyAPI.search({
+    // Use Backend API (publicSearch)
+    const response = await PropertyAPI.publicSearchFilter({
       location: location || undefined,
+      checkIn: searchParams.get('checkin') || undefined,
+      checkOut: searchParams.get('checkout') || undefined,
       guests: guests ? parseInt(guests) : undefined,
       minPrice: minPrice ? parseFloat(minPrice) : undefined,
       maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
-      type: propertyType || undefined,
+      propertyType: propertyType || undefined,
       page,
       limit,
     });
@@ -113,7 +115,12 @@ export async function GET(request: NextRequest) {
       success: true,
       count: filteredProperties.length,
       properties: filteredProperties,
-      pagination: response.data?.pagination,
+      pagination: {
+        page: response.data?.page || 1,
+        limit: response.data?.limit || 20,
+        total: response.data?.total || 0,
+        totalPages: Math.ceil((response.data?.total || 0) / (response.data?.limit || 20))
+      }
     });
   } catch (error) {
     console.error('❌ Error searching properties:', error);

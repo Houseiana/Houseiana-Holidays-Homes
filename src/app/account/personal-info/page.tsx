@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { Shield, AlertCircle, Eye, EyeOff, Loader2, Upload, X, FileText, Image as ImageIcon } from 'lucide-react';
@@ -11,10 +11,12 @@ import {
   InfoRow,
   EditFormActions
 } from '@/features/auth/components';
-import { AccountAPI } from '@/lib/backend-api';
+import { AccountAPI, LookupsAPI } from '@/lib/backend-api';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { countries } from '@/lib/constants/countries';
 
 interface PassportInfo {
-  number: string;
+  passportNumber: string;
   numberMasked: string;
   issuingCountry: string;
   issueDate: string;
@@ -68,27 +70,7 @@ interface UserProfile {
   emergencyContact: EmergencyContact | null;
 }
 
-const COUNTRIES = [
-  'Qatar',
-  'United Arab Emirates',
-  'Saudi Arabia',
-  'Kuwait',
-  'Bahrain',
-  'Oman',
-  'Egypt',
-  'Jordan',
-  'Lebanon',
-  'United States',
-  'United Kingdom',
-  'Canada',
-  'Australia',
-  'Germany',
-  'France',
-  'India',
-  'Pakistan',
-  'Philippines',
-  'Other'
-];
+const COUNTRIES = countries.map(c => c.name);
 
 const RELATIONSHIPS = [
   'Spouse',
@@ -106,6 +88,7 @@ export default function PersonalInfoPage() {
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  console.log(profile);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -115,6 +98,7 @@ export default function PersonalInfoPage() {
   const [showPhone, setShowPhone] = useState(false);
   const [showPassportNumber, setShowPassportNumber] = useState(false);
   const [showIdNumber, setShowIdNumber] = useState(false);
+  const [genderOptions, setGenderOptions] = useState<any[]>([]);
 
   // File upload states
   const [passportFile, setPassportFile] = useState<File | null>(null);
@@ -124,13 +108,23 @@ export default function PersonalInfoPage() {
   const idFrontInputRef = useRef<HTMLInputElement>(null);
   const idBackInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch profile data
   const fetchProfile = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await AccountAPI.getProfile();
-      if (response.success && response.data) {
-        const data = response.data as any;
+        const [genderResponse, profileResponse, passportResponse] = await Promise.all([
+        LookupsAPI.getGenders(),
+        AccountAPI.getProfile(user?.id || ''),
+        AccountAPI.getPassport(user?.id || '')
+      ]);
+
+      if (genderResponse.success && genderResponse.data) {
+        setGenderOptions(genderResponse.data.data);
+      }
+
+      if (profileResponse.success && profileResponse.data) {
+        const data = profileResponse.data as any;
+        const passportData = passportResponse.success ? passportResponse.data : null; 
+
         setProfile({
           id: data.id,
           firstName: data.firstName || '',
@@ -147,7 +141,7 @@ export default function PersonalInfoPage() {
           nationality: data.nationality || null,
           address: data.address || null,
           residencyCountry: data.residencyCountry || null,
-          passport: data.passport || null,
+          passport: passportData || data.passport || null,
           nationalId: data.nationalId || null,
           emergencyContact: data.emergencyContact || null,
         });
@@ -157,7 +151,7 @@ export default function PersonalInfoPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -171,6 +165,11 @@ export default function PersonalInfoPage() {
     }
   }, [isSignedIn, fetchProfile]);
 
+  const toInputDate = (dateStr: string | undefined | null) => {
+    if (!dateStr) return '';
+    return dateStr.split('T')[0];
+  };
+
   const handleEdit = (field: string) => {
     setEditingField(field);
     setSaveMessage(null);
@@ -181,7 +180,7 @@ export default function PersonalInfoPage() {
     if (field === 'legalName' && profile) {
       setFormData({ firstName: profile.firstName, lastName: profile.lastName });
     } else if (field === 'dateOfBirth' && profile) {
-      setFormData({ dateOfBirth: profile.dateOfBirth || '' });
+      setFormData({ dateOfBirth: toInputDate(profile.dateOfBirth) });
     } else if (field === 'gender' && profile) {
       setFormData({ gender: profile.gender || '' });
     } else if (field === 'phone' && profile) {
@@ -195,18 +194,26 @@ export default function PersonalInfoPage() {
     } else if (field === 'residencyCountry' && profile) {
       setFormData({ residencyCountry: profile.residencyCountry || '' });
     } else if (field === 'passport' && profile) {
-      setFormData(profile.passport || {
-        number: '',
-        issuingCountry: '',
-        issueDate: '',
-        expiryDate: '',
+      setFormData({
+        ...(profile.passport || {
+          passportNumber: '',
+          issuingCountry: '',
+          issueDate: '',
+          expiryDate: '',
+        }),
+        issueDate: toInputDate(profile.passport?.issueDate),
+        expiryDate: toInputDate(profile.passport?.expiryDate)
       });
     } else if (field === 'nationalId' && profile) {
-      setFormData(profile.nationalId || {
-        number: '',
-        issuingCountry: '',
-        issueDate: '',
-        expiryDate: '',
+      setFormData({
+        ...(profile.nationalId || {
+          number: '',
+          issuingCountry: '',
+          issueDate: '',
+          expiryDate: '',
+        }),
+        issueDate: toInputDate(profile.nationalId?.issueDate),
+        expiryDate: toInputDate(profile.nationalId?.expiryDate)
       });
     } else if (field === 'emergencyContact' && profile) {
       setFormData(profile.emergencyContact || {
@@ -248,7 +255,35 @@ export default function PersonalInfoPage() {
         if (idBackFile) uploadData.backImageFile = idBackFile;
       }
 
-      const response = await AccountAPI.updateProfile(editingField, uploadData);
+      // Age validation
+      if (editingField === 'dateOfBirth' && formData.dateOfBirth) {
+        const birthDate = new Date(formData.dateOfBirth);
+        if (isNaN(birthDate.getTime())) {
+           setSaveMessage({ type: 'error', text: 'Please enter a valid date' });
+           setIsSaving(false);
+           return;
+        }
+
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < 18) {
+           setSaveMessage({ type: 'error', text: 'Legally its not allowed to register if you under 18 years' });
+           setIsSaving(false);
+           return;
+        }
+      }
+
+      let response;
+      if (editingField === 'passport') {
+         response = await AccountAPI.updatePassport(user?.id || '', uploadData);
+      } else {
+         response = await AccountAPI.updateProfile(user?.id || '', uploadData);
+      }
 
       if (response.success) {
         if (response.data?.requiresVerification) {
@@ -295,8 +330,8 @@ export default function PersonalInfoPage() {
   };
 
   const formatPassportSummary = (passport: PassportInfo | null) => {
-    if (!passport || !passport.number) return '';
-    return `${passport.numberMasked || passport.number} - ${passport.issuingCountry || 'N/A'}`;
+    if (!passport || !passport.passportNumber) return '';
+    return `${passport.numberMasked || passport.passportNumber} - ${passport.issuingCountry || 'N/A'}`;
   };
 
   const formatNationalIdSummary = (nationalId: NationalIdInfo | null) => {
@@ -373,7 +408,7 @@ export default function PersonalInfoPage() {
   );
 
   // Form components
-  const LegalNameForm = () => (
+  const renderLegalNameForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500 mt-1">This is the name on your travel document, which could be a license or a passport.</p>
       {saveMessage && (
@@ -405,7 +440,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const DateOfBirthForm = () => (
+  const renderDateOfBirthForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Your date of birth as it appears on your official documents.</p>
       {saveMessage && (
@@ -426,7 +461,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const GenderForm = () => (
+  const renderGenderForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Select your gender.</p>
       {saveMessage && (
@@ -442,16 +477,18 @@ export default function PersonalInfoPage() {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
           <option value="">Select gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="other">Other</option>
+          {genderOptions.map((opt: any) => (
+             <option key={opt.id || opt.value || opt} value={opt.id || opt.value || opt}>
+               {opt.name || opt.label || opt}
+             </option>
+          ))}
         </select>
       </div>
       <EditFormActions onSave={handleSave} onCancel={handleCancel} saveText={isSaving ? 'Saving...' : 'Save'} />
     </div>
   );
 
-  const PhoneForm = () => (
+  const renderPhoneForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Add a number so confirmed guests and Houseiana can get in touch.</p>
       {saveMessage && (
@@ -461,12 +498,10 @@ export default function PersonalInfoPage() {
       )}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
-        <input
-          type="tel"
+        <PhoneInput
           value={formData.phone || ''}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          placeholder="+974 XXXX XXXX"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+          onChange={(value) => setFormData({ ...formData, phone: value })}
+          placeholder=""
         />
       </div>
       <p className="text-xs text-gray-400">A verification code will be sent to confirm your number.</p>
@@ -474,7 +509,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const EmailForm = () => (
+  const renderEmailForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Use an address you&apos;ll always have access to.</p>
       {saveMessage && (
@@ -496,7 +531,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const NationalityForm = () => (
+  const renderNationalityForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Your nationality as shown on your passport or ID.</p>
       {saveMessage && (
@@ -521,7 +556,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const AddressForm = () => (
+  const renderAddressForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Use a permanent address where you can receive mail.</p>
       {saveMessage && (
@@ -583,7 +618,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const ResidencyCountryForm = () => (
+  const renderResidencyCountryForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">The country where you currently reside.</p>
       {saveMessage && (
@@ -608,7 +643,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const PassportForm = () => (
+  const renderPassportForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Your passport information as shown on your travel document.</p>
       {saveMessage && (
@@ -621,8 +656,8 @@ export default function PersonalInfoPage() {
         <label className="block text-sm font-medium text-gray-700 mb-1">Passport Number</label>
         <input
           type="text"
-          value={formData.number || ''}
-          onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+          value={formData.passportNumber || ''}
+          onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })}
           placeholder="Enter your passport number"
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
         />
@@ -679,7 +714,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const NationalIdForm = () => (
+  const renderNationalIdForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">Your national ID or QID information.</p>
       {saveMessage && (
@@ -765,7 +800,7 @@ export default function PersonalInfoPage() {
     </div>
   );
 
-  const EmergencyContactForm = () => (
+  const renderEmergencyContactForm = () => (
     <div className="mt-4 space-y-4">
       <p className="text-sm text-gray-500">A trusted contact we can reach in an urgent situation.</p>
       {saveMessage && (
@@ -802,22 +837,18 @@ export default function PersonalInfoPage() {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-          <input
-            type="tel"
+          <PhoneInput
             value={formData.phoneNumber || ''}
-            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            placeholder="+974 XXXX XXXX"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+            onChange={(value) => setFormData({ ...formData, phoneNumber: value })}
+            placeholder=""
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
-          <input
-            type="tel"
+          <PhoneInput
             value={formData.whatsappNumber || ''}
-            onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-            placeholder="+974 XXXX XXXX"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+            onChange={(value) => setFormData({ ...formData, whatsappNumber: value })}
+            placeholder=""
           />
         </div>
       </div>
@@ -875,7 +906,7 @@ export default function PersonalInfoPage() {
                 field="legalName"
                 isEditing={editingField === 'legalName'}
                 onEdit={() => handleEdit('legalName')}
-                editForm={<LegalNameForm />}
+                editForm={renderLegalNameForm()}
               />
 
               {/* Date of Birth */}
@@ -886,7 +917,7 @@ export default function PersonalInfoPage() {
                 notProvidedText="Not provided"
                 isEditing={editingField === 'dateOfBirth'}
                 onEdit={() => handleEdit('dateOfBirth')}
-                editForm={<DateOfBirthForm />}
+                editForm={renderDateOfBirthForm()}
               />
 
               {/* Gender */}
@@ -897,7 +928,7 @@ export default function PersonalInfoPage() {
                 notProvidedText="Not provided"
                 isEditing={editingField === 'gender'}
                 onEdit={() => handleEdit('gender')}
-                editForm={<GenderForm />}
+                editForm={renderGenderForm()}
               />
 
               {/* Phone Number */}
@@ -920,7 +951,7 @@ export default function PersonalInfoPage() {
                 notProvidedText="Not provided"
                 isEditing={editingField === 'phone'}
                 onEdit={() => handleEdit('phone')}
-                editForm={<PhoneForm />}
+                editForm={renderPhoneForm()}
               />
 
               {/* Email */}
@@ -940,7 +971,7 @@ export default function PersonalInfoPage() {
                 field="email"
                 isEditing={editingField === 'email'}
                 onEdit={() => handleEdit('email')}
-                editForm={<EmailForm />}
+                editForm={renderEmailForm()}
               />
 
               {/* Nationality */}
@@ -951,7 +982,7 @@ export default function PersonalInfoPage() {
                 notProvidedText="Not provided"
                 isEditing={editingField === 'nationality'}
                 onEdit={() => handleEdit('nationality')}
-                editForm={<NationalityForm />}
+                editForm={renderNationalityForm()}
               />
 
               {/* Address */}
@@ -962,7 +993,7 @@ export default function PersonalInfoPage() {
                 notProvidedText="Not provided"
                 isEditing={editingField === 'address'}
                 onEdit={() => handleEdit('address')}
-                editForm={<AddressForm />}
+                editForm={renderAddressForm()}
               />
 
               {/* Residency Country */}
@@ -973,7 +1004,7 @@ export default function PersonalInfoPage() {
                 notProvidedText="Not provided"
                 isEditing={editingField === 'residencyCountry'}
                 onEdit={() => handleEdit('residencyCountry')}
-                editForm={<ResidencyCountryForm />}
+                editForm={renderResidencyCountryForm()}
               />
             </div>
 
@@ -985,9 +1016,9 @@ export default function PersonalInfoPage() {
                 <InfoRow
                   label="Passport"
                   value={
-                    profile.passport?.number ? (
+                    profile.passport?.passportNumber ? (
                       <span className="flex items-center gap-2">
-                        {showPassportNumber ? profile.passport.number : profile.passport.numberMasked}
+                        {showPassportNumber ? profile.passport.passportNumber : profile.passport.numberMasked}
                         <button onClick={() => setShowPassportNumber(!showPassportNumber)} className="text-gray-400 hover:text-gray-600">
                           {showPassportNumber ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -1001,7 +1032,7 @@ export default function PersonalInfoPage() {
                   notProvidedText="Not provided"
                   isEditing={editingField === 'passport'}
                   onEdit={() => handleEdit('passport')}
-                  editForm={<PassportForm />}
+                  editForm={renderPassportForm()}
                 />
 
                 {/* National ID */}
@@ -1024,7 +1055,7 @@ export default function PersonalInfoPage() {
                   notProvidedText="Not provided"
                   isEditing={editingField === 'nationalId'}
                   onEdit={() => handleEdit('nationalId')}
-                  editForm={<NationalIdForm />}
+                  editForm={renderNationalIdForm()}
                 />
               </div>
             </div>
@@ -1041,7 +1072,7 @@ export default function PersonalInfoPage() {
                   description="A trusted contact we can reach in an urgent situation."
                   isEditing={editingField === 'emergencyContact'}
                   onEdit={() => handleEdit('emergencyContact')}
-                  editForm={<EmergencyContactForm />}
+                  editForm={renderEmergencyContactForm()}
                 />
               </div>
             </div>
@@ -1078,9 +1109,6 @@ export default function PersonalInfoPage() {
               <p className="text-sm text-gray-600 leading-relaxed">
                 Houseiana only releases contact information for hosts and guests after a reservation is confirmed.
               </p>
-              <button className="text-sm font-semibold text-gray-900 underline mt-3 hover:text-gray-600">
-                Learn more about privacy
-              </button>
             </div>
           </div>
         </div>
