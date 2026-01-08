@@ -12,23 +12,56 @@ const firebaseConfig = {
 };
 
 // Check if Firebase is properly configured
-const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.projectId;
+const isFirebaseConfigured = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.projectId &&
+  firebaseConfig.apiKey !== 'undefined' &&
+  firebaseConfig.projectId !== 'undefined'
+);
 
 let app: FirebaseApp | undefined = undefined;
 let messaging: Messaging | undefined = undefined;
+let initialized = false;
 
-try {
-  if (isFirebaseConfigured) {
-    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Lazy initialization function
+function initializeFirebase() {
+  if (initialized) return;
+  initialized = true;
 
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && app) {
-      messaging = getMessaging(app);
-    }
-  } else {
+  if (!isFirebaseConfigured) {
     console.warn('Firebase is not configured. Push notifications will be disabled.');
+    return;
   }
-} catch (error) {
-  console.warn('Firebase initialization failed:', error);
+
+  try {
+    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  } catch (error) {
+    console.warn('Firebase initialization failed:', error);
+  }
 }
 
-export { app, messaging };
+// Get messaging instance lazily
+function getFirebaseMessaging(): Messaging | undefined {
+  if (!isFirebaseConfigured) return undefined;
+
+  initializeFirebase();
+
+  if (!app) return undefined;
+
+  if (!messaging && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      messaging = getMessaging(app);
+    } catch (error) {
+      console.warn('Firebase messaging initialization failed:', error);
+    }
+  }
+
+  return messaging;
+}
+
+// Only initialize on client side when needed
+if (typeof window !== 'undefined' && isFirebaseConfigured) {
+  initializeFirebase();
+}
+
+export { app, messaging, getFirebaseMessaging, isFirebaseConfigured };
