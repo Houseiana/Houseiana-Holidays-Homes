@@ -12,7 +12,7 @@ export interface BookingCardProps {
   onUpdateGuests: (change: number) => void;
   onReserve: () => void;
   calculateNights: () => number;
-  calculateTotal: () => { base: number; total: number; service: number; cleaning: number };
+  calculateTotal: () => { base: number; total: number; service: number; cleaning: number; discount?: number };
   isNewListing: boolean;
   reviewLabel: string;
   isDateBlocked: (date: Date) => boolean;
@@ -35,12 +35,14 @@ export function BookingCard({
   const totals = calculateTotal();
   const nights = calculateNights();
   const [showCalendar, setShowCalendar] = useState(false);
+  const [focusedInput, setFocusedInput] = useState<'checkIn' | 'checkOut' | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
             setShowCalendar(false);
+            setFocusedInput(null);
         }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -77,20 +79,12 @@ export function BookingCard({
       <div className="flex items-center justify-between">
         <div>
           <div className="text-2xl font-bold text-gray-900">
-            ${property.price?.toFixed(0) || 0} <span className="text-sm text-gray-600 font-normal">night</span>
+            ${property.priceWithoutDiscount?.toFixed(0) || 0} <span className="text-sm text-gray-600 font-normal">night</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Tag className="w-4 h-4 text-amber-500" />
             <span className="font-semibold">{isNewListing ? 'Intro price for early guests' : reviewLabel}</span>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Share className="w-4 h-4 text-gray-600" />
-          </button>
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <MessageCircle className="w-4 h-4 text-gray-600" />
-          </button>
         </div>
       </div>
 
@@ -98,15 +92,26 @@ export function BookingCard({
         {/* Date Selection Trigger */}
         <div 
           className="grid grid-cols-2 divide-x divide-gray-200 cursor-pointer"
-          onClick={() => setShowCalendar(!showCalendar)}
         >
-          <div className="p-3 hover:bg-gray-50 transition-colors">
+          <div 
+            className={`p-3 hover:bg-gray-50 transition-colors ${focusedInput === 'checkIn' ? 'bg-gray-50 ring-2 ring-inset ring-black' : ''}`}
+            onClick={() => {
+              setFocusedInput('checkIn');
+              setShowCalendar(true);
+            }}
+          >
             <label className="text-xs font-semibold text-gray-600 block mb-1">CHECK-IN</label>
             <div className="text-sm text-gray-900 font-medium">
                 {bookingForm.checkIn ? format(new Date(bookingForm.checkIn), 'd/MM/yyyy') : 'Add date'}
             </div>
           </div>
-          <div className="p-3 hover:bg-gray-50 transition-colors">
+          <div 
+            className={`p-3 hover:bg-gray-50 transition-colors ${focusedInput === 'checkOut' ? 'bg-gray-50 ring-2 ring-inset ring-black' : ''}`}
+             onClick={() => {
+              setFocusedInput('checkOut');
+              setShowCalendar(true);
+            }}
+          >
             <label className="text-xs font-semibold text-gray-600 block mb-1">CHECKOUT</label>
             <div className="text-sm text-gray-900 font-medium">
                 {bookingForm.checkOut ? format(new Date(bookingForm.checkOut), 'd/MM/yyyy') : 'Add date'}
@@ -121,10 +126,17 @@ export function BookingCard({
                     blockedDates={bookedDates}
                     checkIn={bookingForm.checkIn}
                     checkOut={bookingForm.checkOut}
+                    focusedInput={focusedInput}
                     onChange={(inDate, outDate) => {
+                        // Pass updates to parent
                         onBookingFormChange({ checkIn: inDate, checkOut: outDate });
-                        if (inDate && outDate) {
-                            setShowCalendar(false);
+                        
+                        // Auto-advance logic
+                        if (focusedInput === 'checkIn' && inDate) {
+                             setFocusedInput('checkOut');
+                        } else if (focusedInput === 'checkOut' && outDate) {
+                             setShowCalendar(false);
+                             setFocusedInput(null);
                         }
                     }}
                     minDate={today}
@@ -139,14 +151,14 @@ export function BookingCard({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onUpdateGuests(-1)}
-                className="p-2 rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50"
+                className="p-2 rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50 flex items-center justify-center"
                 disabled={bookingForm.guests <= 1}
               >
                 <Minus className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onUpdateGuests(1)}
-                className="p-2 rounded-full border border-gray-200 hover:border-gray-300"
+                className="p-2 rounded-full border border-gray-200 hover:border-gray-300 flex items-center justify-center"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -171,9 +183,17 @@ export function BookingCard({
 
       <div className="border-t pt-4 space-y-2 text-sm text-gray-700">
         <div className="flex justify-between">
-          <span>${property.price?.toFixed(0) || 0} x {nights} nights</span>
+          <span>${property.priceWithoutDiscount || 0} x {nights} nights</span>
           <span>${totals.base?.toFixed(0)}</span>
         </div>
+        
+        {totals.discount! > 0 && (
+          <div className="flex justify-between text-emerald-600 font-medium">
+            <span>Discount</span>
+            <span>-${totals.discount?.toFixed(0)}</span>
+          </div>
+        )}
+
         <div className="flex justify-between">
           <span>Cleaning fee</span>
           <span>${totals.cleaning?.toFixed(0) || 0}</span>

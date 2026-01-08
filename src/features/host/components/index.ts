@@ -10,4 +10,7 @@ export * from './DiscountsStep';
 export * from './LegalStep';
 export * from './HouseRulesStep';
 export * from './ReviewStep';
+export * from './ClassificationStep';
+export * from './CancellationPolicyStep';
 export * from './Counter';
+export * from './listings';

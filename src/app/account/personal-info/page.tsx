@@ -24,6 +24,11 @@ interface PassportInfo {
   documentUrl: string | null;
 }
 
+interface Gender {
+  id: string;
+  name: string;
+}
+
 interface NationalIdInfo {
   number: string;
   numberMasked: string;
@@ -47,7 +52,8 @@ interface UserProfile {
   firstName: string;
   lastName: string;
   dateOfBirth: string | null;
-  gender: 'male' | 'female' | 'other' | null;
+  gender: Gender | null;
+  genderId: 'male' | 'female' | null;
   email: string;
   emailMasked: string;
   emailVerified: boolean;
@@ -81,6 +87,7 @@ const RELATIONSHIPS = [
   'Colleague',
   'Other'
 ];
+
 
 export default function PersonalInfoPage() {
   const router = useRouter();
@@ -130,6 +137,7 @@ export default function PersonalInfoPage() {
           firstName: data.firstName || '',
           lastName: data.lastName || '',
           dateOfBirth: data.dateOfBirth || null,
+          genderId: data.genderId || null,
           gender: data.gender || null,
           email: data.email || '',
           emailMasked: data.emailMasked || '',
@@ -181,8 +189,8 @@ export default function PersonalInfoPage() {
       setFormData({ firstName: profile.firstName, lastName: profile.lastName });
     } else if (field === 'dateOfBirth' && profile) {
       setFormData({ dateOfBirth: toInputDate(profile.dateOfBirth) });
-    } else if (field === 'gender' && profile) {
-      setFormData({ gender: profile.gender || '' });
+    } else if (field === 'genderId' && profile) {
+      setFormData({ genderId: profile.genderId || '' });
     } else if (field === 'phone' && profile) {
       setFormData({ phone: profile.phone });
     } else if (field === 'email' && profile) {
@@ -324,10 +332,11 @@ export default function PersonalInfoPage() {
     }
   };
 
-  const formatGender = (gender: string | null) => {
-    if (!gender) return '';
-    return gender.charAt(0).toUpperCase() + gender.slice(1);
-  };
+ 
+const formatGender = (genderId: string | null) => {
+  if (!genderId) return '';
+  return genderOptions.find(g => g.id === genderId)?.name || '';
+};
 
   const formatPassportSummary = (passport: PassportInfo | null) => {
     if (!passport || !passport.passportNumber) return '';
@@ -463,7 +472,7 @@ export default function PersonalInfoPage() {
 
   const renderGenderForm = () => (
     <div className="mt-4 space-y-4">
-      <p className="text-sm text-gray-500">Select your gender.</p>
+      <p className="text-sm text-gray-500">Select your genderId.</p>
       {saveMessage && (
         <div className={`p-3 rounded-lg text-sm ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
           {saveMessage.text}
@@ -472,11 +481,11 @@ export default function PersonalInfoPage() {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
         <select
-          value={formData.gender || ''}
-          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+          value={formData.genderId || ''}
+          onChange={(e) => setFormData({ ...formData, genderId: e.target.value })}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
-          <option value="">Select gender</option>
+          <option value="">Select genderId</option>
           {genderOptions.map((opt: any) => (
              <option key={opt.id || opt.value || opt} value={opt.id || opt.value || opt}>
                {opt.name || opt.label || opt}
@@ -923,11 +932,11 @@ export default function PersonalInfoPage() {
               {/* Gender */}
               <InfoRow
                 label="Gender"
-                value={formatGender(profile.gender)}
-                field="gender"
+                value={formatGender(profile.genderId)}
+                field="genderId"
                 notProvidedText="Not provided"
-                isEditing={editingField === 'gender'}
-                onEdit={() => handleEdit('gender')}
+                isEditing={editingField === 'genderId'}
+                onEdit={() => handleEdit('genderId')}
                 editForm={renderGenderForm()}
               />
 

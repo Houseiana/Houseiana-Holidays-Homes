@@ -291,6 +291,22 @@ export default function HouseianaHeader({
                   </span>
                 </Link>
                 <Link
+                  href="/host-dashboard/bookings"
+                  className={`text-sm font-medium transition-colors min-h-0 ${
+                    pathname?.startsWith('/host-dashboard/bookings')
+                      ? 'text-gray-900'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  <span className={`pb-2 border-b-2 ${
+                    pathname?.startsWith('/host-dashboard/bookings')
+                      ? 'border-gray-900'
+                      : 'border-transparent hover:border-gray-300'
+                  }`}>
+                    Reservations
+                  </span>
+                </Link>
+                <Link
                   href="/host-dashboard/listings"
                   className={`text-sm font-medium transition-colors min-h-0 ${
                     pathname?.startsWith('/host-dashboard/listings')
@@ -334,10 +350,6 @@ export default function HouseianaHeader({
                   </button>
                   {/* Dropdown for more host options */}
                   <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                    <a href="/host-dashboard/bookings" className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      <CalendarDays className="w-4 h-4" />
-                      Reservations
-                    </a>
                     <a href="/host-dashboard/earnings" className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       <DollarSign className="w-4 h-4" />
                       Earnings

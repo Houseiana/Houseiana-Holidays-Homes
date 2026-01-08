@@ -21,7 +21,9 @@ import {
   DiscountsStep,
   LegalStep,
   HouseRulesStep,
-  ReviewStep
+  ReviewStep,
+  ClassificationStep,
+  CancellationPolicyStep
 } from '@/features/host/components';
 
 const libraries: ("places")[] = ["places"];
@@ -52,6 +54,12 @@ export default function AddListingPage() {
     title: '',
     description: '',
     highlights: [],
+    stars: 0,
+    cancellationPolicy: {
+      policyType: 'FLEXIBLE',
+      freeCancellationHours: null,
+      freeCancellationDays: null,
+    },
     basePrice: 100,
     weeklyDiscount: 0,
     monthlyDiscount: 0,
@@ -80,17 +88,19 @@ export default function AddListingPage() {
     { id: 4, phase: 2, title: 'Add some photos of your place', subtitle: 'You\'ll need 5 photos to get started. You can add more or make changes later' },
     { id: 5, phase: 3, title: "Now, let's give your place a title", subtitle: 'Short titles work best. Have fun with it—you can always change it later' },
     { id: 6, phase: 3, title: 'Create your description', subtitle: 'Share what makes your place special' },
-    { id: 7, phase: 3, title: 'Now, set your price', subtitle: 'You can change it anytime' },
-    { id: 8, phase: 3, title: 'Add discounts', subtitle: 'Help your place stand out to get booked faster and earn your first reviews' },
-    { id: 9, phase: 3, title: 'Just a few last questions...', subtitle: 'These help us personalize your hosting experience' },
-    { id: 10, phase: 3, title: 'Set your house rules', subtitle: 'Guests must agree to your rules before they book' },
-    { id: 11, phase: 3, title: 'Review your listing', subtitle: 'Here\'s what we\'ll show to guests. Make sure everything looks good' },
+    { id: 7, phase: 3, title: 'Classify your unit', subtitle: 'How would you rate your property?' },
+    { id: 8, phase: 3, title: 'Now, set your price', subtitle: 'You can change it anytime' },
+    { id: 9, phase: 3, title: 'Add discounts', subtitle: 'Help your place stand out to get booked faster and earn your first reviews' },
+    { id: 10, phase: 3, title: 'Cancellation Policy', subtitle: 'Choose a policy that works for you and your guests' },
+    { id: 11, phase: 3, title: 'Just a few last questions...', subtitle: 'These help us personalize your hosting experience' },
+    { id: 12, phase: 3, title: 'Set your house rules', subtitle: 'Guests must agree to your rules before they book' },
+    { id: 13, phase: 3, title: 'Review your listing', subtitle: 'Here\'s what we\'ll show to guests. Make sure everything looks good' },
   ];
 
   const phases = [
     { id: 1, title: 'Tell us about your place', steps: [0, 1, 2] },
     { id: 2, title: 'Make it stand out', steps: [3, 4] },
-    { id: 3, title: 'Finish up and publish', steps: [5, 6, 7, 8, 9, 10, 11] },
+    { id: 3, title: 'Finish up and publish', steps: [5, 6, 7, 8, 9, 10, 11, 12, 13] },
   ];
 
   const handleNext = () => {
@@ -162,6 +172,14 @@ export default function AddListingPage() {
       formData.append('hostId', userId);
       formData.append('title', listing.title);
       formData.append('description', listing.description);
+      if (listing.stars) {
+        formData.append('stars', listing.stars.toString());
+      }
+      
+      if (listing.cancellationPolicy) {
+        formData.append('cancellationPolicy', JSON.stringify(listing.cancellationPolicy));
+      }
+
       formData.append('propertyType', listing.propertyType);
       formData.append('country', listing.country);
       formData.append('city', listing.city);
@@ -276,11 +294,13 @@ export default function AddListingPage() {
       case 4: return <PhotosStep listing={listing} setListing={setListing} />;
       case 5: return <TitleStep listing={listing} setListing={setListing} />;
       case 6: return <DescriptionStep listing={listing} setListing={setListing} />;
-      case 7: return <PricingStep listing={listing} setListing={setListing} />;
-      case 8: return <DiscountsStep listing={listing} setListing={setListing} />;
-      case 9: return <LegalStep listing={listing} setListing={setListing} />;
-      case 10: return <HouseRulesStep listing={listing} setListing={setListing} />;
-      case 11: return <ReviewStep listing={listing} />;
+      case 7: return <ClassificationStep listing={listing} setListing={setListing} />;
+      case 8: return <PricingStep listing={listing} setListing={setListing} />;
+      case 9: return <DiscountsStep listing={listing} setListing={setListing} />;
+      case 10: return <CancellationPolicyStep listing={listing} setListing={setListing} />;
+      case 11: return <LegalStep listing={listing} setListing={setListing} />;
+      case 12: return <HouseRulesStep listing={listing} setListing={setListing} />;
+      case 13: return <ReviewStep listing={listing} />;
       default: return null;
     }
   };

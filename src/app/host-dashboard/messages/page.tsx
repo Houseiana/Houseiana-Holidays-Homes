@@ -194,6 +194,7 @@ export default function HouseianaHostMessages() {
                   </span>
                 )}
               </a>
+              <a href="/host-dashboard/reservations" className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full">Reservations</a>
               <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full flex items-center gap-1">
                 Menu <ChevronDown className="w-4 h-4" />
               </button>

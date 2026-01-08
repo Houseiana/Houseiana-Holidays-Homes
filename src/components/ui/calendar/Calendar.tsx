@@ -30,6 +30,7 @@ interface CalendarProps {
   checkOut?: string;
   onChange: (checkIn: string, checkOut: string) => void;
   minDate?: string;
+  focusedInput?: 'checkIn' | 'checkOut' | null;
 }
 
 export default function Calendar({ 
@@ -37,25 +38,39 @@ export default function Calendar({
   checkIn, 
   checkOut, 
   onChange,
-  minDate
+  minDate,
+  focusedInput
 }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
-  // State for internal selection flow (first click sets checkIn, second sets checkOut)
-  // If both are set, next click resets and starts new checkIn
   
   const handleDateClick = (date: Date) => {
     if (isBlocked(date)) return;
     
     const dateStr = format(date, 'yyyy-MM-dd');
     
-    // Logic: 
-    // 1. If no checkIn, set checkIn.
-    // 2. If checkIn but no checkOut:
-    //    a. If clicked date < checkIn, set new checkIn.
-    //    b. If clicked date > checkIn, set checkOut (if range valid).
-    // 3. If both set, reset to just checkIn.
+    if (focusedInput === 'checkIn') {
+       onChange(dateStr, '');
+       return;
+    }
+
+    if (focusedInput === 'checkOut' && checkIn) {
+        const start = parseISO(checkIn);
+        if (isBefore(date, start)) {
+            onChange(dateStr, ''); // New start date
+        } else if (isSameDay(date, start)) {
+            // Clicked start date again? Do nothing or maybe clear?
+            // Let's keep it as is
+        } else {
+             if (hasBlockedDatesInBetween(start, date)) {
+                 onChange(dateStr, '');
+             } else {
+                 onChange(checkIn, dateStr);
+             }
+        }
+        return;
+    }
     
+    // Default flow (if focusedInput not matched or not provided)
     if (!checkIn || (checkIn && checkOut)) {
       onChange(dateStr, '');
     } else if (checkIn && !checkOut) {
@@ -65,8 +80,6 @@ export default function Calendar({
       } else {
         // Validation: Verify no blocked dates in between
         if (hasBlockedDatesInBetween(start, date)) {
-           // Maybe show error or just don't select?
-           // For better UX, let's just reset start to this date if the range is invalid
            onChange(dateStr, '');
         } else {
            onChange(checkIn, dateStr);

@@ -5,6 +5,7 @@ import { PropertyAPI } from '@/lib/api/backend-api';
 
 // Types
 export interface PropertyHost {
+  id: string;
   name: string;
   avatar: string;
   joinDate: string;
@@ -19,6 +20,7 @@ export interface PropertyDetail {
   latitude?: number;
   longitude?: number;
   price: number;
+  priceWithoutDiscount: number;
   rating: number;
   reviews: number;
   images: string[];
@@ -31,7 +33,13 @@ export interface PropertyDetail {
   isRareFind: boolean;
   guestFavorite: boolean;
   perks?: string[];
+  // New pricing fields
+  weeklyDiscount?: number;
+  smallBookingDiscount?: number;
+  bookingsCount?: number;
 }
+
+
 
 export interface PropertyBookingForm {
   checkIn: string;
@@ -64,7 +72,7 @@ interface UsePropertyDetailReturn {
 
   // Computed
   calculateNights: () => number;
-  calculateTotal: () => { base: number; total: number; service: number; cleaning: number };
+  calculateTotal: () => { base: number; total: number; service: number; cleaning: number; discount: number };
   isNewListing: boolean;
   reviewLabel: string;
   ratingLabel: string;
@@ -107,7 +115,6 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
       if (propertyResponse.success && propertyResponse.data) {
         // Cast to any to handle potential backend wrapper mismatch
         const p = (propertyResponse.data as any).data || propertyResponse.data as any;
-
         // Map backend property to UI model
         const mappedProperty: PropertyDetail = {
           id: p.id,
@@ -117,6 +124,7 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
           latitude: p.latitude,
           longitude: p.longitude,
           price: p.pricePerNight || p.price,
+          priceWithoutDiscount: p.priceWithoutDiscount,
           rating: p.rating || 0,
           reviews: p.reviews || 0,
           images: p.images && p.images.length > 0
@@ -129,7 +137,8 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
           bathrooms: p.bathrooms,
           guests: p.guests,
           host: {
-            name: p.host?.name || 'Host',
+            id: p.host?.id || '',
+            name: p.host?.firstName + ' ' + p.host?.lastName || 'Host',
             avatar: p.host?.avatar || '',
             joinDate: 'Recently joined',
             verified: p.host?.verified || false,
@@ -138,6 +147,9 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
           isRareFind: false, // Not in API yet
           guestFavorite: false, // Not in API yet
           perks: ['Flexible check-in', 'Self check-in'],
+          weeklyDiscount: p.weeklyDiscount || 0,
+          smallBookingDiscount: p.smallBookingDiscount || 0,
+          bookingsCount: p.bookingsCount || 0,
         };
 
         setProperty(mappedProperty);
@@ -219,16 +231,48 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
   // Calculate total
   const calculateTotal = useCallback(() => {
     const nights = calculateNights();
-    if (!nights || !property) return { base: 0, total: 0, service: 0, cleaning: 0 };
+    if (!nights || !property) return { base: 0, total: 0, service: 0, cleaning: 0, discount: 0 };
     
     const price = Number(property.price) || 0;
-    const base = price * nights;
-    const service = Math.round(base * 0.08);
-    const cleaning = 35;
-    const total = base + service + cleaning;
+    const priceWithoutDiscount = Number(property.priceWithoutDiscount) || 0;
+    const guests = bookingForm.guests;
     
-    return { base, service, cleaning, total };
-  }, [calculateNights, property]);
+    // Base is price * nights * guests
+    const base = priceWithoutDiscount * nights;
+    
+    // --- Pricing Logic Start ---
+    let discountAmount = 0;
+    // @ts-ignore - Properties exist on runtime object but types might need strict check if optional
+    const { weeklyDiscount, smallBookingDiscount, bookingsCount } = property;
+
+    // Rule: Exclusive discounts
+    let activeDiscountPercentage = 0;
+
+    if (weeklyDiscount && weeklyDiscount > 0) {
+      activeDiscountPercentage = weeklyDiscount;
+    } else if (smallBookingDiscount && smallBookingDiscount > 0) {
+      // Rule: Small booking apply only to first 3 bookings
+      // We assume bookingsCount is the number of COMPLETED bookings.
+      if ((bookingsCount || 0) < 3) {
+        activeDiscountPercentage = smallBookingDiscount;
+      }
+    }
+
+    if (activeDiscountPercentage > 0) {
+      // Rule: Discount cap - applies to max 7 nights
+      const discountableNights = Math.min(nights, 7);
+      // Discount based on priceWithoutDiscount * discountableNights * guests
+      const discountableAmount = priceWithoutDiscount * discountableNights;
+      discountAmount = (discountableAmount * activeDiscountPercentage) / 100;
+    }
+    // --- Pricing Logic End ---
+
+    const service = Math.round((base - discountAmount) * 0.10); // Service fee (10%)
+    const cleaning = 35;
+    const total = base - discountAmount + service + cleaning;
+    
+    return { base, service, cleaning, total, discount: discountAmount };
+  }, [calculateNights, property, bookingForm.guests]);
 
   // Update guests
   const updateGuests = useCallback((change: number) => {

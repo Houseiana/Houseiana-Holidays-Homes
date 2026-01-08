@@ -246,13 +246,6 @@ export function useBookingConfirm({
         }
 
       } else if (paymentMethod === 'sadad') {
-          console.log('📤 Initiating Sadad payment:', {
-              amount,
-              orderId,
-              email: guestForm.email,
-              mobileNo: guestForm.phoneCode.replace('+', '') + guestForm.phone,
-          });
-
           const sadadResponse = await BackendAPI.Payment.createSadadPayment({
               amount: amount,
               orderId: orderId,
@@ -260,79 +253,32 @@ export function useBookingConfirm({
               mobileNo: guestForm.phoneCode.replace('+', '') + guestForm.phone,
               description: `Booking for ${bookingData.property.title}`
           });
-
-          console.log('📥 Sadad API Response:', JSON.stringify(sadadResponse, null, 2));
-
+          
            if (sadadResponse.success && sadadResponse.data) {
-                const data = sadadResponse.data as any;
+                const data = sadadResponse.data as any; 
+                let redirectUrl = null;
 
-                // Check if we have formAction and formData for POST submission
-                if (data.formAction && data.formData) {
-                    console.log('🔗 Sadad Form Action:', data.formAction);
-                    console.log('📋 Sadad Form Data:', data.formData);
+               if (typeof data === 'string' && data.startsWith('http')) {
+                    redirectUrl = data;
+               } else if (data.formAction) {
+                    redirectUrl = data.formAction;
+               }
 
-                    toast.success('Redirecting to payment page...');
-
-                    // Create and submit a hidden form (POST request required by Sadad)
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = data.formAction;
-                    form.style.display = 'none';
-
-                    // Add all form fields from the response
-                    const formData = data.formData;
-
-                    // Add standard fields
-                    const addField = (name: string, value: string) => {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = name;
-                        input.value = value;
-                        form.appendChild(input);
-                    };
-
-                    // Map the response fields to Sadad expected field names
-                    // IMPORTANT: Don't modify values here - backend must provide sanitized data
-                    // because signature is calculated on backend with these exact values
-                    if (formData.merchant_id) addField('merchant_id', formData.merchant_id);
-                    if (formData.ORDER_ID) addField('ORDER_ID', formData.ORDER_ID);
-                    if (formData.WEBSITE) addField('WEBSITE', formData.WEBSITE);
-                    if (formData.TXN_AMOUNT) addField('TXN_AMOUNT', formData.TXN_AMOUNT);
-                    if (formData.email) addField('email', formData.email);
-                    if (formData.MOBILE_NO) addField('MOBILE_NO', formData.MOBILE_NO);
-                    if (formData.CALLBACK_URL) addField('CALLBACK_URL', formData.CALLBACK_URL);
-                    if (formData.txnDate) addField('txnDate', formData.txnDate);
-                    if (formData.signature) addField('signature', formData.signature);
-
-                    // Add product details as array fields (not JSON string)
-                    // Sadad expects: productdetail[0][order_id], productdetail[0][amount], productdetail[0][quantity]
-                    if (formData.productdetail && Array.isArray(formData.productdetail)) {
-                        formData.productdetail.forEach((product: any, index: number) => {
-                            if (product.order_id) addField(`productdetail[${index}][order_id]`, product.order_id);
-                            if (product.amount) addField(`productdetail[${index}][amount]`, product.amount);
-                            if (product.quantity) addField(`productdetail[${index}][quantity]`, product.quantity);
-                        });
-                    }
-
-                    // Append form to body and submit
-                    document.body.appendChild(form);
-                    console.log('📤 Submitting Sadad form...');
-                    form.submit();
-                } else {
-                    // Fallback: try direct URL redirect
-                    let redirectUrl = data.formAction || data.transactionUrl || data.url || data.redirectUrl;
-
-                    if (redirectUrl) {
-                        console.log('🔗 Sadad Redirect URL (fallback):', redirectUrl);
-                        toast.success('Redirecting to payment page...');
-                        window.location.href = redirectUrl;
-                    } else {
-                        console.error('❌ No valid form data or redirect URL found:', data);
+               if (redirectUrl) {
+                   window.open(redirectUrl);
+                   toast.success('Opening payment page...');
+               } else {
+                    // Fallback or specific handling if needed.
+                   console.log('Sadad response:', sadadResponse);
+                   const fallbackUrl = sadadResponse.data.transactionUrl || sadadResponse.data.url;
+                   if (fallbackUrl && typeof fallbackUrl === 'string') {
+                        window.open(fallbackUrl, '_blank');
+                        toast.success('Opening payment page...');
+                   } else {
                         throw new Error('Invalid Sadad response format');
-                    }
-                }
+                   }
+               }
            } else {
-               console.error('❌ Sadad payment failed:', sadadResponse.error);
                throw new Error(sadadResponse.error || 'Failed to initiate Sadad payment');
            }
       }

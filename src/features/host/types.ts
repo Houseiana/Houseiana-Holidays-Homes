@@ -32,4 +32,10 @@ export interface PropertyFormData {
   allowParties: boolean;
   checkInTime: string;
   checkOutTime: string;
+  stars?: number;
+  cancellationPolicy: {
+    policyType: 'FLEXIBLE' | 'MODERATE' | 'FIXED';
+    freeCancellationHours?: any;
+    freeCancellationDays?: any;
+  };
 }

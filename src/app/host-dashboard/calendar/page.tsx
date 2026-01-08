@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Home, Calendar, Building2, MessageSquare, ChevronDown, ChevronLeft,
   ChevronRight, Globe, Menu, Plus, X, Check,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 export default function HouseianaHostCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 11, 1)); // December 2024
+  const [currentDate, setCurrentDate] = useState(new Date()); // Defaults to current month
   const [selectedProperty, setSelectedProperty] = useState('all');
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -104,14 +104,40 @@ export default function HouseianaHostCalendar() {
     },
   ];
 
-  // Sample blocked dates - TODO: Fetch from API
-  const blockedDates = [
+  // Sample blocked dates - converted to state for mock functionality
+  const [blockedDates, setBlockedDates] = useState([
     { propertyId: 'P001', date: new Date(2024, 11, 12), reason: 'Owner use' },
     { propertyId: 'P001', date: new Date(2024, 11, 13), reason: 'Owner use' },
     { propertyId: 'P001', date: new Date(2024, 11, 14), reason: 'Owner use' },
     { propertyId: 'P002', date: new Date(2024, 11, 20), reason: 'Maintenance' },
     { propertyId: 'P002', date: new Date(2024, 11, 21), reason: 'Maintenance' },
-  ];
+  ]);
+
+  const toggleDayStatus = (date: Date) => {
+    const isBlocked = isDateBlocked(date, selectedProperty === 'all' ? null : selectedProperty);
+    
+    if (isBlocked) {
+      // Unblock: Remove from blockedDates
+      setBlockedDates(prev => prev.filter(b => {
+        if (selectedProperty !== 'all' && b.propertyId !== selectedProperty) return true; // Keep other props
+        return !isSameDay(b.date, date);
+      }));
+      // Optional: Toast or feedback
+    } else {
+      // Block: Add to blockedDates
+      // If 'all' is selected, maybe block for first property or warn? 
+      // For now, let's assume if 'all', we block for 'P001' (default) or handle it gracefully.
+      // Better: check if we have a selected property, if "all", assume P001 or just block visually.
+      
+      const targetPropertyId = selectedProperty === 'all' ? 'P001' : selectedProperty;
+      
+      setBlockedDates(prev => [...prev, {
+        propertyId: targetPropertyId,
+        date: new Date(date),
+        reason: 'User blocked' 
+      }]);
+    }
+  };
 
   // Custom pricing - TODO: Fetch from API
   const customPricing = [
@@ -444,7 +470,7 @@ export default function HouseianaHostCalendar() {
                     onClick={() => !isPast && !booking && handleDateClick(day.date)}
                     onMouseEnter={() => handleDateHover(day.date)}
                     className={`
-                      bg-white min-h-[100px] p-2 relative cursor-pointer transition-all
+                      group bg-white min-h-[100px] p-2 relative cursor-pointer transition-all
                       ${!day.isCurrentMonth ? 'bg-gray-50' : ''}
                       ${isPast ? 'bg-gray-50 cursor-not-allowed' : 'hover:bg-gray-50'}
                       ${isSelected ? 'ring-2 ring-inset ring-teal-500 bg-teal-50' : ''}
@@ -498,6 +524,23 @@ export default function HouseianaHostCalendar() {
                         <Sparkles className="w-3 h-3 text-teal-500" />
                       </div>
                     )}
+
+                    {/* Hover Block/Unblock Action */}
+                    {!isPast && !booking && day.isCurrentMonth && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleDayStatus(day.date);
+                        }}
+                        className={`
+                          absolute top-2 right-2 p-1.5 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10 flex items-center justify-center
+                          ${blocked ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}
+                        `}
+                        title={blocked ? "Unblock date" : "Block date"}
+                      >
+                        {blocked ? <Check className="w-5 h-5" /> : <Ban className="w-5 h-5" />}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -535,15 +578,20 @@ export default function HouseianaHostCalendar() {
                           {property?.name} · {booking.checkIn.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {booking.checkOut.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">QAR {booking.totalAmount.toLocaleString()}</p>
-                        <p className={`text-sm ${booking.status === 'confirmed' ? 'text-teal-600' : 'text-amber-600'}`}>
-                          {booking.status === 'confirmed' ? 'Confirmed' : 'Pending'}
-                        </p>
+                      <div className="flex gap-3 items-center justify-between">
+                        <div className="text-left mr-3">
+                          <p className="font-medium text-gray-900">QAR {booking.totalAmount.toLocaleString()}</p>
+                          <p className={`text-sm ${booking.status === 'confirmed' ? 'text-teal-600' : 'text-amber-600'}`}>
+                            {booking.status === 'confirmed' ? 'Confirmed' : 'Pending'}
+                          </p>
+                        </div>
+                        <button className="p-2 bg-green-100 hover:bg-green-200 rounded-full flex items-center justify-center transition-colors">
+                          <Check className="w-5 h-5 text-green-600" />
+                        </button>
+                        <button className="p-2 bg-rose-100 hover:bg-rose-200 rounded-full flex items-center justify-center transition-colors">
+                          <X className="w-5 h-5 text-rose-600" />
+                        </button>
                       </div>
-                      <button className="p-2 hover:bg-gray-200 rounded-full">
-                        <MessageSquare className="w-5 h-5 text-gray-500" />
-                      </button>
                     </div>
                   );
                 })}
