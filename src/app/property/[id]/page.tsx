@@ -172,7 +172,6 @@ export default function PropertyDetailPage() {
               reviewLabel={reviewLabel}
               isDateBlocked={isDateBlocked}
               bookedDates={bookedDates}
-              onShare={shareProperty}
             />
           </div>
         </div>

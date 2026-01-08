@@ -17,7 +17,6 @@ export interface BookingCardProps {
   reviewLabel: string;
   isDateBlocked: (date: Date) => boolean;
   bookedDates: { from: string; to: string }[];
-  onShare: () => void;
 }
 
 export function BookingCard({
@@ -32,7 +31,6 @@ export function BookingCard({
   reviewLabel,
   isDateBlocked,
   bookedDates,
-  onShare,
 }: BookingCardProps) {
   const totals = calculateTotal();
   const nights = calculateNights();
@@ -87,14 +85,6 @@ export function BookingCard({
             <Tag className="w-4 h-4 text-amber-500" />
             <span className="font-semibold">{isNewListing ? 'Intro price for early guests' : reviewLabel}</span>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={onShare} className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Share className="w-4 h-4 text-gray-600" />
-          </button>
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <MessageCircle className="w-4 h-4 text-gray-600" />
-          </button>
         </div>
       </div>
 
@@ -161,14 +151,14 @@ export function BookingCard({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onUpdateGuests(-1)}
-                className="p-2 rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50"
+                className="p-2 rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50 flex items-center justify-center"
                 disabled={bookingForm.guests <= 1}
               >
                 <Minus className="w-4 h-4" />
               </button>
               <button
                 onClick={() => onUpdateGuests(1)}
-                className="p-2 rounded-full border border-gray-200 hover:border-gray-300"
+                className="p-2 rounded-full border border-gray-200 hover:border-gray-300 flex items-center justify-center"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -193,7 +183,7 @@ export function BookingCard({
 
       <div className="border-t pt-4 space-y-2 text-sm text-gray-700">
         <div className="flex justify-between">
-          <span>${property.priceWithoutDiscount * bookingForm.guests || 0} x {nights} nights</span>
+          <span>${property.priceWithoutDiscount || 0} x {nights} nights</span>
           <span>${totals.base?.toFixed(0)}</span>
         </div>
         

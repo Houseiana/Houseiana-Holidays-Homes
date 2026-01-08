@@ -13,8 +13,6 @@ export function Footer() {
             <ul className="space-y-2">
               <li><Link href="/help" className="text-gray-600 hover:text-gray-900">Help Center</Link></li>
               <li><Link href="/help/contact-support" className="text-gray-600 hover:text-gray-900">Contact Us</Link></li>
-              <li><Link href="/safety" className="text-gray-600 hover:text-gray-900">Safety</Link></li>
-              <li><Link href="/cancellation" className="text-gray-600 hover:text-gray-900">Cancellation Options</Link></li>
             </ul>
           </div>
 
@@ -24,8 +22,6 @@ export function Footer() {
             <ul className="space-y-2">
               <li><Link href="/host" className="text-gray-600 hover:text-gray-900">Host your home</Link></li>
               <li><Link href="/resources" className="text-gray-600 hover:text-gray-900">Resources</Link></li>
-              <li><Link href="/community" className="text-gray-600 hover:text-gray-900">Community</Link></li>
-              <li><Link href="/responsible-hosting" className="text-gray-600 hover:text-gray-900">Responsible hosting</Link></li>
             </ul>
           </div>
 

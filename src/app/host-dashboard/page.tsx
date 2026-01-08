@@ -424,7 +424,7 @@ function HostDashboardContent() {
                       <span className="text-gray-700">Community center</span>
                       <ChevronRight className="w-5 h-5 text-gray-400" />
                     </a>
-                    <a href="#" className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <a href="/support" className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
                       <span className="text-gray-700">Get help</span>
                       <ChevronRight className="w-5 h-5 text-gray-400" />
                     </a>

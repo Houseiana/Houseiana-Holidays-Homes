@@ -5,6 +5,7 @@ import { PropertyAPI } from '@/lib/api/backend-api';
 
 // Types
 export interface PropertyHost {
+  id: string;
   name: string;
   avatar: string;
   joinDate: string;
@@ -114,7 +115,6 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
       if (propertyResponse.success && propertyResponse.data) {
         // Cast to any to handle potential backend wrapper mismatch
         const p = (propertyResponse.data as any).data || propertyResponse.data as any;
-
         // Map backend property to UI model
         const mappedProperty: PropertyDetail = {
           id: p.id,
@@ -137,7 +137,8 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
           bathrooms: p.bathrooms,
           guests: p.guests,
           host: {
-            name: p.host?.name || 'Host',
+            id: p.host?.id || '',
+            name: p.host?.firstName + ' ' + p.host?.lastName || 'Host',
             avatar: p.host?.avatar || '',
             joinDate: 'Recently joined',
             verified: p.host?.verified || false,
@@ -237,7 +238,7 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
     const guests = bookingForm.guests;
     
     // Base is price * nights * guests
-    const base = priceWithoutDiscount * nights * guests;
+    const base = priceWithoutDiscount * nights;
     
     // --- Pricing Logic Start ---
     let discountAmount = 0;
@@ -261,12 +262,12 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
       // Rule: Discount cap - applies to max 7 nights
       const discountableNights = Math.min(nights, 7);
       // Discount based on priceWithoutDiscount * discountableNights * guests
-      const discountableAmount = priceWithoutDiscount * discountableNights * guests;
+      const discountableAmount = priceWithoutDiscount * discountableNights;
       discountAmount = (discountableAmount * activeDiscountPercentage) / 100;
     }
     // --- Pricing Logic End ---
 
-    const service = Math.round((base - discountAmount) * 0.08); // Service fee usually on discounted base
+    const service = Math.round((base - discountAmount) * 0.10); // Service fee (10%)
     const cleaning = 35;
     const total = base - discountAmount + service + cleaning;
     

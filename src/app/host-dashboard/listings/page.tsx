@@ -4,292 +4,17 @@ import { useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import {
-  Home, Calendar, Building2, Menu, Plus, Search,
-  DollarSign, Users, Edit, Star, LayoutGrid, List, Eye, MoreHorizontal,
-  MapPin, Bed, Bath, Image as ImageIcon, CheckCircle, XCircle,
-  Zap, Award, Sparkles, Pause as PauseIcon, FileText, Camera, Check, AlertCircle,
-  CalendarDays, Globe,
+  Plus, Search, DollarSign, LayoutGrid, List, Check, CheckCircle, CalendarDays, Award, Sparkles, Star, Building2
 } from 'lucide-react';
 
 import { useHostListings, Listing, ListingStatus, ListingSortBy, ViewMode } from '@/hooks';
 
 // Status configuration
-const statusConfig = {
-  active: { label: 'Active', color: 'bg-green-100 text-green-700', dotColor: 'bg-green-500', icon: CheckCircle },
-  paused: { label: 'Paused', color: 'bg-amber-100 text-amber-700', dotColor: 'bg-amber-500', icon: PauseIcon },
-  draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', dotColor: 'bg-gray-400', icon: FileText },
-  inactive: { label: 'Inactive', color: 'bg-red-100 text-red-700', dotColor: 'bg-red-500', icon: XCircle },
-};
-
-// Helper function to format date
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-// Presentational Components
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  iconBgColor: string;
-}
-
-function StatCard({ label, value, icon, iconBgColor }: StatCardProps) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">{label}</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-1">{value}</p>
-        </div>
-        <div className={`w-10 h-10 ${iconBgColor} rounded-full flex items-center justify-center`}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface ListingCardProps {
-  listing: Listing;
-  isSelected: boolean;
-  onToggleSelect: () => void;
-  onView: () => void;
-  onEdit: () => void;
-  onViewCalendar: () => void;
-}
-
-function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdit, onViewCalendar }: ListingCardProps) {
-  const status = statusConfig[listing.status];
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group">
-      {/* Image */}
-      <div className="relative aspect-[4/3] bg-gray-200">
-        {listing.images.length > 0 ? (
-          <img
-            src={listing.images[0]}
-            alt={listing.title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <ImageIcon className="w-12 h-12 text-gray-400" />
-          </div>
-        )}
-
-        <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
-          {status.label}
-        </div>
-
-        <div className="absolute top-3 right-3 flex gap-2">
-          {listing.guestFavorite && (
-            <div className="px-2 py-1 bg-white rounded-full text-xs font-medium text-gray-900 shadow">
-              Guest favorite
-            </div>
-          )}
-          {listing.superhostBadge && (
-            <div className="px-2 py-1 bg-white rounded-full shadow">
-              <Award className="w-4 h-4 text-amber-500" />
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
-          className={`absolute bottom-3 left-3 w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
-            isSelected
-              ? 'bg-teal-600 border-teal-600'
-              : 'bg-white/80 border-gray-300 opacity-0 group-hover:opacity-100'
-          }`}
-        >
-          {isSelected && <Check className="w-4 h-4 text-white" />}
-        </button>
-
-        <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={onView} className="p-2 bg-white rounded-full shadow hover:bg-gray-100">
-            <Eye className="w-4 h-4 text-gray-600" />
-          </button>
-          <button onClick={onEdit} className="p-2 bg-white rounded-full shadow hover:bg-gray-100">
-            <Edit className="w-4 h-4 text-gray-600" />
-          </button>
-          <button onClick={onViewCalendar} className="p-2 bg-white rounded-full shadow hover:bg-gray-100">
-            <MoreHorizontal className="w-4 h-4 text-gray-600" />
-          </button>
-        </div>
-
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/60 text-white text-xs rounded-full flex items-center gap-1">
-          <Camera className="w-3 h-3" />
-          {listing.imageCount}
-        </div>
-      </div>
-
-      <div className="p-4">
-        <div className="mb-3">
-          <h3 className="font-semibold text-gray-900 line-clamp-1">{listing.title}</h3>
-          <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
-            <MapPin className="w-3.5 h-3.5" />
-            {listing.location}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
-          <span className="flex items-center gap-1">
-            <Bed className="w-4 h-4" />
-            {listing.bedrooms || 'Studio'}
-          </span>
-          <span className="flex items-center gap-1">
-            <Bath className="w-4 h-4" />
-            {listing.bathrooms}
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="w-4 h-4" />
-            {listing.maxGuests}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between py-3 border-t border-gray-100">
-          <div className="flex items-center gap-4">
-            {listing.rating && (
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                <span className="text-sm font-medium">{listing.rating}</span>
-                <span className="text-sm text-gray-500">({listing.reviewCount})</span>
-              </div>
-            )}
-            {listing.status === 'draft' && listing.completionPercent && (
-              <div className="flex items-center gap-1">
-                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-500 rounded-full" style={{ width: `${listing.completionPercent}%` }} />
-                </div>
-                <span className="text-xs text-gray-500">{listing.completionPercent}%</span>
-              </div>
-            )}
-          </div>
-          <div className="text-right">
-            <p className="font-semibold text-gray-900">QAR {listing.basePrice}</p>
-            <p className="text-xs text-gray-500">per night</p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-sm">
-          <div className="flex items-center gap-1 text-gray-500">
-            <Eye className="w-4 h-4" />
-            {listing.views.toLocaleString()} views
-          </div>
-          {listing.bookings.upcoming > 0 && (
-            <span className="text-teal-600 font-medium">{listing.bookings.upcoming} upcoming</span>
-          )}
-        </div>
-
-        {(listing.pauseReason || listing.deactivationReason) && (
-          <div className="mt-3 p-2 bg-amber-50 rounded-lg flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800">{listing.pauseReason || listing.deactivationReason}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface ListingRowProps {
-  listing: Listing;
-  isSelected: boolean;
-  onToggleSelect: () => void;
-  onView: () => void;
-  onEdit: () => void;
-  onViewCalendar: () => void;
-}
-
-function ListingRow({ listing, isSelected, onToggleSelect, onView, onEdit, onViewCalendar }: ListingRowProps) {
-  const status = statusConfig[listing.status];
-
-  return (
-    <tr className="hover:bg-gray-50">
-      <td className="px-4 py-4">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onToggleSelect}
-          className="w-4 h-4 text-teal-600 rounded"
-        />
-      </td>
-      <td className="px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-16 h-12 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {listing.images.length > 0 ? (
-              <img src={listing.images[0]} alt={listing.title} className="w-full h-full object-cover" />
-            ) : (
-              <ImageIcon className="w-5 h-5 text-gray-400" />
-            )}
-          </div>
-          <div>
-            <p className="font-medium text-gray-900 line-clamp-1">{listing.title}</p>
-            <p className="text-sm text-gray-500">{listing.location}</p>
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-4">
-        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${status.dotColor} mr-1.5`} />
-          {status.label}
-        </span>
-      </td>
-      <td className="px-4 py-4">
-        {listing.instantBook ? (
-          <span className="flex items-center gap-1 text-teal-600">
-            <Zap className="w-4 h-4" />
-            On
-          </span>
-        ) : (
-          <span className="text-gray-400">Off</span>
-        )}
-      </td>
-      <td className="px-4 py-4">
-        <span className="font-medium text-gray-900">QAR {listing.basePrice}</span>
-      </td>
-      <td className="px-4 py-4">
-        <div>
-          <p className="font-medium text-gray-900">{listing.bookings.upcoming} upcoming</p>
-          <p className="text-sm text-gray-500">{listing.bookings.total} total</p>
-        </div>
-      </td>
-      <td className="px-4 py-4">
-        {listing.rating ? (
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-            <span className="font-medium">{listing.rating}</span>
-            <span className="text-gray-500">({listing.reviewCount})</span>
-          </div>
-        ) : (
-          <span className="text-gray-400">No reviews</span>
-        )}
-      </td>
-      <td className="px-4 py-4 text-sm text-gray-500">{formatDate(listing.lastUpdated)}</td>
-      <td className="px-4 py-4">
-        <div className="flex items-center justify-end gap-2">
-          <button onClick={onView} className="p-2 hover:bg-gray-100 rounded-lg" title="Preview">
-            <Eye className="w-4 h-4 text-gray-500" />
-          </button>
-          <button onClick={onEdit} className="p-2 hover:bg-gray-100 rounded-lg" title="Edit">
-            <Edit className="w-4 h-4 text-gray-500" />
-          </button>
-          <button onClick={onViewCalendar} className="p-2 hover:bg-gray-100 rounded-lg" title="Calendar">
-            <Calendar className="w-4 h-4 text-gray-500" />
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
+import {
+  ListingCard,
+  ListingRow,
+  StatCard
+} from '@/features/host/components';
 
 // Main Page Component
 export default function HouseianaHostListings() {
@@ -330,7 +55,32 @@ export default function HouseianaHostListings() {
     router.push(`/host-dashboard/add-listing?id=${id}`);
   };
 
+  const handleDeleteListing = (id: string) => {
+    router.push(`/host-dashboard/add-listing?id=${id}`);
+  };
+
   const handleViewCalendar = (id: string) => {
+    router.push(`/host-dashboard/calendar?property=${id}`);
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'INACTIVE' : 'PUBLISHED';
+    const isActive = newStatus === 'PUBLISHED';
+    try {
+      await fetch('/api/properties', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus, isActive }),
+      });
+      // In a real app we would refetch or update optimistic state here
+      // For now we assume the parent refreshes or we rely on the next fetch cycle
+      window.location.reload(); // Simple reload to reflect changes as we don't have direct access to setListings
+    } catch (error) {
+      console.error('Error toggling status:', error);
+    }
+  };
+
+  const handleBlock = (id: string) => {
     router.push(`/host-dashboard/calendar?property=${id}`);
   };
 
@@ -497,6 +247,9 @@ export default function HouseianaHostListings() {
                 onView={() => handleViewListing(listing.id)}
                 onEdit={() => handleEditListing(listing.id)}
                 onViewCalendar={() => handleViewCalendar(listing.id)}
+                onDelete={() => handleDeleteListing(listing.id)}
+                onToggleStatus={() => handleToggleStatus(listing.id, listing.status)}
+                onBlock={() => handleBlock(listing.id)}
               />
             ))}
           </div>

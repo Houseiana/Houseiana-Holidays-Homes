@@ -3,6 +3,7 @@
 import { ShieldCheck } from 'lucide-react';
 import type { PropertyDetail } from '@/hooks';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export interface HostInfoProps {
   host: PropertyDetail['host'];
@@ -10,7 +11,7 @@ export interface HostInfoProps {
 
 export function HostInfo({ host }: HostInfoProps) {
   return (
-    <div className="flex items-center gap-3">
+    <Link href={`/profile/${host.id}`} className="flex items-center gap-3">
       <Image
         src={host.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(host.name)}&background=random`}
         alt={host.name}
@@ -32,6 +33,6 @@ export function HostInfo({ host }: HostInfoProps) {
           </span>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
