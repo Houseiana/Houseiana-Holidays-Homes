@@ -2,12 +2,16 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "react-hot-toast";
+import { Suspense } from "react";
 import "./globals.css";
 
 import QueryProvider from "@/providers/query-provider";
 import { Header as HouseianaHeader, Footer as HouseianaFooter } from "@/layout";
 import { ToastContainer } from "@/components/ui/toast";
 import NotificationListener from "@/components/NotificationListener";
+
+// Force dynamic rendering for all pages
+export const dynamic = 'force-dynamic';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -101,8 +105,12 @@ export default function RootLayout({
         <NotificationListener />
         <html lang="en">
           <body className={`${inter.variable} font-sans antialiased`}>
-            <HouseianaHeader />
-            {children}
+            <Suspense fallback={null}>
+              <HouseianaHeader />
+            </Suspense>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div></div>}>
+              {children}
+            </Suspense>
             <ToastContainer />
             <Toaster position="top-center" />
           </body>
