@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const clerkUser = await clerk.users.getUser(clerkId);
 
     const primaryEmail = clerkUser.emailAddresses.find(
-      (e: { id: string; emailAddress: string; verification?: { status: string } }) => e.id === clerkUser.primaryEmailAddressId
+      (e) => e.id === clerkUser.primaryEmailAddressId
     );
 
     // Build profile from Clerk data
