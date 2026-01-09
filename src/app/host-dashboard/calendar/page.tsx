@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Home, Calendar, Building2, MessageSquare, ChevronDown, ChevronLeft,
   ChevronRight, Globe, Menu, Plus, X, Check,
@@ -8,47 +8,65 @@ import {
   TrendingUp, LayoutGrid, CalendarDays
 } from 'lucide-react';
 
+import { useUser } from '@clerk/nextjs';
+import { LookupsAPI } from '@/lib/backend-api';
+import { PropertyService } from '@/features/property/api/property.service';
+import Swal from 'sweetalert2';
+
 export default function HouseianaHostCalendar() {
+  const { user } = useUser();
   const [currentDate, setCurrentDate] = useState(new Date()); // Defaults to current month
   const [selectedProperty, setSelectedProperty] = useState('all');
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  console.log(selectedDates);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<Date | null>(null);
   const [showPricing, setShowPricing] = useState(true);
   const [showSidebar, setShowSidebar] = useState(false);
   const [sidebarMode, setSidebarMode] = useState<'details' | 'pricing' | 'block'>('details');
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+  const [blockReasons, setBlockReasons] = useState<any[]>([]);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [selectedReason, setSelectedReason] = useState<string>('');
+  const [blockNotes, setBlockNotes] = useState('');
 
-  // Sample properties - TODO: Fetch from API
-  const properties = [
-    {
-      id: 'P001',
-      name: 'Beachfront Villa',
-      location: 'The Pearl, Doha',
-      basePrice: 450,
-      bedrooms: 3,
-      bathrooms: 2,
-      status: 'active'
-    },
-    {
-      id: 'P002',
-      name: 'Mountain Cabin Retreat',
-      location: 'Al Khor',
-      basePrice: 280,
-      bedrooms: 2,
-      bathrooms: 1,
-      status: 'active'
-    },
-    {
-      id: 'P003',
-      name: 'City Loft Premium',
-      location: 'West Bay, Doha',
-      basePrice: 320,
-      bedrooms: 1,
-      bathrooms: 1,
-      status: 'active'
-    },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const promises: Promise<any>[] = [LookupsAPI.getReasonBlockProperty()];
+        
+        if (user?.id) {
+          promises.push(PropertyService.getByHost(user.id));
+        }
+
+        const [reasonsResponse, propertiesResponse] = await Promise.all(promises);
+
+        if (reasonsResponse && reasonsResponse.success && reasonsResponse.data) {
+          setBlockReasons(reasonsResponse.data);
+        }
+        // propertiesResponse might be undefined if user.id wasn't present
+        if (propertiesResponse && propertiesResponse.success && propertiesResponse.data) {
+          // Map API property data to expected UI format
+          const mappedProperties = propertiesResponse?.data?.data?.map((p: any) => ({
+            ...p,
+            name: p.name, // Map title to name
+          }));
+          setProperties(mappedProperties);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    
+    if (user?.id) {
+        fetchData();
+    } else {
+        // Fetch just reasons if user is not loaded yet? Or wait? 
+        // Let's at least fetch reasons. 
+        // Better: logic handles array length.
+        fetchData();
+    }
+  }, [user]);
 
   // Sample bookings - TODO: Fetch from API
   const bookings = [
@@ -305,6 +323,98 @@ export default function HouseianaHostCalendar() {
   const selectedProperty_obj = selectedProperty === 'all'
     ? null
     : properties.find(p => p.id === selectedProperty);
+
+  const handleBlockDates = async () => {
+    if (!user?.id || !selectedDates.length) return;
+    
+    // If 'all' properties selected, we can't easily block for "all" unless we loop or the API supports it.
+    // For now, enforce selecting a property if 'all' is selected, or default to one if logic permits. 
+    // The previous mock logic defaulted to 'P001' if 'all', but with real data we should probably ask user to select one.
+    let targetPropertyId = selectedProperty;
+    if (targetPropertyId === 'all') {
+        // If properties are loaded, maybe pick the first one or show error
+        if (properties.length > 0) {
+            targetPropertyId = properties[0].id; // Fallback or prompt user
+            // Ideally Swal alert: "Please select a specific property to block dates."
+             Swal.fire({
+                title: 'Select Property',
+                text: 'Please select a specific property to block dates.',
+                icon: 'warning',
+                confirmButtonColor: '#0f766e',
+             });
+             return;
+        } 
+    }
+
+    try {
+        // Sort dates to find start and end
+        const sortedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime());
+        const fromDate = sortedDates[0];
+        const toDate = sortedDates[sortedDates.length - 1];
+
+        // API expects strings, likely ISO or YYYY-MM-DD. 
+        // Based on user payload "fromDate": "string", likely ISO 8601 or YYYY-MM-DD.
+        // Let's use YYYY-MM-DD for simplicity if API accepts it, or ISO. Safe bet is often ISO string or local date string.
+        // Assuming YYYY-MM-DD from context of calendar apps usually.
+        // To be safe let's try ISO string but check if backend needs specific format. 
+        // User didn't specify format, I'll use YYYY-MM-DD.
+        const formatDate = (d: Date) => {
+            const offset = d.getTimezoneOffset();
+            const date = new Date(d.getTime() - (offset*60*1000));
+            return date.toISOString().split('T')[0];
+        };
+
+        const payload = {
+            propertyId: targetPropertyId,
+            userId: user.id,
+            fromDate: formatDate(fromDate),
+            toDate: formatDate(toDate),
+            status: 'BLOCKED', // Explicitly setting blocked status
+            reasonId: selectedReason ? Number(selectedReason) : 0, // Assuming ID is number based on "reasonId": 0 example
+            reasonText: blockNotes || ''
+        };
+        
+        // If selectedReason is actually a string name (from my previous mapping `value={reason.id || reason.name}`), 
+        // and API expects `reasonId` as number, I might need to find the ID.
+        // Let's look at how I mapped options: `value={reason.id || reason.name}`.
+        // If `reason.id` is available and is number, good. If it is string or name is used, we might need adjustment.
+        // The user example says `"reasonId": 0`.
+        // I should ensure I send the correct ID.
+        const reasonObj = blockReasons.find(r => (r.id?.toString() === selectedReason) || (r.name === selectedReason));
+        if (reasonObj && reasonObj.id) {
+            payload.reasonId = Number(reasonObj.id);
+        }
+
+        const response = await PropertyService.updateCalendarStatus(payload);
+
+        if (response.success) {
+            Swal.fire({
+                title: 'Dates Blocked',
+                text: 'The selected dates have been blocked successfully.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            // Update local state to reflect change (or refetch bookings/blocked dates)
+            // Ideally we refetch fetched data.
+            // For now, let's just clear selection and maybe close sidebar
+            clearSelection();
+            // TODO: Refetch blockers/bookings to update calendar view
+            // fetchBookings/Blockers(); 
+        } else {
+             throw new Error(response.message || 'Failed to block dates');
+        }
+
+    } catch (error) {
+        console.error('Block error:', error);
+        Swal.fire({
+            title: 'Error',
+            text: error instanceof Error ? error.message : 'Failed to block dates',
+            icon: 'error',
+            confirmButtonColor: '#0f766e',
+        });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -708,13 +818,23 @@ export default function HouseianaHostCalendar() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Block reason (optional)
                     </label>
-                    <select className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-500 focus:border-gray-500">
+                    <select 
+                        value={selectedReason}
+                        onChange={(e) => setSelectedReason(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                    >
                       <option value="">Select a reason</option>
-                      <option value="owner_use">Owner use</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="renovation">Renovation</option>
-                      <option value="booked_elsewhere">Booked elsewhere</option>
-                      <option value="other">Other</option>
+                      {blockReasons.length > 0 ? (
+                        blockReasons.map((reason: any) => (
+                          <option key={reason.id || reason.name} value={reason.id || reason.name}>
+                            {reason.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option disabled>No data available</option>
+                        </>
+                      )}
                     </select>
                   </div>
 
@@ -724,6 +844,8 @@ export default function HouseianaHostCalendar() {
                     </label>
                     <textarea
                       placeholder="Add any notes about this block..."
+                      value={blockNotes}
+                      onChange={(e) => setBlockNotes(e.target.value)}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-500 focus:border-gray-500 resize-none"
                       rows={3}
                     />
@@ -738,7 +860,15 @@ export default function HouseianaHostCalendar() {
                     </div>
                   </div>
 
-                  <button className="w-full py-3 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800">
+                  <button 
+                    onClick={handleBlockDates}
+                    // disabled={!selectedProperty || selectedProperty === 'all'}
+                    className={`w-full py-3 text-white font-medium rounded-xl transition-colors ${
+                        // !selectedProperty || selectedProperty === 'all' 
+                        
+                        'bg-gray-900 hover:bg-gray-800'
+                    }`}
+                  >
                     Block {selectedDates.length} {selectedDates.length === 1 ? 'night' : 'nights'}
                   </button>
                 </div>

@@ -15,6 +15,7 @@ import {
   ListingRow,
   StatCard
 } from '@/features/host/components';
+import { PropertyService } from '@/features/property/api/property.service';
 
 // Main Page Component
 export default function HouseianaHostListings() {
@@ -44,6 +45,7 @@ export default function HouseianaHostListings() {
     bulkActivate,
     bulkPause,
     bulkDelete,
+    deleteListing,
   } = useHostListings(user?.id);
 
   // Navigation handlers (stay in page since they use router)
@@ -64,19 +66,16 @@ export default function HouseianaHostListings() {
   };
 
   const handleToggleStatus = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'INACTIVE' : 'PUBLISHED';
-    const isActive = newStatus === 'PUBLISHED';
     try {
-      await fetch('/api/properties', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus, isActive }),
-      });
-      // In a real app we would refetch or update optimistic state here
-      // For now we assume the parent refreshes or we rely on the next fetch cycle
-      window.location.reload(); // Simple reload to reflect changes as we don't have direct access to setListings
+      if (user?.id) {
+        const response = await PropertyService.deactivate(id, user.id);
+        if (response.success) {
+          window.location.reload();
+        }
+      }
     } catch (error) {
       console.error('Error toggling status:', error);
+      alert('Failed to update status');
     }
   };
 
@@ -247,7 +246,7 @@ export default function HouseianaHostListings() {
                 onView={() => handleViewListing(listing.id)}
                 onEdit={() => handleEditListing(listing.id)}
                 onViewCalendar={() => handleViewCalendar(listing.id)}
-                onDelete={() => handleDeleteListing(listing.id)}
+                onDelete={() => deleteListing(listing.id)}
                 onToggleStatus={() => handleToggleStatus(listing.id, listing.status)}
                 onBlock={() => handleBlock(listing.id)}
               />

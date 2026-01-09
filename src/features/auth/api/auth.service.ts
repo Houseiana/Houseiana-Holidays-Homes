@@ -59,6 +59,37 @@ export const AccountService = {
     });
   },
 
+  // National ID
+  getNationalId: async (id: string) => {
+    const response = await backendFetch<any>(`/users/${id}/national-id`);
+    return { ...response, data: response.data };
+  },
+
+  addNationalId: async (id: string, data: any) => {
+    return backendFetch<any>(`/users/${id}/national-id`, {
+      method: 'POST',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    });
+  },
+
+  // Emergency Contact
+  getEmergencyContact: async (id: string) => {
+    const response = await backendFetch<any>(`/users/${id}/emergency-contact`);
+    return { ...response, data: response.data };
+  },
+
+  addEmergencyContact: async (id: string, data: any) => {
+    return backendFetch<any>(`/users/${id}/emergency-contact`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getRelationshipOptions: async () => {
+    return backendFetch<any>('/api/Lookups/relationshipOfEmergencyContact');
+  },
+
+
   // Payment Methods
   getPaymentMethods: async () => {
     const response = await backendFetch<any>('/api/account/payment-methods');

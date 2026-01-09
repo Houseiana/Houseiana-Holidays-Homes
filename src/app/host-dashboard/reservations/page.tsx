@@ -10,6 +10,7 @@ import {
   MessageCircle, FileText, Flag, Copy,
   ChevronUp, Zap
 } from 'lucide-react';
+import { LookupsAPI } from '@/lib/backend-api';
 
 export default function HouseianaHostReservations() {
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -19,6 +20,23 @@ export default function HouseianaHostReservations() {
   const [allReservations, setAllReservations] = useState<any[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusTabs, setStatusTabs] = useState<any[]>([]);
+
+  // Fetch booking status tabs
+  useEffect(() => {
+    const fetchStatusTabs = async () => {
+      try {
+        const response = await LookupsAPI.getBookingDisplayStatus();
+        if (response.success && response.data) {
+          setStatusTabs(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching status tabs:', error);
+      }
+    };
+
+    fetchStatusTabs();
+  }, []);
 
   // Fetch bookings from API
   useEffect(() => {
@@ -56,39 +74,41 @@ export default function HouseianaHostReservations() {
     fetchBookings();
   }, []);
 
-  // Status configurations
-  const statusConfig = {
-    pending: { label: 'Pending', color: 'bg-amber-100 text-amber-700', dotColor: 'bg-amber-500' },
-    confirmed: { label: 'Confirmed', color: 'bg-green-100 text-green-700', dotColor: 'bg-green-500' },
-    hosting: { label: 'Currently hosting', color: 'bg-blue-100 text-blue-700', dotColor: 'bg-blue-500' },
-    checkout: { label: 'Checking out', color: 'bg-purple-100 text-purple-700', dotColor: 'bg-purple-500' },
-    completed: { label: 'Completed', color: 'bg-gray-100 text-gray-700', dotColor: 'bg-gray-500' },
-    cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', dotColor: 'bg-red-500' },
-  };
-
   // Tab configurations
-  const tabs = useMemo(() => [
-    { id: 'upcoming', label: 'Upcoming', filter: (r: any) => ['confirmed', 'pending'].includes(r.status) },
-    { id: 'hosting', label: 'Currently hosting', filter: (r: any) => r.status === 'hosting' },
-    { id: 'checkout', label: 'Checking out', filter: (r: any) => r.status === 'checkout' },
-    { id: 'pending', label: 'Pending', filter: (r: any) => r.status === 'pending' },
-    { id: 'completed', label: 'Completed', filter: (r: any) => r.status === 'completed' },
-    { id: 'cancelled', label: 'Cancelled', filter: (r: any) => r.status === 'cancelled' },
-    { id: 'all', label: 'All', filter: () => true },
-  ], []);
+  const tabs = useMemo(() => {
+    if (statusTabs.length > 0) {
+      return [
+        ...statusTabs.map((status: any) => ({
+          id: status.id || status.name.toLowerCase(), // fallback if id missing
+          label: status.name,
+          // Assuming backend returns a status code or strict name to match reservation status
+          filter: (r: any) => {
+             // If status.id is e.g., 'Upcoming', we might need logic.
+             // Usually 'Upcoming' implies future check-in.
+             // If the API returns straightforward statuses like 'Pending', 'Confirmed', direct match works.
+             // If it returns 'Upcoming' which aggregates multiple statuses, we need mapping logic from backend or handled here.
+             // For safety, assuming strict match or specific known types for now:
+             if (status.name === 'Upcoming') return ['confirmed', 'pending'].includes(r.status);
+             if (status.name === 'All') return true;
+             return r.status.toLowerCase() === status.name.toLowerCase();
+          }
+        }))
+      ];
+    }
+  }, [statusTabs]);
 
-  // Calculate tab counts
-  const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    tabs.forEach(tab => {
-      counts[tab.id] = allReservations.filter(tab.filter).length;
-    });
-    return counts;
-  }, [allReservations, tabs]);
+  // // Calculate tab counts
+  // const tabCounts = useMemo(() => {
+  //   const counts: Record<string, number> = {};
+  //   statusTabs.forEach(tab => {
+  //     counts[tab.id] = allReservations?.filter(tab.filter).length;
+  //   });
+  //   return counts;
+  // }, [allReservations, statusTabs]);
 
   // Filter reservations
   const filteredReservations = useMemo(() => {
-    const tab = tabs.find(t => t.id === activeTab);
+    const tab = statusTabs.find(t => t.id === activeTab);
     if (!tab) return [];
     let result = allReservations.filter(tab.filter);
 
@@ -137,7 +157,7 @@ export default function HouseianaHostReservations() {
 
         {/* Tabs */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-          {tabs.map(tab => (
+          {statusTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -147,12 +167,12 @@ export default function HouseianaHostReservations() {
                   : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
               }`}
             >
-              {tab.label}
-              {tabCounts[tab.id] > 0 && (
+              {tab.name}
+              {/* {tabCounts[tab.id] > 0 && (
                 <span className={`ml-1.5 ${activeTab === tab.id ? 'text-gray-300' : 'text-gray-400'}`}>
                   ({tabCounts[tab.id]})
                 </span>
-              )}
+              )} */}
             </button>
           ))}
         </div>

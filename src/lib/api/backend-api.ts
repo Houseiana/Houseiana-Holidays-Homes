@@ -850,6 +850,38 @@ export const LookupsAPI = {
   async getPropertyHighlights(): Promise<ApiResponse<any[]>> {
     return backendFetch('/api/Lookups/PropertyHighlight');
   },
+
+  /**
+   * Get booking display status
+   * Endpoint: GET /api/Lookups/BookingDisplayStatus
+   */
+  async getBookingDisplayStatus(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/BookingDisplayStatus');
+  },
+
+  /**
+   * Get reason for blocking property
+   * Endpoint: GET /api/Lookups/ReasonBlockProperty
+   */
+  async getReasonBlockProperty(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/ReasonBlockProperty');
+  },
+
+  /**
+   * Get countries
+   * Endpoint: GET /api/Lookups/country
+   */
+  async getCountries(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/country');
+  },
+
+  /**
+   * Get cities by country ID
+   * Endpoint: GET /api/Lookups/cities?countryId={countryId}
+   */
+  async getCities(countryId: string | number): Promise<ApiResponse<any[]>> {
+    return backendFetch(`/api/Lookups/cities?countryId=${countryId}`);
+  },
 };
 
 /**

@@ -298,9 +298,11 @@ function HostDashboardContent() {
                     <a href="#" className="text-sm font-medium text-gray-900 hover:underline">View all</a>
                   </div>
                   <div className="space-y-3">
-                    {reservations.upcoming.map((res) => (
+                    {reservations.upcoming?.length > 0 ? reservations.upcoming.map((res) => (
                       <ReservationCard key={res.id} reservation={res} type="upcoming" />
-                    ))}
+                    )) : (
+                      <div className="flex items-center justify-center p-3 h-26 text-gray-500 text-center mt-4">No upcoming reservations</div>
+                    )}
                   </div>
                 </div>
 

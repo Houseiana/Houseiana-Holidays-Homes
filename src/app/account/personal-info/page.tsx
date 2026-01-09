@@ -11,9 +11,10 @@ import {
   InfoRow,
   EditFormActions
 } from '@/features/auth/components';
+import { AccountService } from '@/features/auth/api/auth.service';
 import { AccountAPI, LookupsAPI } from '@/lib/backend-api';
 import { PhoneInput } from '@/components/ui/phone-input';
-import { countries } from '@/lib/constants/countries';
+import { useCountries } from '@/hooks/use-locations';
 
 interface PassportInfo {
   passportNumber: string;
@@ -76,26 +77,15 @@ interface UserProfile {
   emergencyContact: EmergencyContact | null;
 }
 
-const COUNTRIES = countries.map(c => c.name);
-
-const RELATIONSHIPS = [
-  'Spouse',
-  'Parent',
-  'Sibling',
-  'Child',
-  'Friend',
-  'Colleague',
-  'Other'
-];
 
 
 export default function PersonalInfoPage() {
+  const { countries } = useCountries();
   const router = useRouter();
   const { isSignedIn, user } = useUser();
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  console.log(profile);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -114,14 +104,30 @@ export default function PersonalInfoPage() {
   const passportInputRef = useRef<HTMLInputElement>(null);
   const idFrontInputRef = useRef<HTMLInputElement>(null);
   const idBackInputRef = useRef<HTMLInputElement>(null);
+  const [relationshipOptions, setRelationshipOptions] = useState<any[]>([]);
+
+  const fetchRelationshipOptions = useCallback(async () => {
+    try {
+      const response = await AccountService.getRelationshipOptions();
+      if (response.success && response.data) {
+        setRelationshipOptions(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching relationship options:', error);
+    }
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     try {
+      // Fetch relationship options in parallel or just call it here if we want strict loading
+      fetchRelationshipOptions();
       setIsLoading(true);
-        const [genderResponse, profileResponse, passportResponse] = await Promise.all([
+        const [genderResponse, profileResponse, passportResponse, nationalIdResponse, emergencyContactResponse] = await Promise.all([
         LookupsAPI.getGenders(),
         AccountAPI.getProfile(user?.id || ''),
-        AccountAPI.getPassport(user?.id || '')
+        AccountAPI.getPassport(user?.id || ''),
+        AccountAPI.getNationalId(user?.id || ''),
+        AccountAPI.getEmergencyContact(user?.id || '')
       ]);
 
       if (genderResponse.success && genderResponse.data) {
@@ -131,6 +137,8 @@ export default function PersonalInfoPage() {
       if (profileResponse.success && profileResponse.data) {
         const data = profileResponse.data as any;
         const passportData = passportResponse.success ? passportResponse.data : null; 
+        const nationalIdData = nationalIdResponse.success ? nationalIdResponse.data : null;
+        const emergencyContactData = emergencyContactResponse.success ? emergencyContactResponse.data.data : null; 
 
         setProfile({
           id: data.id,
@@ -150,8 +158,8 @@ export default function PersonalInfoPage() {
           address: data.address || null,
           residencyCountry: data.residencyCountry || null,
           passport: passportData || data.passport || null,
-          nationalId: data.nationalId || null,
-          emergencyContact: data.emergencyContact || null,
+          nationalId: nationalIdData || data.nationalId || null,
+          emergencyContact: emergencyContactData || null,
         });
       }
     } catch (error) {
@@ -259,8 +267,34 @@ export default function PersonalInfoPage() {
       }
 
       if (editingField === 'nationalId') {
-        if (idFrontFile) uploadData.frontImageFile = idFrontFile;
-        if (idBackFile) uploadData.backImageFile = idBackFile;
+        const formDataPayload = new FormData();
+        
+        // Map fields to user requested keys
+        if (formData.number) formDataPayload.append('idNumber', formData.number);
+        if (formData.issuingCountry) formDataPayload.append('issuingCountry', formData.issuingCountry);
+        
+        // Ensure dates are in the correct format (ISO string or just date part depending on strictness, user showed ISO)
+        // Using toISOString() as requested example showed full ISO format
+        if (formData.issueDate) {
+          try {
+            formDataPayload.append('issueDate', new Date(formData.issueDate).toISOString());
+          } catch(e) {
+             formDataPayload.append('issueDate', formData.issueDate);
+          }
+        }
+        
+        if (formData.expiryDate) {
+           try {
+            formDataPayload.append('expiryDate', new Date(formData.expiryDate).toISOString());
+          } catch(e) {
+             formDataPayload.append('expiryDate', formData.expiryDate);
+          }
+        }
+        
+        if (idFrontFile) formDataPayload.append('idFrontPhoto', idFrontFile);
+        if (idBackFile) formDataPayload.append('idBackPhoto', idBackFile);
+
+        uploadData = formDataPayload;
       }
 
       // Age validation
@@ -289,6 +323,18 @@ export default function PersonalInfoPage() {
       let response;
       if (editingField === 'passport') {
          response = await AccountAPI.updatePassport(user?.id || '', uploadData);
+      } else if (editingField === 'nationalId') {
+         response = await AccountAPI.addNationalId(user?.id || '', uploadData);
+      } else if (editingField === 'emergencyContact') {
+         // Map form data to API keys (email -> emailAddress)
+         const apiData = {
+           fullName: formData.fullName,
+           relationship: formData.relationship,
+           phoneNumber: formData.phoneNumber,
+           whatsappNumber: formData.whatsappNumber,
+           emailAddress: formData.email
+         };
+         response = await AccountAPI.addEmergencyContact(user?.id || '', apiData);
       } else {
          response = await AccountAPI.updateProfile(user?.id || '', uploadData);
       }
@@ -350,7 +396,7 @@ const formatGender = (genderId: string | null) => {
 
   const formatEmergencyContactSummary = (contact: EmergencyContact | null) => {
     if (!contact || !contact.fullName) return '';
-    return `${contact.fullName} (${contact.relationship || 'N/A'})`;
+    return `${contact.fullName} (${relationshipOptions.find(r => r.id === contact.relationship)?.name || 'N/A'})`;
   };
 
   // File upload component
@@ -556,8 +602,8 @@ const formatGender = (genderId: string | null) => {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
           <option value="">Select nationality</option>
-          {COUNTRIES.map((country) => (
-            <option key={country} value={country}>{country}</option>
+          {countries.map((country) => (
+            <option key={country.id || country.name} value={country.name}>{country.name}</option>
           ))}
         </select>
       </div>
@@ -580,8 +626,8 @@ const formatGender = (genderId: string | null) => {
           onChange={(e) => setFormData({ ...formData, country: e.target.value })}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
-          {COUNTRIES.map((country) => (
-            <option key={country} value={country}>{country}</option>
+          {countries.map((country) => (
+            <option key={country.id || country.name} value={country.name}>{country.name}</option>
           ))}
         </select>
       </div>
@@ -643,8 +689,8 @@ const formatGender = (genderId: string | null) => {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
           <option value="">Select country</option>
-          {COUNTRIES.map((country) => (
-            <option key={country} value={country}>{country}</option>
+          {countries.map((country) => (
+            <option key={country.id || country.name} value={country.name}>{country.name}</option>
           ))}
         </select>
       </div>
@@ -680,8 +726,8 @@ const formatGender = (genderId: string | null) => {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
           <option value="">Select country</option>
-          {COUNTRIES.map((country) => (
-            <option key={country} value={country}>{country}</option>
+          {countries.map((country) => (
+            <option key={country.id || country.name} value={country.name}>{country.name}</option>
           ))}
         </select>
       </div>
@@ -751,8 +797,8 @@ const formatGender = (genderId: string | null) => {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
           <option value="">Select country</option>
-          {COUNTRIES.map((country) => (
-            <option key={country} value={country}>{country}</option>
+          {countries.map((country) => (
+            <option key={country.id || country.name} value={country.name}>{country.name}</option>
           ))}
         </select>
       </div>
@@ -837,8 +883,8 @@ const formatGender = (genderId: string | null) => {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
           <option value="">Select relationship</option>
-          {RELATIONSHIPS.map((rel) => (
-            <option key={rel} value={rel}>{rel}</option>
+          {relationshipOptions.map((rel) => (
+            <option key={rel.id} value={rel.id}>{rel.name}</option>
           ))}
         </select>
       </div>
@@ -866,8 +912,8 @@ const formatGender = (genderId: string | null) => {
         <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
         <input
           type="email"
-          value={formData.email || ''}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          value={formData.emailAddress || ''}
+          onChange={(e) => setFormData({ ...formData, emailAddress: e.target.value })}
           placeholder="contact@example.com"
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
         />

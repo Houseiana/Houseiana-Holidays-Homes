@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import Swal from 'sweetalert2';
+import { PropertyService } from '@/features/property/api/property.service';
 
 // Types
 export interface Listing {
@@ -84,6 +86,7 @@ interface UseHostListingsReturn {
   bulkActivate: () => Promise<void>;
   bulkPause: () => Promise<void>;
   bulkDelete: () => Promise<void>;
+  deleteListing: (id: string) => Promise<void>;
 }
 
 // Helper function to map API properties to Listing type
@@ -152,7 +155,7 @@ export function useHostListings(userId?: string): UseHostListingsReturn {
   const [selectedListings, setSelectedListings] = useState<string[]>([]);
 
   // Fetch listings
-  const fetchListings = useCallback(async () => {
+  const fetchListings = useCallback(async (query?: string) => {
     if (!userId) {
       setLoading(false);
       return;
@@ -160,11 +163,22 @@ export function useHostListings(userId?: string): UseHostListingsReturn {
 
     try {
       setLoading(true);
-      const response = await fetch(`/api/properties?ownerId=${userId}`);
-      const data = await response.json();
+      
+      const params: any = { hostId: userId };
+      // Use the passed query or fallback to state (though with debounce, passed query is preferred)
+      const searchTerm = query !== undefined ? query : searchQuery;
+      if (searchTerm) params.searchQuery = searchTerm;
+      if (selectedStatus !== 'all') params.status = selectedStatus;
 
-      if (data.success && data.properties) {
-        const mappedListings = mapPropertiesToListings(data.properties);
+      const response = await PropertyService.getAll(params);
+      
+      if (response.success && response.data) {
+        // Handle both paginated response and direct array (just in case)
+        const properties = 'data' in response.data ? response.data.data : response.data;
+        // The API might return 'properties' directly as well based on previous code
+        const items = Array.isArray(properties) ? properties : (response.data as any).properties || [];
+        
+        const mappedListings = mapPropertiesToListings(items);
         setListings(mappedListings);
       } else {
         setListings([]);
@@ -175,12 +189,21 @@ export function useHostListings(userId?: string): UseHostListingsReturn {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, selectedStatus]); // Removed searchQuery from dependencies
 
-  // Initial fetch
+  // Initial fetch and status changes
   useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+    fetchListings(searchQuery);
+  }, [fetchListings, selectedStatus]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchListings(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, fetchListings]);
 
   // Calculate stats
   const stats = useMemo<ListingStats>(() => {
@@ -313,26 +336,73 @@ export function useHostListings(userId?: string): UseHostListingsReturn {
   const bulkDelete = useCallback(async () => {
     if (selectedListings.length === 0) return;
 
-    if (!confirm(`Are you sure you want to delete ${selectedListings.length} listing(s)? This action cannot be undone.`)) {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: `Are you sure you want to delete ${selectedListings.length} listing(s)? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (!result.isConfirmed) {
       return;
     }
 
     try {
       const deletePromises = selectedListings.map(id =>
-        fetch(`/api/properties?id=${id}`, {
-          method: 'DELETE',
-        })
+        PropertyService.delete(id)
       );
 
-      await Promise.all(deletePromises);
+      const results = await Promise.all(deletePromises);
+      const failed = results.filter(r => !r.success);
+
+      if (failed.length > 0) {
+        console.error('Failed deletions:', failed);
+        throw new Error(failed[0].error || 'Failed to delete listings');
+      }
+
       await fetchListings();
       setSelectedListings([]);
-      alert(`${selectedListings.length} listing(s) deleted successfully`);
-    } catch (error) {
+      Swal.fire('Deleted!', `${selectedListings.length} listing(s) deleted successfully`, 'success');
+    } catch (error: any) {
       console.error('Error deleting listings:', error);
-      alert('Failed to delete listings');
+      Swal.fire('Error!', error.message || 'Failed to delete listings', 'error');
     }
   }, [selectedListings, fetchListings]);
+
+  const deleteListing = useCallback(async (id: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await PropertyService.delete(id);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to delete listing');
+      }
+
+      await fetchListings();
+      // If the deleted item was selected, remove it from selection
+      if (selectedListings.includes(id)) {
+        setSelectedListings(prev => prev.filter(itemId => itemId !== id));
+      }
+      Swal.fire('Deleted!', 'Your listing has been deleted.', 'success');
+    } catch (error: any) {
+      console.error('Error deleting listing:', error);
+      Swal.fire('Error!', error.message || 'Failed to delete listing', 'error');
+    }
+  }, [fetchListings, selectedListings]);
 
   return {
     // Data
@@ -362,5 +432,6 @@ export function useHostListings(userId?: string): UseHostListingsReturn {
     bulkActivate,
     bulkPause,
     bulkDelete,
+    deleteListing,
   };
 }

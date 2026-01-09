@@ -19,7 +19,8 @@ export async function backendFetch<T>(
     'Content-Type': 'application/json',
   };
 
-  // Add auth token if available
+
+    // Add auth token if available
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('auth_token');
     if (token) {
@@ -27,13 +28,21 @@ export async function backendFetch<T>(
     }
   }
 
+  const headers = {
+    ...defaultHeaders,
+    ...options.headers,
+  };
+
+  // If body is FormData, let the browser set Content-Type
+  // (it needs to set the boundary)
+  if (options.body instanceof FormData) {
+    delete (headers as any)['Content-Type'];
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
+      headers,
     });
 
     const data = await response.json();

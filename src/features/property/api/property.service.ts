@@ -24,6 +24,10 @@ export const PropertyService = {
     return backendFetch(`/api/properties/${id}`);
   },
 
+  getByHost: async (hostId: string): Promise<ApiResponse<Property[]>> => {
+    return backendFetch(`/api/properties/by-host?hostId=${hostId}`);
+  },
+
   search: async (params: {
     location?: string;
     checkIn?: string;
@@ -94,8 +98,30 @@ export const PropertyService = {
   },
 
   delete: async (propertyId: string): Promise<ApiResponse> => {
-    return backendFetch(`/api/properties/${propertyId}`, {
-      method: 'DELETE',
+    return backendFetch(`/api/properties/${propertyId}/delete`, {
+      method: 'POST',
+    });
+  },
+
+  deactivate: async (propertyId: string, userId: string): Promise<ApiResponse> => {
+    return backendFetch(`/api/properties/deactivate`, {
+      method: 'POST',
+      body: JSON.stringify({ propertyId, userId }),
+    });
+  },
+
+  updateCalendarStatus: async (data: {
+    propertyId: string;
+    userId: string;
+    fromDate: string;
+    toDate: string;
+    status: string;
+    reasonId?: number;
+    reasonText?: string;
+  }): Promise<ApiResponse> => {
+    return backendFetch(`/api/properties/calendar/update-status`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 };

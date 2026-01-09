@@ -2,7 +2,9 @@ import React from 'react';
 import { 
   Building2, Edit, Star, Eye, MoreHorizontal,
   MapPin, Bed, Bath, Image as ImageIcon,
-  Users, Trash, Ban, AlertCircle, Camera 
+  Users, Trash, Ban, AlertCircle, Camera, 
+  MoreVertical,
+  Calendar
 } from 'lucide-react';
 import { Listing } from '@/hooks';
 import { statusConfig } from './constants';
@@ -25,21 +27,23 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
 
   return (
     <div 
-      onClick={onToggleSelect}
-      className={`bg-white rounded-xl border overflow-hidden hover:shadow-lg transition-all group cursor-pointer ${
+      className={`bg-white rounded-xl border overflow-hidden hover:shadow-lg transition-all group ${
         isSelected ? 'border-teal-600 ring-2 ring-teal-600' : 'border-gray-200'
       }`}
     >
       {/* Image */}
       <div className="relative aspect-[4/3] bg-gray-200">
         {listing.images.length > 0 ? (
-          <img
-            src={listing.images[0]}
-            alt={listing.title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <div className="relative cursor-pointer" onClick={(e) => { e.stopPropagation(); onView(); }}>
+            <img
+              src={listing.images[0]}
+              alt={listing.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
+          
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center cursor-pointer" onClick={(e) => { e.stopPropagation(); onView(); }}>
             <ImageIcon className="w-32 h-32 text-gray-400" />
           </div>
         )}
@@ -48,7 +52,8 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
           {status.label}
         </div>
 
-        <div className={`absolute top-2 right-2 px-1 py-1 rounded-full text-xs font-medium z-10`}>
+        {/* Delete Button */}
+        <div className={`absolute top-2 right-2 px-1 py-1 rounded-full text-xs font-medium z-20`}>
           <button 
             onClick={(e) => {
               e.stopPropagation();
@@ -60,6 +65,7 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
           </button>
         </div>
 
+        {/* Guest Favorite and Superhost Badge */}
         <div className="absolute top-3 right-12 flex gap-2">
           {listing.guestFavorite && (
             <div className="px-2 py-1 bg-white rounded-full text-xs font-medium text-gray-900 shadow">
@@ -73,27 +79,6 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
           )}
         </div>
 
-        <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <button 
-            onClick={(e) => { e.stopPropagation(); onView(); }} 
-            className="p-2 bg-white rounded-full shadow hover:bg-gray-100 flex items-center justify-center"
-          >
-            <Eye className="w-4 h-4 text-gray-600" />
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onEdit(); }} 
-            className="p-2 bg-white rounded-full shadow hover:bg-gray-100 flex items-center justify-center"
-          >
-            <Edit className="w-4 h-4 text-gray-600" />
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onViewCalendar(); }} 
-            className="p-2 bg-white rounded-full shadow hover:bg-gray-100 flex items-center justify-center"
-          >
-            <MoreHorizontal className="w-4 h-4 text-gray-600" />
-          </button>
-        </div>
-
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/60 text-white text-xs rounded-full flex items-center gap-1">
           <Camera className="w-3 h-3" />
           {listing.imageCount}
@@ -105,7 +90,7 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
           <h3 className="font-semibold text-gray-900 line-clamp-1">{listing.title}</h3>
           <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
             <MapPin className="w-3.5 h-3.5" />
-            {listing.location}
+            {listing.location || 'Unknown Location'}
           </p>
         </div>
 
@@ -123,8 +108,11 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
             {listing.maxGuests}
           </span>
         </div>
-
         <div className="flex items-center justify-between py-3 border-t border-gray-100">
+          <div className="text-left flex align-center gap-2">
+            <p className="font-semibold text-gray-900">QAR {listing.basePrice}</p>
+            <small className="text-gray-500">per night</small>
+          </div>
           <div className="flex items-center gap-4">
             {listing.rating && (
               <div className="flex items-center gap-1">
@@ -133,18 +121,6 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
                 <span className="text-sm text-gray-500">({listing.reviewCount})</span>
               </div>
             )}
-            {listing.status === 'draft' && listing.completionPercent && (
-              <div className="flex items-center gap-1">
-                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-500 rounded-full" style={{ width: `${listing.completionPercent}%` }} />
-                </div>
-                <span className="text-xs text-gray-500">{listing.completionPercent}%</span>
-              </div>
-            )}
-          </div>
-          <div className="text-right">
-            <p className="font-semibold text-gray-900">QAR {listing.basePrice}</p>
-            <p className="text-xs text-gray-500">per night</p>
           </div>
         </div>
 
@@ -199,11 +175,25 @@ export function ListingCard({ listing, isSelected, onToggleSelect, onView, onEdi
             e.stopPropagation();
             onBlock();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 hover:bg-white hover:shadow-sm hover:text-rose-600 transition-all border border-transparent hover:border-gray-200"
+          className="flex items-center gap-1.5 p-1.5 bg-white rounded text-sm font-medium text-gray-700 hover:bg-white hover:shadow-sm hover:text-rose-600 transition-all border border-transparent hover:border-gray-200"
           title="Block listing"
         >
           <Ban className="w-3.5 h-3.5" />
           Block
+        </button>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onEdit(); }} 
+          className="p-1.5 bg-white rounded text-sm font-medium text-gray-700 hover:bg-white hover:shadow-sm hover:text-green-600 transition-all border border-transparent hover:border-gray-200 flex items-center justify-center gap-1.5"
+        >
+          <Edit className="w-3.5 h-3.5 text-gray-600" />
+          Edit
+        </button>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onViewCalendar(); }} 
+          className="p-1.5 bg-white rounded text-sm font-medium text-gray-700 hover:bg-white hover:shadow-sm hover:text-green-600 transition-all border border-transparent hover:border-gray-200 flex items-center justify-center gap-1.5"
+        >
+          <Calendar className="w-3.5 h-3.5 text-gray-600" />
+          Calendar
         </button>
       </div>
     </div>
