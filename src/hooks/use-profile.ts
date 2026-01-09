@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PublicProfile, ProfileReview, ProfileApiResponse, ProfileReviewsResponse } from '@/types/profile';
+import { UserAPI } from '@/lib/api/backend-api';
 
 interface UseProfileOptions {
   userId?: string;
@@ -29,13 +30,59 @@ export function useProfile({ userId, autoFetch = true }: UseProfileOptions = {})
     setCurrentUserId(id);
 
     try {
-      const response = await fetch(`/api/users/${id}`);
-      const data: ProfileApiResponse = await response.json();
+      // Use the centralized UserAPI instead of local API route
+      const response = await UserAPI.getById(id);
 
-      if (data.success && data.data) {
-        setProfile(data.data);
+      if (response.success && response.data) {
+        const userData = response.data;
+        
+        // Map backend User type to PublicProfile type
+        // This mapping ensures the frontend has the structure it expects
+        const publicProfile: PublicProfile = {
+          user: {
+            id: userData.id,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profilePhoto: userData.avatar,
+            nationality: undefined,
+            preferredLanguage: 'en',
+            isGuest: userData.role === 'guest',
+            isHost: userData.role === 'host',
+            kycStatus: userData.verified ? 'VERIFIED' : 'NOT_STARTED',
+            emailVerified: true, // Assuming true if they exist in backend for now
+            phoneVerified: !!userData.phone,
+            createdAt: new Date().toISOString(), // Fallback if not provided
+          },
+          displayName: `${userData.firstName} ${userData.lastName}`.trim(),
+          initials: ((userData.firstName?.[0] || '') + (userData.lastName?.[0] || '')).toUpperCase(),
+          memberSince: new Date().toISOString(),
+          aboutMe: undefined,
+          location: undefined,
+          verifications: [
+            {
+              type: 'email',
+              status: 'verified',
+            },
+            ...(userData.verified ? [{
+              type: 'identity' as const,
+              status: 'verified' as const,
+            }] : []),
+          ],
+          trustIndicators: [],
+          reviews: {
+            summary: {
+              averageRating: 0,
+              totalReviews: 0,
+              ratingBreakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            },
+            items: [],
+            hasMore: false,
+          },
+        };
+        
+        setProfile(publicProfile);
       } else {
-        setError(data.error || 'Failed to fetch profile');
+        setError(response.error || 'Failed to fetch profile');
         setProfile(null);
       }
     } catch (err) {
