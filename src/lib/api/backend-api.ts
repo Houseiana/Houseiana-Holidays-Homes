@@ -172,8 +172,8 @@ export const PropertyAPI = {
     return backendFetch(`/api/properties/${id}`);
   },
 
-  async getPropertyById(id: string): Promise<ApiResponse<Property>> {
-    return backendFetch(`/api/property-search/${id}`);
+  async getPropertyById(id: string, userId?: string): Promise<ApiResponse<Property>> {
+    return backendFetch(`/api/property-search/${id}?userId=${userId}`);
   },
 
   /**
@@ -468,6 +468,17 @@ export const UserAPI = {
     return backendFetch('/users/favorites', {
       method: 'POST',
       body: JSON.stringify({ userId, propertyId }),
+    });
+  },
+
+  /**
+   * Add payment method (Payout)
+   * Endpoint: POST /users/{userId}/payment-method
+   */
+  async addPaymentMethod(userId: string, data: { paymentMethodId: number; accountId: string; accountName: string }): Promise<ApiResponse> {
+    return backendFetch(`/users/${userId}/payment-method`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 };
@@ -873,6 +884,14 @@ export const LookupsAPI = {
    */
   async getReasonBlockProperty(): Promise<ApiResponse<any[]>> {
     return backendFetch('/api/Lookups/ReasonBlockProperty');
+  },
+
+  /**
+   * Get payment methods
+   * Endpoint: GET /api/Lookups/payment-method
+   */
+  async getPaymentMethods(): Promise<ApiResponse<any>> {
+    return backendFetch('/api/Lookups/payment-method');
   },
 
   /**

@@ -1,7 +1,6 @@
-'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Building2 } from 'lucide-react';
+import { LookupsAPI } from '@/lib/api/backend-api';
 
 interface AddPayoutModalProps {
   isOpen: boolean;
@@ -11,22 +10,10 @@ interface AddPayoutModalProps {
 }
 
 export interface PayoutFormData {
-  country: string;
-  payoutType: 'bank' | 'paypal';
-  accountHolderName: string;
-  iban?: string;
-  paypalEmail?: string;
-  isDefault: boolean;
+  paymentMethodId: number | string;
+  accountId: string;
+  accountName: string;
 }
-
-const COUNTRIES = [
-  { code: 'SA', name: 'Saudi Arabia' },
-  { code: 'QA', name: 'Qatar' },
-  { code: 'AE', name: 'United Arab Emirates' },
-  { code: 'KW', name: 'Kuwait' },
-  { code: 'BH', name: 'Bahrain' },
-  { code: 'OM', name: 'Oman' },
-];
 
 export function AddPayoutModal({
   isOpen,
@@ -34,14 +21,32 @@ export function AddPayoutModal({
   onSubmit,
   isLoading = false,
 }: AddPayoutModalProps) {
-  const [formData, setFormData] = useState<PayoutFormData>({
-    country: 'SA',
-    payoutType: 'bank',
-    accountHolderName: '',
-    iban: '',
-    paypalEmail: '',
-    isDefault: false,
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    paymentMethodId: 0,
+    accountId: '',
+    accountName: '',
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchMethods = async () => {
+        try {
+          const response = await LookupsAPI.getPaymentMethods();
+          if (response.success && response.data.data) {
+            debugger
+            setPaymentMethods(response.data.data);
+            if (response.data.data.length > 0) {
+              setFormData(prev => ({ ...prev, paymentMethodId: response?.data?.data?.[0]?.id }));
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching payment methods:', error);
+        }
+      };
+      fetchMethods();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -50,16 +55,19 @@ export function AddPayoutModal({
     onSubmit(formData);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
     }));
   };
+
+  const handleMethodChange = (id: number) => {
+    setFormData(prev => ({ ...prev, paymentMethodId: id }));
+  };
+
+  // const selectedMethod = paymentMethods.find(m => m.id === Number(formData.paymentMethodId));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -75,71 +83,37 @@ export function AddPayoutModal({
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Billing country/region
-              </label>
-              <select
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
-              >
-                {COUNTRIES.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Payout method
               </label>
               <div className="space-y-3">
-                <label className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-teal-500 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
-                  <input
-                    type="radio"
-                    name="payoutType"
-                    value="bank"
-                    checked={formData.payoutType === 'bank'}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-teal-500"
-                  />
-                  <Building2 className="w-6 h-6 text-gray-600" />
-                  <div>
-                    <p className="font-medium text-gray-900">Bank account</p>
-                    <p className="text-sm text-gray-500">3-5 business days</p>
-                  </div>
-                </label>
-                <label className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-teal-500 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
-                  <input
-                    type="radio"
-                    name="payoutType"
-                    value="paypal"
-                    checked={formData.payoutType === 'paypal'}
-                    onChange={handleChange}
-                    className="w-5 h-5 text-teal-500"
-                  />
-                  <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">P</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">PayPal</p>
-                    <p className="text-sm text-gray-500">Within minutes</p>
-                  </div>
-                </label>
+                {paymentMethods.map((method) => (
+                  <label key={method.id} className="flex items-center gap-4 p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-teal-500 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50">
+                    <input
+                      type="radio"
+                      name="paymentMethodId"
+                      value={method.id}
+                      checked={Number(formData.paymentMethodId) === method.id}
+                      onChange={() => handleMethodChange(method.id)}
+                      className="w-5 h-5 text-teal-500"
+                    />
+                    <Building2 className="w-6 h-6 text-gray-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">{method.name}</p>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account holder name
+                Account Name
               </label>
               <input
                 type="text"
-                name="accountHolderName"
-                value={formData.accountHolderName}
+                name="accountName"
+                value={formData.accountName}
                 onChange={handleChange}
                 placeholder="Full name on account"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
@@ -147,48 +121,21 @@ export function AddPayoutModal({
               />
             </div>
 
-            {formData.payoutType === 'bank' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  IBAN
-                </label>
-                <input
-                  type="text"
-                  name="iban"
-                  value={formData.iban}
-                  onChange={handleChange}
-                  placeholder="SA00 0000 0000 0000 0000 0000"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  PayPal email
-                </label>
-                <input
-                  type="email"
-                  name="paypalEmail"
-                  value={formData.paypalEmail}
-                  onChange={handleChange}
-                  placeholder="your@email.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-                  required
-                />
-              </div>
-            )}
-
-            <label className="flex items-center gap-3 cursor-pointer">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Account ID / IBAN
+              </label>
               <input
-                type="checkbox"
-                name="isDefault"
-                checked={formData.isDefault}
+                type="text"
+                name="accountId"
+                value={formData.accountId}
                 onChange={handleChange}
-                className="w-5 h-5 rounded border-gray-300 text-teal-500 focus:ring-teal-500"
+                placeholder="Account Number, IBAN, or Email"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                required
               />
-              <span className="text-sm text-gray-700">Set as default payout method</span>
-            </label>
+            </div>
+
           </div>
 
           <div className="p-6 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-white">

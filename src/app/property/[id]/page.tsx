@@ -49,7 +49,7 @@ export default function PropertyDetailPage() {
     getBookingUrl,
     isDateBlocked,
     bookedDates,
-  } = usePropertyDetail(propertyId);
+  } = usePropertyDetail(propertyId , user?.id);
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);

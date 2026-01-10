@@ -192,16 +192,14 @@ export default function PaymentsPage() {
 
   // Add payout method handler
   const handleAddPayout = async (data: PayoutFormData) => {
+    if (!user?.id) return;
     setIsAddingPayout(true);
     try {
-      const response = await AccountAPI.addPayoutMethod({
-        payoutType: data.payoutType,
-        country: data.country,
-        accountHolderName: data.accountHolderName,
-        iban: data.iban,
-        paypalEmail: data.paypalEmail,
-        isDefault: data.isDefault,
-      });
+      const response = await AccountAPI.addPayoutMethod(user.id, {
+        paymentMethodId: Number(data.paymentMethodId),
+        accountId: data.accountId,
+        accountName: data.accountName,
+      } as any);
 
       if (response.success) {
         await fetchData();

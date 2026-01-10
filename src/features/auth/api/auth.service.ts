@@ -41,7 +41,7 @@ export const AccountService = {
 
   updateProfile: async (id: string, data: any) => {
     return backendFetch<any>(`/users/${id}/profile`, {
-      method: 'PUT',
+      method: 'POST',
       body: data instanceof FormData ? data : JSON.stringify(data),
     });
   },
@@ -136,15 +136,12 @@ export const AccountService = {
     return { ...response, data: response.data?.data };
   },
 
-  addPayoutMethod: async (data: {
-    payoutType: 'bank' | 'paypal';
-    country: string;
-    accountHolderName: string;
-    iban?: string;
-    paypalEmail?: string;
-    isDefault?: boolean;
+  addPayoutMethod: async (id: string, data: {
+    paymentMethodId: number;
+    accountId: string;
+    accountName: string;
   }) => {
-    const response = await backendFetch<any>('/api/account/payout-methods', {
+    const response = await backendFetch<any>(`/users/${id}/payment-method`, {
       method: 'POST',
       body: JSON.stringify(data),
     });

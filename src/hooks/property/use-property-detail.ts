@@ -85,7 +85,7 @@ interface UsePropertyDetailReturn {
   bookedDates: { from: string; to: string }[];
 }
 
-export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
+export function usePropertyDetail(propertyId: string , userId?: string): UsePropertyDetailReturn {
   // Data state
   const [property, setProperty] = useState<PropertyDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +108,7 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
     try {
       setLoading(true);
       const [propertyResponse, bookedDatesResponse] = await Promise.all([
-        PropertyAPI.getPropertyById(id),
+        PropertyAPI.getPropertyById(id , userId),
         PropertyAPI.getBookedDates(id)
       ]);
 
@@ -242,28 +242,22 @@ export function usePropertyDetail(propertyId: string): UsePropertyDetailReturn {
     
     // --- Pricing Logic Start ---
     let discountAmount = 0;
-    // @ts-ignore - Properties exist on runtime object but types might need strict check if optional
-    const { weeklyDiscount, smallBookingDiscount, bookingsCount } = property;
+    // @ts-ignore
+    const { weeklyDiscount, smallBookingDiscount } = property;
 
-    // Rule: Exclusive discounts
     let activeDiscountPercentage = 0;
 
-    if (weeklyDiscount && weeklyDiscount > 0) {
+    // 1. Weekly Discount: Applies if booking is 7 days or more
+    if (nights === 7 && weeklyDiscount && weeklyDiscount > 0) {
       activeDiscountPercentage = weeklyDiscount;
-    } else if (smallBookingDiscount && smallBookingDiscount > 0) {
-      // Rule: Small booking apply only to first 3 bookings
-      // We assume bookingsCount is the number of COMPLETED bookings.
-      if ((bookingsCount || 0) < 3) {
-        activeDiscountPercentage = smallBookingDiscount;
-      }
+    } 
+    // 2. Small Booking Discount: Applies generic discount if exists (fallback)
+    else if (smallBookingDiscount && smallBookingDiscount > 0) {
+      activeDiscountPercentage = smallBookingDiscount;
     }
 
     if (activeDiscountPercentage > 0) {
-      // Rule: Discount cap - applies to max 7 nights
-      const discountableNights = Math.min(nights, 7);
-      // Discount based on priceWithoutDiscount * discountableNights * guests
-      const discountableAmount = priceWithoutDiscount * discountableNights;
-      discountAmount = (discountableAmount * activeDiscountPercentage) / 100;
+      discountAmount = (base * activeDiscountPercentage) / 100;
     }
     // --- Pricing Logic End ---
 

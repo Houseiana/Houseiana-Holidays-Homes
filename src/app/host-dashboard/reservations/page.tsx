@@ -48,7 +48,7 @@ export default function HouseianaHostReservations() {
   useEffect(() => {
     const fetchStatusTabs = async () => {
       try {
-        const response = await LookupsAPI.getBookingStatus();
+        const response = await LookupsAPI.getBookingDisplayStatus();
         if (response.success && response.data) {
           setStatusTabs(response.data);
           // Set default tab to 'upcoming' id if found, else first tab
