@@ -14,7 +14,7 @@ import {
 import { AccountService } from '@/features/auth/api/auth.service';
 import { AccountAPI, LookupsAPI } from '@/lib/backend-api';
 import { PhoneInput } from '@/components/ui/phone-input';
-import { useCountries } from '@/hooks/use-locations';
+import { useCountries, useCities } from '@/hooks/use-locations';
 
 interface PassportInfo {
   passportNumber: string;
@@ -96,6 +96,9 @@ export default function PersonalInfoPage() {
   const [showPassportNumber, setShowPassportNumber] = useState(false);
   const [showIdNumber, setShowIdNumber] = useState(false);
   const [genderOptions, setGenderOptions] = useState<any[]>([]);
+
+  const selectedCountry = countries.find(c => c.name === (formData.country || 'Qatar'));
+  const { cities } = useCities(selectedCountry?.id);
 
   // File upload states
   const [passportFile, setPassportFile] = useState<File | null>(null);
@@ -284,7 +287,7 @@ export default function PersonalInfoPage() {
         }
         
         if (formData.expiryDate) {
-           try {
+          try {
             formDataPayload.append('expiryDate', new Date(formData.expiryDate).toISOString());
           } catch(e) {
              formDataPayload.append('expiryDate', formData.expiryDate);
@@ -335,6 +338,17 @@ export default function PersonalInfoPage() {
            emailAddress: formData.email
          };
          response = await AccountAPI.addEmergencyContact(user?.id || '', apiData);
+      } else if (editingField === 'address') {
+         const apiData = {
+           userId: user?.id,
+           cityId: Number(formData.cityId),
+           streetAddress: formData.street,
+           buildingNumber: formData.apt,
+           postalCode: formData.zip,
+           latitude: null,
+           longitude: null 
+         };
+         response = await AccountAPI.updateAddress(apiData);
       } else {
          response = await AccountAPI.updateProfile(user?.id || '', uploadData);
       }
@@ -379,7 +393,7 @@ export default function PersonalInfoPage() {
   };
 
  
-const formatGender = (genderId: string | null) => {
+const formatGender = (genderId: string | null | undefined) => {
   if (!genderId) return '';
   return genderOptions.find(g => g.id === genderId)?.name || '';
 };
@@ -652,12 +666,16 @@ const formatGender = (genderId: string | null) => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-          <input
-            type="text"
-            value={formData.city || ''}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-          />
+          <select
+            value={formData.cityId || ''}
+            onChange={(e) => setFormData({ ...formData, cityId: e.target.value })}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
+          >
+            <option value="">Select city</option>
+            {cities.map((city: any) => (
+              <option key={city.id} value={city.id}>{city.name}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Postal code</label>
@@ -824,29 +842,27 @@ const formatGender = (genderId: string | null) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">ID Front</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Front Side</label>
           <FileUploadBox
-            label="Upload ID front"
+            label="Upload front side"
             file={idFrontFile}
             existingUrl={profile?.nationalId?.frontImageUrl || null}
             inputRef={idFrontInputRef as React.RefObject<HTMLInputElement>}
             onFileChange={setIdFrontFile}
             onRemove={() => setIdFrontFile(null)}
-            accept="image/*"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">ID Back</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Back Side</label>
           <FileUploadBox
-            label="Upload ID back"
+            label="Upload back side"
             file={idBackFile}
             existingUrl={profile?.nationalId?.backImageUrl || null}
             inputRef={idBackInputRef as React.RefObject<HTMLInputElement>}
             onFileChange={setIdBackFile}
             onRemove={() => setIdBackFile(null)}
-            accept="image/*"
           />
         </div>
       </div>
@@ -857,20 +873,20 @@ const formatGender = (genderId: string | null) => {
 
   const renderEmergencyContactForm = () => (
     <div className="mt-4 space-y-4">
-      <p className="text-sm text-gray-500">A trusted contact we can reach in an urgent situation.</p>
-      {saveMessage && (
+       <p className="text-sm text-gray-500">A trusted contact we can reach in case of emergency.</p>
+       {saveMessage && (
         <div className={`p-3 rounded-lg text-sm ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
           {saveMessage.text}
         </div>
       )}
-
+      
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Contact Full Name</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Contact name</label>
         <input
           type="text"
           value={formData.fullName || ''}
           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-          placeholder="Enter contact's full name"
+          placeholder="Full name"
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
         />
       </div>
@@ -883,15 +899,15 @@ const formatGender = (genderId: string | null) => {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
         >
           <option value="">Select relationship</option>
-          {relationshipOptions.map((rel) => (
-            <option key={rel.id} value={rel.id}>{rel.name}</option>
+          {relationshipOptions.map((opt: any) => (
+             <option key={opt.id} value={opt.id}>{opt.name}</option>
           ))}
         </select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
           <PhoneInput
             value={formData.phoneNumber || ''}
             onChange={(value) => setFormData({ ...formData, phoneNumber: value })}
@@ -899,7 +915,7 @@ const formatGender = (genderId: string | null) => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp number</label>
           <PhoneInput
             value={formData.whatsappNumber || ''}
             onChange={(value) => setFormData({ ...formData, whatsappNumber: value })}
@@ -909,266 +925,175 @@ const formatGender = (genderId: string | null) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Email (optional)</label>
         <input
           type="email"
-          value={formData.emailAddress || ''}
-          onChange={(e) => setFormData({ ...formData, emailAddress: e.target.value })}
-          placeholder="contact@example.com"
+          value={formData.email || ''}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="Email address"
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
         />
       </div>
 
-      <EditFormActions onSave={handleSave} onCancel={handleCancel} saveText={isSaving ? 'Saving...' : 'Save'} />
+       <EditFormActions onSave={handleSave} onCancel={handleCancel} saveText={isSaving ? 'Saving...' : 'Save'} />
     </div>
   );
 
-  if (!isSignedIn || !user) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
+      <div className="min-h-screen pt-24 pb-12 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
       </div>
     );
   }
 
-  const userAvatar = user.firstName?.charAt(0).toUpperCase() || user.emailAddresses[0]?.emailAddress.charAt(0).toUpperCase() || 'U';
-
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen pb-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <AccountBreadcrumb current="Personal info" />
+        
+        <h1 className="text-3xl font-semibold text-gray-900 mb-8">Personal info</h1>
 
-
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <AccountBreadcrumb />
-
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">Personal info</h1>
-        <p className="text-gray-500 mb-8">Manage your personal details and how we can reach you.</p>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
-            <span className="ml-3 text-gray-600">Loading your profile...</span>
-          </div>
-        ) : profile ? (
-          <>
-            <div className="divide-y divide-gray-200">
-              {/* Legal Name */}
-              <InfoRow
-                label="Legal name"
-                value={`${profile.firstName} ${profile.lastName}`}
-                field="legalName"
-                isEditing={editingField === 'legalName'}
-                onEdit={() => handleEdit('legalName')}
-                editForm={renderLegalNameForm()}
-              />
-
-              {/* Date of Birth */}
-              <InfoRow
-                label="Date of birth"
-                value={formatDate(profile.dateOfBirth)}
-                field="dateOfBirth"
-                notProvidedText="Not provided"
-                isEditing={editingField === 'dateOfBirth'}
-                onEdit={() => handleEdit('dateOfBirth')}
-                editForm={renderDateOfBirthForm()}
-              />
-
-              {/* Gender */}
-              <InfoRow
-                label="Gender"
-                value={formatGender(profile.genderId)}
-                field="genderId"
-                notProvidedText="Not provided"
-                isEditing={editingField === 'genderId'}
-                onEdit={() => handleEdit('genderId')}
-                editForm={renderGenderForm()}
-              />
-
-              {/* Phone Number */}
-              <InfoRow
-                label="Phone number"
-                value={
-                  profile.phone ? (
-                    <span className="flex items-center gap-2">
-                      {showPhone ? profile.phone : profile.phoneMasked}
-                      <button onClick={() => setShowPhone(!showPhone)} className="text-gray-400 hover:text-gray-600">
-                        {showPhone ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                      {profile.phoneVerified && (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Verified</span>
-                      )}
-                    </span>
-                  ) : undefined
-                }
-                field="phone"
-                notProvidedText="Not provided"
-                isEditing={editingField === 'phone'}
-                onEdit={() => handleEdit('phone')}
-                editForm={renderPhoneForm()}
-              />
-
-              {/* Email */}
-              <InfoRow
-                label="Email"
-                value={
-                  <span className="flex items-center gap-2">
-                    {showEmail ? profile.email : profile.emailMasked}
-                    <button onClick={() => setShowEmail(!showEmail)} className="text-gray-400 hover:text-gray-600">
-                      {showEmail ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                    {profile.emailVerified && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Verified</span>
-                    )}
-                  </span>
-                }
-                field="email"
-                isEditing={editingField === 'email'}
-                onEdit={() => handleEdit('email')}
-                editForm={renderEmailForm()}
-              />
-
-              {/* Nationality */}
-              <InfoRow
-                label="Nationality"
-                value={profile.nationality}
-                field="nationality"
-                notProvidedText="Not provided"
-                isEditing={editingField === 'nationality'}
-                onEdit={() => handleEdit('nationality')}
-                editForm={renderNationalityForm()}
-              />
-
-              {/* Address */}
-              <InfoRow
-                label="Address"
-                value={formatAddress(profile.address)}
-                field="address"
-                notProvidedText="Not provided"
-                isEditing={editingField === 'address'}
-                onEdit={() => handleEdit('address')}
-                editForm={renderAddressForm()}
-              />
-
-              {/* Residency Country */}
-              <InfoRow
-                label="Residency country"
-                value={profile.residencyCountry}
-                field="residencyCountry"
-                notProvidedText="Not provided"
-                isEditing={editingField === 'residencyCountry'}
-                onEdit={() => handleEdit('residencyCountry')}
-                editForm={renderResidencyCountryForm()}
-              />
+        {/* Profile Completion Alert */}
+        {(!profile?.passport && !profile?.nationalId) && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-8 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-medium text-orange-800">Complete your profile</h3>
+              <p className="text-sm text-orange-600 mt-1">
+                Please add your government ID (Passport or National ID) to verify your identity and unlock booking features.
+              </p>
             </div>
-
-            {/* Documents Section */}
-            <div className="mt-10">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Identity Documents</h2>
-              <div className="divide-y divide-gray-200">
-                {/* Passport */}
-                <InfoRow
-                  label="Passport"
-                  value={
-                    profile.passport?.passportNumber ? (
-                      <span className="flex items-center gap-2">
-                        {showPassportNumber ? profile.passport.passportNumber : profile.passport.numberMasked}
-                        <button onClick={() => setShowPassportNumber(!showPassportNumber)} className="text-gray-400 hover:text-gray-600">
-                          {showPassportNumber ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                        {profile.passport.issuingCountry && (
-                          <span className="text-gray-500">({profile.passport.issuingCountry})</span>
-                        )}
-                      </span>
-                    ) : undefined
-                  }
-                  field="passport"
-                  notProvidedText="Not provided"
-                  isEditing={editingField === 'passport'}
-                  onEdit={() => handleEdit('passport')}
-                  editForm={renderPassportForm()}
-                />
-
-                {/* National ID */}
-                <InfoRow
-                  label="National ID"
-                  value={
-                    profile.nationalId?.number ? (
-                      <span className="flex items-center gap-2">
-                        {showIdNumber ? profile.nationalId.number : profile.nationalId.numberMasked}
-                        <button onClick={() => setShowIdNumber(!showIdNumber)} className="text-gray-400 hover:text-gray-600">
-                          {showIdNumber ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                        {profile.nationalId.issuingCountry && (
-                          <span className="text-gray-500">({profile.nationalId.issuingCountry})</span>
-                        )}
-                      </span>
-                    ) : undefined
-                  }
-                  field="nationalId"
-                  notProvidedText="Not provided"
-                  isEditing={editingField === 'nationalId'}
-                  onEdit={() => handleEdit('nationalId')}
-                  editForm={renderNationalIdForm()}
-                />
-              </div>
-            </div>
-
-            {/* Emergency Contact Section */}
-            <div className="mt-10">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Emergency Contact</h2>
-              <div className="divide-y divide-gray-200">
-                <InfoRow
-                  label="Emergency contact"
-                  value={formatEmergencyContactSummary(profile.emergencyContact)}
-                  field="emergencyContact"
-                  notProvidedText="Not provided"
-                  description="A trusted contact we can reach in an urgent situation."
-                  isEditing={editingField === 'emergencyContact'}
-                  onEdit={() => handleEdit('emergencyContact')}
-                  editForm={renderEmergencyContactForm()}
-                />
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-20">
-            <p className="text-gray-600">Unable to load profile. Please try again.</p>
           </div>
         )}
 
-        {/* Privacy Notice */}
-        <div className="mt-12 p-6 bg-gray-50 rounded-xl">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-              <Shield className="w-6 h-6 text-gray-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">Which details can be edited?</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Contact info and personal details can be edited. If this info was used to verify your identity, you&apos;ll need to get verified again the next time you book—or to continue hosting.
-              </p>
-            </div>
-          </div>
-        </div>
+        <div className="space-y-6">
+          <InfoRow
+            label="Legal name"
+            field="legalName"
+            value={profile ? `${profile.firstName} ${profile.lastName}` : ''}
+            onEdit={() => handleEdit('legalName')}
+            isEditing={editingField === 'legalName'}
+            editForm={renderLegalNameForm()}
+          />
 
-        {/* Data Sharing Notice */}
-        <div className="mt-6 p-6 bg-gray-50 rounded-xl">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-6 h-6 text-gray-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">What info is shared with others?</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Houseiana only releases contact information for hosts and guests after a reservation is confirmed.
-              </p>
-            </div>
+          <InfoRow
+            label="Date of birth"
+            field="dateOfBirth"
+            value={formatDate(profile?.dateOfBirth || null)}
+            onEdit={() => handleEdit('dateOfBirth')}
+            isEditing={editingField === 'dateOfBirth'}
+            editForm={renderDateOfBirthForm()}
+          />
+
+          <InfoRow
+            label="Gender"
+            field="genderId"
+            value={formatGender(profile?.genderId)}
+            onEdit={() => handleEdit('genderId')}
+            isEditing={editingField === 'genderId'}
+            editForm={renderGenderForm()}
+          />
+
+          <InfoRow
+            label="Email address"
+            field="email"
+            value={showEmail ? (profile?.email || '') : (profile?.emailMasked || '')}
+            onEdit={() => handleEdit('email')}
+            isEditing={editingField === 'email'}
+            editForm={renderEmailForm()}
+            action={
+              <button
+                onClick={() => setShowEmail(!showEmail)}
+                className="text-sm underline text-gray-600 hover:text-gray-900"
+              >
+                {showEmail ? 'Hide' : 'Show'}
+              </button>
+            }
+          />
+
+          <InfoRow
+            label="Phone number"
+            field="phone"
+            value={showPhone ? (profile?.phone || '') : (profile?.phoneMasked || '')}
+            onEdit={() => handleEdit('phone')}
+            isEditing={editingField === 'phone'}
+            editForm={renderPhoneForm()}
+            action={
+              <button
+                onClick={() => setShowPhone(!showPhone)}
+                className="text-sm underline text-gray-600 hover:text-gray-900"
+              >
+                {showPhone ? 'Hide' : 'Show'}
+              </button>
+            }
+          />
+
+          <InfoRow
+            label="Nationality"
+            field="nationality"
+            value={profile?.nationality}
+            onEdit={() => handleEdit('nationality')}
+            isEditing={editingField === 'nationality'}
+            editForm={renderNationalityForm()}
+          />
+
+          <InfoRow
+            label="Address"
+            field="address"
+            value={formatAddress(profile?.address || null)}
+            onEdit={() => handleEdit('address')}
+            isEditing={editingField === 'address'}
+            editForm={renderAddressForm()}
+          />
+          
+          <InfoRow
+            label="Country of residency"
+            field="residencyCountry"
+            value={profile?.residencyCountry || ''}
+            onEdit={() => handleEdit('residencyCountry')}
+            isEditing={editingField === 'residencyCountry'}
+            editForm={renderResidencyCountryForm()}
+          />
+
+          <div className="pt-6 border-t border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Government ID</h2>
+            
+            <InfoRow
+              label="Passport"
+              field="passport"
+              value={formatPassportSummary(profile?.passport || null)}
+              onEdit={() => handleEdit('passport')}
+              isEditing={editingField === 'passport'}
+              editForm={renderPassportForm()}
+              description="Add passport details"
+            />
+
+            <InfoRow
+              label="National ID / QID"
+              field="nationalId"
+              value={formatNationalIdSummary(profile?.nationalId || null)}
+              onEdit={() => handleEdit('nationalId')}
+              isEditing={editingField === 'nationalId'}
+              editForm={renderNationalIdForm()}
+              description="Add national ID details"
+            />
+          </div>
+
+          <div className="pt-6 border-t border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h2>
+            <InfoRow
+              label="Emergency Contact"
+              field="emergencyContact"
+              value={formatEmergencyContactSummary(profile?.emergencyContact || null)}
+              onEdit={() => handleEdit('emergencyContact')}
+              isEditing={editingField === 'emergencyContact'}
+              editForm={renderEmergencyContactForm()}
+              description="Add emergency contact"
+            />
           </div>
         </div>
       </main>
-
       <AccountFooter />
     </div>
   );

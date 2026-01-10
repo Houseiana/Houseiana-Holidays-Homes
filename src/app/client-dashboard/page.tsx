@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, SignOutButton } from '@clerk/nextjs';
@@ -12,6 +13,7 @@ import { useClientDashboard, DashboardTab, TripFilter } from '@/hooks';
 import { TripCard, MessageItem, AccountCard } from '@/features/client-dashboard';
 import PropertyCard from '@/features/home/components/PropertyCard';
 import { PropertyGridSkeleton } from '@/components/ui/loaders/skeleton';
+import { LookupsAPI } from '@/lib/backend-api';
 
 export default function ClientDashboard() {
   const router = useRouter();
@@ -43,11 +45,34 @@ export default function ClientDashboard() {
   };
 
   // Trip filter tabs
-  const tripFilterTabs: { key: TripFilter; label: string }[] = [
-    { key: 'upcoming', label: 'Upcoming' },
-    { key: 'past', label: 'Past' },
-    { key: 'cancelled', label: 'Cancelled' },
-  ];
+  const [tripFilterTabs, setTripFilterTabs] = useState<{ key: TripFilter; label: string }[]>([]);
+  const [loadingTabs, setLoadingTabs] = useState(true);
+
+  useEffect(() => {
+    const fetchTabs = async () => {
+      try {
+        const response = await LookupsAPI.getBookingStatus();
+        if (response.success && response.data) {
+          const tabs = response.data.map((item: any) => ({
+            key: item.name.toLowerCase() as TripFilter, 
+            label: item.name
+          }));
+          setTripFilterTabs(tabs);
+        }
+      } catch (error) {
+        console.error('Failed to fetch trip filter tabs', error);
+        // Fallback
+        setTripFilterTabs([
+            { key: 'upcoming', label: 'Upcoming' },
+            { key: 'past', label: 'Past' },
+            { key: 'cancelled', label: 'Cancelled' },
+        ]);
+      } finally {
+        setLoadingTabs(false);
+      }
+    };
+    fetchTabs();
+  }, []);
 
   // Account settings cards
   const accountCards = [

@@ -14,6 +14,7 @@ interface InfoRowProps {
   isEditing: boolean;
   onEdit: () => void;
   editForm?: ReactNode;
+  action?: ReactNode;
 }
 
 export function InfoRow({
@@ -27,6 +28,7 @@ export function InfoRow({
   isEditing,
   onEdit,
   editForm,
+  action,
 }: InfoRowProps) {
   return (
     <div className="py-6 border-b border-gray-200 last:border-0">
@@ -36,7 +38,10 @@ export function InfoRow({
           {!isEditing && (
             <>
               {value ? (
-                <div className="text-gray-500 mt-1">{value}</div>
+                <div className="text-gray-500 mt-1">
+                  {value}
+                  {action && <span className="ml-2">{action}</span>}
+                </div>
               ) : (
                 <p className="text-gray-400 mt-1">{notProvidedText}</p>
               )}

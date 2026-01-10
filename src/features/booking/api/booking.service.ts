@@ -55,4 +55,23 @@ export const BookingService = {
       body: JSON.stringify({ bookingId, userId, paymentProvider }),
     });
   },
+
+  list: async (params?: {
+    page?: number;
+    limit?: number;
+    hostId?: string;
+    propertyId?: string;
+    statusId?: number;
+    guestName?: string;
+  }): Promise<ApiResponse<Booking[]>> => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.hostId) queryParams.append('hostId', params.hostId);
+    if (params?.propertyId) queryParams.append('propertyId', params.propertyId);
+    if (params?.statusId) queryParams.append('statusId', params.statusId.toString());
+    if (params?.guestName) queryParams.append('guestName', params.guestName);
+
+    return backendFetch(`/api/bookings/list?${queryParams.toString()}`);
+  },
 };

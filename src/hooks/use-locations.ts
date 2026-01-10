@@ -42,7 +42,7 @@ export const useCountries = () => {
 };
 
 export const useCities = (countryId: string | number | null) => {
-  const [cities, setCities] = useState<City[]>([]);
+  const [cities, setCities] = useState<any>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,8 +57,9 @@ export const useCities = (countryId: string | number | null) => {
       setError(null);
       try {
         const response = await LookupsAPI.getCities(countryId);
+        
         if (response.success && response.data) {
-          setCities(response.data);
+          setCities(response.data.cities || []);
         } else {
           setError(response.message || 'Failed to fetch cities');
         }

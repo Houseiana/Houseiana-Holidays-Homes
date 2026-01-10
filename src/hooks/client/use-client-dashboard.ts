@@ -96,10 +96,11 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
   // Fetch trips
   useEffect(() => {
     const fetchTrips = async () => {
+      if (!userId) return;
       try {
-        const result = await BackendAPI.Booking.getGuestTrips(tripFilter);
+        const result = await BackendAPI.Booking.getGuestTrips(userId, tripFilter);
         if (result.success) {
-          setTrips(result.data);
+          setTrips(result.data.data);
         }
       } catch (error) {
         console.error('Error fetching trips:', error);
@@ -109,7 +110,7 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
     if (isSignedIn && activeTab === 'trips') {
       fetchTrips();
     }
-  }, [tripFilter, isSignedIn, activeTab]);
+  }, [tripFilter, isSignedIn, activeTab, userId]);
 
   const [loadingWishlists, setLoadingWishlists] = useState(true);
 

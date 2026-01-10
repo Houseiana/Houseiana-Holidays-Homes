@@ -1,6 +1,7 @@
 // Basic API Response types
 export interface ApiResponse<T = any> {
   success: boolean;
+  status?: number; // Added to match backend-api usage
   data?: T;
   error?: string;
   message?: string;
@@ -15,6 +16,27 @@ export interface PaginatedResponse<T> {
     total: number;
     totalPages: number;
   };
+}
+
+// Auth types
+export interface LoginRequest {
+  email?: string;
+  password?: string;
+  phone?: string;
+  code?: string; // For OTP or something
+}
+
+export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password?: string;
+  phone?: string;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: User;
 }
 
 // Property types
@@ -46,6 +68,18 @@ export interface Property {
   updatedAt: string;
 }
 
+// Location types
+export interface Country {
+  id: number;
+  name: string;
+}
+
+export interface City {
+  id: number;
+  name: string;
+  countryId: number;
+}
+
 // Booking types
 export interface Booking {
   id: string;
@@ -62,6 +96,13 @@ export interface Booking {
   property?: Property;
 }
 
+export interface BookingRequest {
+  propertyId: string;
+  checkIn: string;
+  checkOut: string;
+  guests: number;
+}
+
 export interface CreateBookingDto {
   propertyId: string;
   guestId: string;
@@ -70,6 +111,22 @@ export interface CreateBookingDto {
   guests: number;
   totalPrice: number;
   paymentMethod?: string;
+}
+
+// Trip type (similar to Booking but from guest perspective)
+export interface Trip extends Booking {
+  // Add trip specific fields if any
+}
+
+// Message types
+export interface Conversation {
+  id: string;
+  participants: User[];
+  lastMessage?: {
+    content: string;
+    createdAt: string;
+  };
+  updatedAt: string;
 }
 
 // User types

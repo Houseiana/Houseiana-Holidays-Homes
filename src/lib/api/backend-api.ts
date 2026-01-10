@@ -445,8 +445,8 @@ export const BookingAPI = {
   /**
    * Get guest trips
    */
-  async getGuestTrips(filter: 'upcoming' | 'past' | 'cancelled'): Promise<ApiResponse<any>> {
-    return backendFetch(`/api/guest/trips?filter=${filter}`);
+  async getGuestTrips(userId: string, status: string): Promise<ApiResponse<any>> {
+    return backendFetch(`/users/${userId}/user-trips?status=${status}`);
   },
 };
 
@@ -860,6 +860,14 @@ export const LookupsAPI = {
   },
 
   /**
+   * Get booking status
+   * Endpoint: GET /api/Lookups/BookingStatus
+   */
+  async getBookingStatus(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/BookingStatus');
+  },
+
+  /**
    * Get reason for blocking property
    * Endpoint: GET /api/Lookups/ReasonBlockProperty
    */
@@ -879,7 +887,7 @@ export const LookupsAPI = {
    * Get cities by country ID
    * Endpoint: GET /api/Lookups/cities?countryId={countryId}
    */
-  async getCities(countryId: string | number): Promise<ApiResponse<any[]>> {
+  async getCities(countryId: string | number): Promise<ApiResponse<any>> {
     return backendFetch(`/api/Lookups/cities?countryId=${countryId}`);
   },
 };

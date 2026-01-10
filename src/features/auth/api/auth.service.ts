@@ -46,6 +46,13 @@ export const AccountService = {
     });
   },
 
+  updateAddress: async (data: any) => {
+    return backendFetch<any>('/users/address', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   // Identity Documents
   getPassport: async (id: string) => {
     const response = await backendFetch<any>(`/users/${id}/passport`);

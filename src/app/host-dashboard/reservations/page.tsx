@@ -10,25 +10,54 @@ import {
   MessageCircle, FileText, Flag, Copy,
   ChevronUp, Zap
 } from 'lucide-react';
-import { LookupsAPI } from '@/lib/backend-api';
+import { LookupsAPI, PropertyAPI } from '@/lib/backend-api';
+import { BookingService } from '@/features/booking/api/booking.service';
+import { useAuthStore } from '@/store/auth-store';
+import { useUser } from '@clerk/nextjs';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export default function HouseianaHostReservations() {
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProperty, setSelectedProperty] = useState('all');
   const [expandedReservation, setExpandedReservation] = useState<string | null>(null);
-  const [allReservations, setAllReservations] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<any[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusTabs, setStatusTabs] = useState<any[]>([]);
+  
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Fetch booking status tabs
   useEffect(() => {
     const fetchStatusTabs = async () => {
       try {
-        const response = await LookupsAPI.getBookingDisplayStatus();
+        const response = await LookupsAPI.getBookingStatus();
         if (response.success && response.data) {
           setStatusTabs(response.data);
+          // Set default tab to 'upcoming' id if found, else first tab
+          const upcoming = response.data.find((t: any) => t.name.toLowerCase() === 'upcoming');
+          if (upcoming) {
+            setActiveTab(upcoming.id);
+          } else if (response.data.length > 0) {
+            setActiveTab(response.data[0].id);
+          }
         }
       } catch (error) {
         console.error('Error fetching status tabs:', error);
@@ -38,97 +67,94 @@ export default function HouseianaHostReservations() {
     fetchStatusTabs();
   }, []);
 
-  // Fetch bookings from API
+  // Fetch properties for filter
+  useEffect(() => {
+    const fetchProperties = async () => {
+      // Use user.id from useUser()
+      if (!user?.id) return;
+
+      try {
+        const response = await PropertyAPI.getAll({ 
+          limit: 100, 
+          hostId: user.id 
+        });
+        
+        if (response.success && response.data) {
+           let loadedProperties: any[] = [];
+           if (Array.isArray(response.data)) {
+              loadedProperties = response.data;
+           } else if (response.data.data && Array.isArray(response.data.data)) {
+              loadedProperties = response.data.data;
+           }
+           
+           setProperties(loadedProperties.map((p: any) => ({
+             id: p.id,
+             name: p.title || p.name
+           })));
+        }
+      } catch (error) {
+        console.error('Error fetching properties:', error);
+      }
+    };
+    
+    fetchProperties();
+  }, [user?.id]);
+
+  // Fetch bookings from API with filters
   useEffect(() => {
     const fetchBookings = async () => {
-      try {
-        const response = await fetch('/api/host/bookings');
-        const result = await response.json();
+      // Only fetch if statusIds are available OR if activeTab is not dependent on statusTabs
+      // and user is logged in
+      if (!user?.id || (statusTabs.length === 0 && activeTab !== 'all')) return;
 
-        if (result.success) {
+      setLoading(true);
+      try {
+        const params: any = {
+          page: 1,
+          limit: 100,
+          hostId: user.id,
+        };
+
+        if (selectedProperty !== 'all') {
+          params.propertyId = selectedProperty;
+        }
+
+        if (debouncedSearchQuery) {
+          params.guestName = debouncedSearchQuery;
+        }
+
+        // Mapping activeTab to statusId
+        if (activeTab !== 'all') {
+             params.statusId = activeTab;
+        }
+
+        const response = await BookingService.list(params);
+
+        if (response.success && response.data) {
           // Convert date strings back to Date objects
-          const bookingsWithDates = result.data.map((b: any) => ({
+          const bookingsWithDates = response.data.map((b: any) => ({
             ...b,
             checkIn: new Date(b.checkIn),
             checkOut: new Date(b.checkOut),
             bookedAt: new Date(b.bookedAt),
           }));
-          setAllReservations(bookingsWithDates);
-
-          // Extract unique properties
-          const uniqueProperties = Array.from(
-            new Map(result.data.map((b: any) => [
-              b.propertyId,
-              { id: b.propertyId, name: b.propertyName, location: b.propertyLocation }
-            ])).values()
-          );
-          setProperties(uniqueProperties);
+          setReservations(bookingsWithDates);
+        } else {
+            setReservations([]);
         }
       } catch (error) {
         console.error('Error fetching bookings:', error);
+        setReservations([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchBookings();
-  }, []);
-
-  // Tab configurations
-  const tabs = useMemo(() => {
-    if (statusTabs.length > 0) {
-      return [
-        ...statusTabs.map((status: any) => ({
-          id: status.id || status.name.toLowerCase(), // fallback if id missing
-          label: status.name,
-          // Assuming backend returns a status code or strict name to match reservation status
-          filter: (r: any) => {
-             // If status.id is e.g., 'Upcoming', we might need logic.
-             // Usually 'Upcoming' implies future check-in.
-             // If the API returns straightforward statuses like 'Pending', 'Confirmed', direct match works.
-             // If it returns 'Upcoming' which aggregates multiple statuses, we need mapping logic from backend or handled here.
-             // For safety, assuming strict match or specific known types for now:
-             if (status.name === 'Upcoming') return ['confirmed', 'pending'].includes(r.status);
-             if (status.name === 'All') return true;
-             return r.status.toLowerCase() === status.name.toLowerCase();
-          }
-        }))
-      ];
-    }
-  }, [statusTabs]);
-
-  // // Calculate tab counts
-  // const tabCounts = useMemo(() => {
-  //   const counts: Record<string, number> = {};
-  //   statusTabs.forEach(tab => {
-  //     counts[tab.id] = allReservations?.filter(tab.filter).length;
-  //   });
-  //   return counts;
-  // }, [allReservations, statusTabs]);
-
-  // Filter reservations
-  const filteredReservations = useMemo(() => {
-    const tab = statusTabs.find(t => t.id === activeTab);
-    if (!tab) return [];
-    let result = allReservations.filter(tab.filter);
-
-    if (selectedProperty !== 'all') {
-      result = result.filter(r => r.propertyId === selectedProperty);
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(r =>
-        r.guest.name.toLowerCase().includes(query) ||
-        r.confirmationCode.toLowerCase().includes(query) ||
-        r.propertyName.toLowerCase().includes(query)
-      );
-    }
-
-    return result.sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime());
-  }, [activeTab, selectedProperty, searchQuery, allReservations, tabs]);
+  }, [activeTab, selectedProperty, debouncedSearchQuery, statusTabs, user?.id]);
 
   const formatDate = (date: Date, format = 'short') => {
+    if (!date) return '';
     if (format === 'short') {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
@@ -143,7 +169,7 @@ export default function HouseianaHostReservations() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-semibold text-gray-900">Reservations</h1>
-            <p className="text-gray-500 mt-1">{filteredReservations.length} reservations</p>
+            <p className="text-gray-500 mt-1">{reservations.length} reservations</p>
           </div>
           <div className="flex items-center gap-3">
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -168,11 +194,6 @@ export default function HouseianaHostReservations() {
               }`}
             >
               {tab.name}
-              {/* {tabCounts[tab.id] > 0 && (
-                <span className={`ml-1.5 ${activeTab === tab.id ? 'text-gray-300' : 'text-gray-400'}`}>
-                  ({tabCounts[tab.id]})
-                </span>
-              )} */}
             </button>
           ))}
         </div>
@@ -184,13 +205,14 @@ export default function HouseianaHostReservations() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by guest name or confirmation code..."
+                placeholder="Search by guest name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               />
             </div>
             <select
+              title='properties'
               value={selectedProperty}
               onChange={(e) => setSelectedProperty(e.target.value)}
               className="px-4 py-2.5 border border-gray-300 rounded-lg bg-white min-w-[200px]"
@@ -203,16 +225,24 @@ export default function HouseianaHostReservations() {
           </div>
         </div>
 
-        {/* Empty State */}
-        {filteredReservations.length === 0 && (
+        {/* Content */}
+        {loading ? (
+             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                 <p className="text-gray-500">Loading reservations...</p>
+             </div>
+        ) : reservations.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CalendarDays className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No reservations found</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings found</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              {searchQuery ? 'Try adjusting your search or filters.' : `You don't have any ${activeTab === 'all' ? '' : activeTab} reservations.`}
+              {searchQuery ? 'Try adjusting your search or filters.' : `You don't have any bookings in this category.`}
             </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+             {/* List rendering logic would go here, currently preserving existing structure that lacks it. */}
           </div>
         )}
       </div>
