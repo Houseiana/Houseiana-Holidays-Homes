@@ -14,11 +14,13 @@ import {
   AmenitiesSection,
   LocationSection,
   BookingCard,
+  PropertyReviews,
 } from '@/features/property/components';
 
 import { useUser } from '@clerk/nextjs';
 import BackendAPI from '@/lib/api/backend-api';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 export default function PropertyDetailPage() {
   const params = useParams();
@@ -76,7 +78,16 @@ export default function PropertyDetailPage() {
              // Handle nested data response from backend (e.g. { data: { id: ... } })
              const bookingData = response.data as any;
              const bookingId = bookingData.data?.id || bookingData.id;
-             router.push(getBookingUrl(bookingId));
+             if (property.instantBook) {
+              Swal.fire({
+                icon: 'success',
+                title: 'Booking successful!',
+                text: 'Wait for the host to confirm your booking.',
+              });
+              router.push('/');
+             } else {
+              router.push(getBookingUrl(bookingId));
+             }
           } else {
              // Fallback if create failed or no data (should handle better but keeping flow)
              toast.error(response.error || 'Failed to create booking');
@@ -157,6 +168,8 @@ export default function PropertyDetailPage() {
               longitude={property.longitude}
               title={property.title}
             />
+
+            <PropertyReviews propertyId={propertyId} />
           </div>
 
           <div className="lg:col-span-1">

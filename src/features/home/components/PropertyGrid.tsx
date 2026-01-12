@@ -22,7 +22,7 @@ export default function PropertyGrid({ properties, loading }: PropertyGridProps)
       ) : properties.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-gray-500 text-lg">No properties found</p>
-          <Link href="/discover">
+          <Link href="/properties">
             <button className="mt-4 px-6 py-3 bg-teal-500 text-white rounded-full hover:bg-teal-600">
               Explore All Properties
             </button>

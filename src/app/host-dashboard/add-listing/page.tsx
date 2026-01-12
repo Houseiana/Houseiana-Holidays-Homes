@@ -23,7 +23,8 @@ import {
   HouseRulesStep,
   ReviewStep,
   ClassificationStep,
-  CancellationPolicyStep
+  CancellationPolicyStep,
+  DocumentsStep
 } from '@/features/host/components';
 
 const libraries: ("places")[] = ["places"];
@@ -55,11 +56,12 @@ export default function AddListingPage() {
     description: '',
     highlights: [],
     stars: 0,
-    cancellationPolicy: {
-      policyType: 'FLEXIBLE',
-      freeCancellationHours: null,
-      freeCancellationDays: null,
+    CancellationPolicy: {
+      PolicyType: 'FLEXIBLE',
+      FreeCancellationHours: null,
+      FreeCancellationDays: null,
     },
+    cleaningFee: 0,
     basePrice: 100,
     weeklyDiscount: 0,
     monthlyDiscount: 0,
@@ -73,6 +75,11 @@ export default function AddListingPage() {
     allowParties: false,
     checkInTime: '3:00 PM',
     checkOutTime: '11:00 AM',
+    documentOfProperty: {
+      PrpopertyDocoument: null,
+      HostId: null,
+      PowerOfAttorney: null,
+    },
   });
 
   const { isLoaded: isMapLoaded } = useLoadScript({
@@ -94,13 +101,14 @@ export default function AddListingPage() {
     { id: 10, phase: 3, title: 'Cancellation Policy', subtitle: 'Choose a policy that works for you and your guests' },
     { id: 11, phase: 3, title: 'Just a few last questions...', subtitle: 'These help us personalize your hosting experience' },
     { id: 12, phase: 3, title: 'Set your house rules', subtitle: 'Guests must agree to your rules before they book' },
-    { id: 13, phase: 3, title: 'Review your listing', subtitle: 'Here\'s what we\'ll show to guests. Make sure everything looks good' },
+    { id: 13, phase: 3, title: 'Required Documents', subtitle: 'Upload documents to verify your property and identity' },
+    { id: 14, phase: 3, title: 'Review your listing', subtitle: 'Here\'s what we\'ll show to guests. Make sure everything looks good' },
   ];
 
   const phases = [
     { id: 1, title: 'Tell us about your place', steps: [0, 1, 2] },
     { id: 2, title: 'Make it stand out', steps: [3, 4] },
-    { id: 3, title: 'Finish up and publish', steps: [5, 6, 7, 8, 9, 10, 11, 12, 13] },
+    { id: 3, title: 'Finish up and publish', steps: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14] },
   ];
 
   const handleNext = () => {
@@ -176,8 +184,8 @@ export default function AddListingPage() {
         formData.append('stars', listing.stars.toString());
       }
       
-      if (listing.cancellationPolicy) {
-        formData.append('cancellationPolicy', JSON.stringify(listing.cancellationPolicy));
+      if (listing.CancellationPolicy) {
+        formData.append('cancellationPolicy', JSON.stringify(listing.CancellationPolicy));
       }
 
       formData.append('propertyType', listing.propertyType);
@@ -194,7 +202,7 @@ export default function AddListingPage() {
       formData.append('bathrooms', listing.bathrooms.toString());
       formData.append('pricePerNight', listing.basePrice.toString());
       
-      formData.append('cleaningFee', '0');
+      formData.append('cleaningFee', listing.cleaningFee.toString());
       formData.append('serviceFee', '0');
       formData.append('weeklyDiscount', listing.weeklyDiscount.toString());
       formData.append('monthlyDiscount', listing.monthlyDiscount.toString());
@@ -242,6 +250,17 @@ export default function AddListingPage() {
         listing.photos.forEach((photo: File) => {
           formData.append('photos', photo);
         });
+      }
+
+      // Handle documents
+      if (listing.documentOfProperty.PrpopertyDocoument) {
+        formData.append('PrpopertyDocoument', listing.documentOfProperty.PrpopertyDocoument);
+      }
+      if (listing.documentOfProperty.HostId) {
+        formData.append('HostId', listing.documentOfProperty.HostId);
+      }
+      if (listing.documentOfProperty.PowerOfAttorney) {
+        formData.append('PowerOfAttorney', listing.documentOfProperty.PowerOfAttorney);
       }
 
       const clerkToken = await getToken();
@@ -300,7 +319,8 @@ export default function AddListingPage() {
       case 10: return <CancellationPolicyStep listing={listing} setListing={setListing} />;
       case 11: return <LegalStep listing={listing} setListing={setListing} />;
       case 12: return <HouseRulesStep listing={listing} setListing={setListing} />;
-      case 13: return <ReviewStep listing={listing} />;
+      case 13: return <DocumentsStep listing={listing} setListing={setListing} />;
+      case 14: return <ReviewStep listing={listing} />;
       default: return null;
     }
   };

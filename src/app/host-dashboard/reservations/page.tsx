@@ -1,19 +1,15 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Home, Calendar, Building2, MessageSquare, ChevronDown,
-  ChevronRight, Globe, Menu, Search, X, Check,
-  DollarSign, Clock, Star, CalendarDays, Eye,
-  MoreHorizontal, AlertCircle, MapPin, Users, Phone,
-  Mail, Download, Printer, CheckCircle, XCircle,
-  MessageCircle, FileText, Flag, Copy,
-  ChevronUp, Zap
+  CalendarDays, Download, Printer, Search
 } from 'lucide-react';
 import { LookupsAPI, PropertyAPI } from '@/lib/backend-api';
 import { BookingService } from '@/features/booking/api/booking.service';
-import { useAuthStore } from '@/store/auth-store';
 import { useUser } from '@clerk/nextjs';
+import { ReservationCard, Reservation } from './reservation-card';
+import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -36,12 +32,12 @@ export default function HouseianaHostReservations() {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProperty, setSelectedProperty] = useState('all');
-  const [expandedReservation, setExpandedReservation] = useState<string | null>(null);
-  const [reservations, setReservations] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusTabs, setStatusTabs] = useState<any[]>([]);
-  
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
+
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Fetch booking status tabs
@@ -70,7 +66,6 @@ export default function HouseianaHostReservations() {
   // Fetch properties for filter
   useEffect(() => {
     const fetchProperties = async () => {
-      // Use user.id from useUser()
       if (!user?.id) return;
 
       try {
@@ -101,71 +96,107 @@ export default function HouseianaHostReservations() {
   }, [user?.id]);
 
   // Fetch bookings from API with filters
-  useEffect(() => {
-    const fetchBookings = async () => {
-      // Only fetch if statusIds are available OR if activeTab is not dependent on statusTabs
-      // and user is logged in
-      if (!user?.id || (statusTabs.length === 0 && activeTab !== 'all')) return;
+  const fetchBookings = async () => {
+    if (!user?.id || (statusTabs.length === 0 && activeTab !== 'all')) return;
 
-      setLoading(true);
-      try {
-        const params: any = {
-          page: 1,
-          limit: 100,
-          hostId: user.id,
-        };
+    setLoading(true);
+    try {
+      const params: any = {
+        page: 1,
+        limit: 100,
+        hostId: user.id,
+      };
 
-        if (selectedProperty !== 'all') {
-          params.propertyId = selectedProperty;
-        }
-
-        if (debouncedSearchQuery) {
-          params.guestName = debouncedSearchQuery;
-        }
-
-        // Mapping activeTab to statusId
-        if (activeTab !== 'all') {
-             params.statusId = activeTab;
-        }
-
-        const response = await BookingService.list(params);
-
-        if (response.success && response.data) {
-          // Convert date strings back to Date objects
-          const bookingsWithDates = response.data.map((b: any) => ({
-            ...b,
-            checkIn: new Date(b.checkIn),
-            checkOut: new Date(b.checkOut),
-            bookedAt: new Date(b.bookedAt),
-          }));
-          setReservations(bookingsWithDates);
-        } else {
-            setReservations([]);
-        }
-      } catch (error) {
-        console.error('Error fetching bookings:', error);
-        setReservations([]);
-      } finally {
-        setLoading(false);
+      if (selectedProperty !== 'all') {
+        params.propertyId = selectedProperty;
       }
-    };
 
+      if (debouncedSearchQuery) {
+        params.guestName = debouncedSearchQuery;
+      }
+
+      if (activeTab !== 'all') {
+           params.statusId = activeTab;
+      }
+
+      const response = await BookingService.list(params);
+
+      if (response.success && response.data) {
+        // Convert date strings back to Date objects
+        const bookingsWithDates = response.data.data.map((b: any) => ({
+          ...b,
+          checkIn: new Date(b.checkIn),
+          checkOut: new Date(b.checkOut),
+          bookedAt: new Date(b.bookedAt),
+        }));
+        setReservations(bookingsWithDates);
+      } else {
+          setReservations([]);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      setReservations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchBookings();
   }, [activeTab, selectedProperty, debouncedSearchQuery, statusTabs, user?.id]);
 
-  const formatDate = (date: Date, format = 'short') => {
-    if (!date) return '';
-    if (format === 'short') {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const handleApprove = async (bookingId: string) => {
+    if (!user?.id) return;
+    setIsProcessing(bookingId);
+    try {
+      const response = await BookingService.approvalByHost(bookingId, user.id, true);
+      if (response.success) {
+        toast.success('Booking approved successfully');
+        fetchBookings(); // Refresh list
+      } else {
+        toast.error(response.error || 'Failed to approve booking');
+      }
+    } catch (error) {
+      console.error('Error approving booking:', error);
+      toast.error('An error occurred');
+    } finally {
+      setIsProcessing(null);
     }
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const handleDecline = async (bookingId: string) => {
+    if (!user?.id) return;
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You will not be able to revert this!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, decline it!'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+    setIsProcessing(bookingId);
+    try {
+      const response = await BookingService.approvalByHost(bookingId, user.id, false);
+      if (response.success) {
+         toast.success('Booking declined');
+         fetchBookings();
+      } else {
+         toast.error(response.error || 'Failed to decline booking');
+      }
+    } catch (error) {
+       console.error('Error declining booking:', error);
+       toast.error('An error occurred');
+    } finally {
+       setIsProcessing(null);
+    }
+  }})
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Page Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-semibold text-gray-900">Reservations</h1>
@@ -181,8 +212,17 @@ export default function HouseianaHostReservations() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === 'all'
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            All
+          </button>
           {statusTabs.map(tab => (
             <button
               key={tab.id}
@@ -198,7 +238,6 @@ export default function HouseianaHostReservations() {
           ))}
         </div>
 
-        {/* Search and Filters */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             <div className="relative flex-1">
@@ -225,7 +264,6 @@ export default function HouseianaHostReservations() {
           </div>
         </div>
 
-        {/* Content */}
         {loading ? (
              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                  <p className="text-gray-500">Loading reservations...</p>
@@ -242,7 +280,15 @@ export default function HouseianaHostReservations() {
           </div>
         ) : (
           <div className="space-y-4">
-             {/* List rendering logic would go here, currently preserving existing structure that lacks it. */}
+             {reservations.map((booking) => (
+               <ReservationCard
+                 key={booking.id}
+                 reservation={booking}
+                 onApprove={handleApprove}
+                 onDecline={handleDecline}
+                 isProcessing={isProcessing}
+               />
+             ))}
           </div>
         )}
       </div>

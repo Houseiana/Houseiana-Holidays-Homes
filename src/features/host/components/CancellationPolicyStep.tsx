@@ -47,13 +47,13 @@ export function CancellationPolicyStep({ listing, setListing }: CancellationPoli
       {/* Main Policy Selection */}
       <div className="grid gap-4">
         {policies.map((policy) => {
-          const isSelected = listing.cancellationPolicy?.policyType === policy.id;
+          const isSelected = listing.CancellationPolicy?.PolicyType === policy.id;
           const Icon = policy.icon;
 
           return (
             <div
               key={policy.id}
-              onClick={() => setListing({ ...listing, cancellationPolicy: { ...listing.cancellationPolicy, policyType: policy.id } })}
+              onClick={() => setListing({ ...listing, CancellationPolicy: { ...listing.CancellationPolicy, PolicyType: policy.id } })}
               className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                 isSelected
                   ? 'border-teal-600 bg-teal-50 ring-1 ring-teal-600'
@@ -81,7 +81,7 @@ export function CancellationPolicyStep({ listing, setListing }: CancellationPoli
 
       {/* Conditional Sub-options */}
       <div className="mt-8 space-y-6">
-        {listing.cancellationPolicy?.policyType === 'FLEXIBLE' && (
+        {listing.CancellationPolicy?.PolicyType === 'FLEXIBLE' && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-300 p-6 bg-gray-50 rounded-xl border border-gray-200">
             <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Clock className="w-4 h-4 text-teal-600" />
@@ -89,7 +89,7 @@ export function CancellationPolicyStep({ listing, setListing }: CancellationPoli
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className={`flex items-center justify-between p-4 bg-white border rounded-lg cursor-pointer transition-all ${
-                listing.cancellationPolicy.freeCancellationHours === 24
+                listing.CancellationPolicy.FreeCancellationHours === 24
                   ? 'border-teal-500 ring-1 ring-teal-500'
                   : 'border-gray-200 hover:border-gray-300'
               }`}>
@@ -97,14 +97,14 @@ export function CancellationPolicyStep({ listing, setListing }: CancellationPoli
                 <input
                   type="radio"
                   name="flexibleConfig"
-                  checked={listing.cancellationPolicy.freeCancellationHours === 24}
-                  onChange={() => setListing({ ...listing, cancellationPolicy: { ...listing.cancellationPolicy!, freeCancellationHours: 24 } })}
+                  checked={listing.CancellationPolicy.FreeCancellationHours === 24}
+                  onChange={() => setListing({ ...listing, CancellationPolicy: { ...listing.CancellationPolicy!, FreeCancellationHours: 24 } })}
                   className="text-teal-600 focus:ring-teal-500"
                 />
               </label>
 
               <label className={`flex items-center justify-between p-4 bg-white border rounded-lg cursor-pointer transition-all ${
-                listing.cancellationPolicy.freeCancellationHours === 48
+                listing.CancellationPolicy.FreeCancellationHours === 48
                   ? 'border-teal-500 ring-1 ring-teal-500'
                   : 'border-gray-200 hover:border-gray-300'
               }`}>
@@ -112,8 +112,8 @@ export function CancellationPolicyStep({ listing, setListing }: CancellationPoli
                 <input
                   type="radio"
                   name="flexibleConfig"
-                  checked={listing.cancellationPolicy.freeCancellationHours === 48}
-                  onChange={() => setListing({ ...listing, cancellationPolicy: { ...listing.cancellationPolicy!, freeCancellationHours: 48 } })}
+                  checked={listing.CancellationPolicy.FreeCancellationHours === 48}
+                  onChange={() => setListing({ ...listing, CancellationPolicy: { ...listing.CancellationPolicy!, FreeCancellationHours: 48 } })}
                   className="text-teal-600 focus:ring-teal-500"
                 />
               </label>
@@ -121,7 +121,7 @@ export function CancellationPolicyStep({ listing, setListing }: CancellationPoli
           </div>
         )}
 
-        {listing.cancellationPolicy?.policyType === 'MODERATE' && (
+        {listing.CancellationPolicy?.PolicyType === 'MODERATE' && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-300 p-6 bg-gray-50 rounded-xl border border-gray-200">
              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-amber-600" />
@@ -136,8 +136,8 @@ export function CancellationPolicyStep({ listing, setListing }: CancellationPoli
                   type="number"
                   min="1"
                   max="30"
-                  value={listing.cancellationPolicy.freeCancellationDays || ''}
-                  onChange={(e) => setListing({ ...listing, cancellationPolicy: { ...listing.cancellationPolicy!, freeCancellationDays: parseInt(e.target.value) || 0 } })}
+                  value={listing.CancellationPolicy.FreeCancellationDays || ''}
+                  onChange={(e) => setListing({ ...listing, CancellationPolicy: { ...listing.CancellationPolicy!, FreeCancellationDays: parseInt(e.target.value) || 0 } })}
                   className="block w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 transition-colors"
                   placeholder="e.g. 5"
                 />

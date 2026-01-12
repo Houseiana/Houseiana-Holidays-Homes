@@ -32,10 +32,9 @@ export function useProfile({ userId, autoFetch = true }: UseProfileOptions = {})
     try {
       // Use the centralized UserAPI instead of local API route
       const response = await UserAPI.getById(id);
-
+debugger
       if (response.success && response.data) {
-        const userData = response.data;
-        
+        const userData = response.data.user;
         // Map backend User type to PublicProfile type
         // This mapping ensures the frontend has the structure it expects
         const publicProfile: PublicProfile = {
@@ -43,41 +42,70 @@ export function useProfile({ userId, autoFetch = true }: UseProfileOptions = {})
             id: userData.id,
             firstName: userData.firstName,
             lastName: userData.lastName,
-            profilePhoto: userData.avatar,
-            nationality: undefined,
-            preferredLanguage: 'en',
-            isGuest: userData.role === 'guest',
-            isHost: userData.role === 'host',
-            kycStatus: userData.verified ? 'VERIFIED' : 'NOT_STARTED',
-            emailVerified: true, // Assuming true if they exist in backend for now
-            phoneVerified: !!userData.phone,
-            createdAt: new Date().toISOString(), // Fallback if not provided
+            profilePhoto: userData.profilePhoto, // Updated field name
+            nationality: userData.nationality,
+            preferredLanguage: userData.preferredLanguage || 'en',
+            isGuest: userData.role === 'guest' || userData.role === 'GUEST_AND_HOST',
+            isHost: userData.role === 'host' || userData.role === 'GUEST_AND_HOST',
+            kycStatus: userData.kycStatus, // Direct mapping
+            emailVerified: userData.emailVerified,
+            phoneVerified: userData.phoneVerified,
+            createdAt: userData.createdAt || new Date().toISOString(),
           },
           displayName: `${userData.firstName} ${userData.lastName}`.trim(),
           initials: ((userData.firstName?.[0] || '') + (userData.lastName?.[0] || '')).toUpperCase(),
-          memberSince: new Date().toISOString(),
+          memberSince: userData.createdAt || new Date().toISOString(),
           aboutMe: undefined,
           location: undefined,
           verifications: [
             {
               type: 'email',
-              status: 'verified',
+              status: userData.emailVerified ? 'verified' : 'pending',
             },
-            ...(userData.verified ? [{
-              type: 'identity' as const,
-              status: 'verified' as const,
-            }] : []),
+            {
+              type: 'phone',
+              status: userData.phoneVerified ? 'verified' : userData.phone ? 'pending' : 'not_verified',
+            },
+            {
+              type: 'identity',
+              status: userData.kycStatus === 'APPROVED' ? 'verified' : userData.kycStatus === 'PENDING' ? 'pending' : 'not_verified',
+            }
           ],
           trustIndicators: [],
-          reviews: {
-            summary: {
-              averageRating: 0,
-              totalReviews: 0,
-              ratingBreakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-            },
-            items: [],
-            hasMore: false,
-          },
+          reviews: (() => {
+            const ratings = userData.hostRatings || [];
+            const transformReviews = ratings.map(r => ({
+              id: r.id,
+              reviewerId: r.guestId,
+              reviewerName: r.guest ? `${r.guest.firstName} ${r.guest.lastName}` : 'Anonymous',
+              reviewerPhoto: r.guest?.profilePhoto,
+              rating: r.ratingValue,
+              comment: r.comment,
+              createdAt: r.createdAt
+            }));
+
+            const totalReviews = ratings.length;
+            const averageRating = totalReviews > 0 
+              ? ratings.reduce((acc, r) => acc + r.ratingValue, 0) / totalReviews 
+              : 0;
+
+            const ratingBreakdown = {
+              5: ratings.filter(r => Math.round(r.ratingValue) === 5).length,
+              4: ratings.filter(r => Math.round(r.ratingValue) === 4).length,
+              3: ratings.filter(r => Math.round(r.ratingValue) === 3).length,
+              2: ratings.filter(r => Math.round(r.ratingValue) === 2).length,
+              1: ratings.filter(r => Math.round(r.ratingValue) === 1).length,
+            };
+
+            return {
+              summary: {
+                averageRating,
+                totalReviews,
+                ratingBreakdown
+              },
+              items: transformReviews
+            };
+          })(),
         };
         
         setProfile(publicProfile);
@@ -135,84 +163,6 @@ interface UseProfileReviewsReturn {
   } | null;
   fetchReviews: (options?: { page?: number }) => Promise<void>;
   loadMore: () => Promise<void>;
-}
-
-/**
- * Hook to fetch and manage a user's reviews with pagination
- */
-export function useProfileReviews({
-  userId,
-  role = 'host',
-  page = 1,
-  limit = 10,
-  autoFetch = true,
-}: UseProfileReviewsOptions = {}): UseProfileReviewsReturn {
-  const [reviews, setReviews] = useState<ProfileReview[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<UseProfileReviewsReturn['pagination']>(null);
-  const [currentPage, setCurrentPage] = useState(page);
-
-  const fetchReviews = useCallback(
-    async (options?: { page?: number; append?: boolean }) => {
-      if (!userId) return;
-
-      const fetchPage = options?.page ?? currentPage;
-      const shouldAppend = options?.append ?? false;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const params = new URLSearchParams({
-          page: fetchPage.toString(),
-          limit: limit.toString(),
-          role,
-        });
-
-        const response = await fetch(`/api/users/${userId}/reviews?${params}`);
-        const data: ProfileReviewsResponse = await response.json();
-
-        if (data.success && data.data) {
-          if (shouldAppend) {
-            setReviews((prev) => [...prev, ...data.data!.reviews]);
-          } else {
-            setReviews(data.data.reviews);
-          }
-          setPagination(data.data.pagination);
-          setCurrentPage(fetchPage);
-        } else {
-          setError(data.error || 'Failed to fetch reviews');
-        }
-      } catch (err) {
-        setError((err as Error).message || 'Failed to fetch reviews');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [userId, role, limit, currentPage]
-  );
-
-  const loadMore = useCallback(async () => {
-    if (pagination?.hasMore && !loading) {
-      await fetchReviews({ page: currentPage + 1, append: true });
-    }
-  }, [pagination, loading, currentPage, fetchReviews]);
-
-  useEffect(() => {
-    if (autoFetch && userId) {
-      fetchReviews({ page: 1 });
-    }
-  }, [autoFetch, userId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return {
-    reviews,
-    loading,
-    error,
-    pagination,
-    fetchReviews,
-    loadMore,
-  };
 }
 
 interface UseMyProfileReturn {

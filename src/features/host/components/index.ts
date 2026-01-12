@@ -14,3 +14,4 @@ export * from './ClassificationStep';
 export * from './CancellationPolicyStep';
 export * from './Counter';
 export * from './listings';
+export * from './DocumentsStep';

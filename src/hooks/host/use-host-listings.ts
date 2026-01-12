@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Swal from 'sweetalert2';
 import { PropertyService } from '@/features/property/api/property.service';
+import { UserAPI } from '@/lib/api/backend-api';
 
 // Types
 export interface Listing {
@@ -44,12 +45,8 @@ export interface Listing {
 
 export interface ListingStats {
   total: number;
-  active: number;
-  paused: number;
-  draft: number;
-  inactive: number;
-  totalViews: number;
-  totalBookings: number;
+  activeProperties: number;
+  upcomingBookingsCount: number;
   avgRating: string;
   totalEarnings: number;
 }
@@ -205,25 +202,40 @@ export function useHostListings(userId?: string): UseHostListingsReturn {
     return () => clearTimeout(timer);
   }, [searchQuery, fetchListings]);
 
-  // Calculate stats
-  const stats = useMemo<ListingStats>(() => {
-    const ratedListings = listings.filter(l => l.rating);
-    const avgRating = ratedListings.length > 0
-      ? (ratedListings.reduce((sum, l) => sum + (l.rating || 0), 0) / ratedListings.length).toFixed(2)
-      : '0.00';
+  // Stats state
+  const [stats, setStats] = useState<ListingStats>({
+    total: 0,
+    activeProperties: 0,
+    upcomingBookingsCount: 0,
+    avgRating: '0.00',
+    totalEarnings: 0,
+  });
 
-    return {
-      total: listings.length,
-      active: listings.filter(l => l.status === 'active').length,
-      paused: listings.filter(l => l.status === 'paused').length,
-      draft: listings.filter(l => l.status === 'draft').length,
-      inactive: listings.filter(l => l.status === 'inactive').length,
-      totalViews: listings.reduce((sum, l) => sum + l.views, 0),
-      totalBookings: listings.reduce((sum, l) => sum + l.bookings.upcoming, 0),
-      avgRating,
-      totalEarnings: listings.reduce((sum, l) => sum + l.earnings.thisMonth, 0),
-    };
-  }, [listings]);
+  // Fetch stats from API
+  const fetchStats = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const response = await UserAPI.getHostDashboardStats(userId);
+      if (response.success && response.data) {
+         const apiData = response.data.data;
+        setStats({
+          total: apiData.totalProperties || 0,
+          activeProperties: apiData.activeProperties || 0,
+          totalEarnings: apiData.currentMonthEarnings || 0,
+          upcomingBookingsCount: apiData.upcomingBookingsCount || 0,
+          avgRating: apiData.averagePropertyRating ? Number(apiData.averagePropertyRating).toFixed(2) : ''
+        });
+      } 
+    } catch (error) {
+       console.error('Failed to fetch host stats', error);
+
+    }
+  }, [userId]);
+
+  // Sync stats when listings change or on mount
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   // Filter and sort listings
   const filteredListings = useMemo(() => {

@@ -30,6 +30,13 @@ export const BookingService = {
     });
   },
 
+  approvalByHost: async (bookingId: string, hostId: string, isApproved: boolean): Promise<ApiResponse<Booking>> => {
+    return backendFetch(`/booking-manager/approvalByHost`, {
+      method: 'POST',
+      body: JSON.stringify({ bookingId, hostId, isApproved }),
+    });
+  },
+
   reject: async (bookingId: string, hostId: string, reason?: string): Promise<ApiResponse<Booking>> => {
     return backendFetch(`/booking-manager/${bookingId}/reject`, {
       method: 'POST',
@@ -63,7 +70,7 @@ export const BookingService = {
     propertyId?: string;
     statusId?: number;
     guestName?: string;
-  }): Promise<ApiResponse<Booking[]>> => {
+  }): Promise<ApiResponse<any>> => {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   Plus, Search, DollarSign, LayoutGrid, List, Check, CheckCircle, CalendarDays, Award, Sparkles, Star, Building2
 } from 'lucide-react';
+import { useCallback, useEffect } from 'react';
+import { LookupsAPI } from '@/lib/api/backend-api';
 
 import { useHostListings, Listing, ListingStatus, ListingSortBy, ViewMode } from '@/hooks';
 
@@ -24,6 +26,21 @@ export default function HouseianaHostListings() {
 
   // UI-only state (stays in page)
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [sortingOptions, setSortingOptions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchSortingOptions = async () => {
+      try {
+        const response = await LookupsAPI.getPropertySorting();
+        if (response.success && response.data) {
+          setSortingOptions(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch sorting options:', error);
+      }
+    };
+    fetchSortingOptions();
+  }, []);
 
   // Hook provides all data and business logic
   const {
@@ -105,19 +122,19 @@ export default function HouseianaHostListings() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard
             label="Active listings"
-            value={stats.active}
+            value={stats.activeProperties}
             icon={<CheckCircle className="w-5 h-5 text-green-600" />}
             iconBgColor="bg-green-100"
           />
           <StatCard
             label="Upcoming bookings"
-            value={stats.totalBookings}
+            value={stats.upcomingBookingsCount}
             icon={<CalendarDays className="w-5 h-5 text-blue-600" />}
             iconBgColor="bg-blue-100"
           />
           <StatCard
             label="This month"
-            value={`QAR ${stats.totalEarnings.toLocaleString()}`}
+            value={`QAR ${stats.totalEarnings}`}
             icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
             iconBgColor="bg-emerald-100"
           />
@@ -154,10 +171,10 @@ export default function HouseianaHostListings() {
             <div className="flex items-center gap-2 overflow-x-auto">
               {[
                 { id: 'all' as ListingStatus, label: 'All', count: stats.total },
-                { id: 'active' as ListingStatus, label: 'Active', count: stats.active },
-                { id: 'paused' as ListingStatus, label: 'Paused', count: stats.paused },
-                { id: 'draft' as ListingStatus, label: 'Draft', count: stats.draft },
-                { id: 'inactive' as ListingStatus, label: 'Inactive', count: stats.inactive },
+                { id: 'active' as ListingStatus, label: 'Active', count: stats.activeProperties },
+                { id: 'paused' as ListingStatus, label: 'Paused', count: 0 },
+                { id: 'draft' as ListingStatus, label: 'Draft', count: 0 },
+                { id: 'inactive' as ListingStatus, label: 'Inactive', count: 0 },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -179,12 +196,15 @@ export default function HouseianaHostListings() {
                 onChange={(e) => setSortBy(e.target.value as ListingSortBy)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
               >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="price_high">Price: High to Low</option>
-                <option value="price_low">Price: Low to High</option>
-                <option value="rating">Highest rated</option>
-                <option value="bookings">Most booked</option>
+                {sortingOptions.length > 0 ? (
+                  sortingOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))
+                ) : (
+                  <div>no data</div>
+                )}
               </select>
 
               <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">

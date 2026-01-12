@@ -34,6 +34,32 @@ export const PricingStep = ({ listing, setListing }: PricingStepProps) => (
             Price must be at least $20
           </p>
         )}
+
+        <div className="mt-12 w-full px-4 border-t border-gray-100 pt-8">
+          <label className="block text-lg font-medium text-gray-900 mb-4 text-center">
+            Cleaning fee
+          </label>
+          <div className="flex flex-col items-center">
+            <div className="inline-flex items-center border-b-2 border-gray-300 focus-within:border-black pb-1 transition-colors">
+              <span className="text-4xl font-semibold text-gray-900 mr-1">$</span>
+              <input
+                type="number"
+                min="0"
+                max="35"
+                value={listing.cleaningFee || 0}
+                onChange={(e) => {
+                  let val = parseInt(e.target.value);
+                  if (isNaN(val)) val = 0;
+                  if (val < 0) val = 0;
+                  if (val > 35) val = 35;
+                  setListing({ ...listing, cleaningFee: val });
+                }}
+                className="text-4xl lg:text-5xl font-semibold w-56 text-center border-0 focus:ring-0 outline-none bg-transparent p-0"
+              />
+            </div>
+            <p className="text-sm text-gray-500 mt-2">Maximum $35</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -43,12 +69,16 @@ export const PricingStep = ({ listing, setListing }: PricingStepProps) => (
         <span className="font-medium">${listing.basePrice}</span>
       </div>
       <div className="flex items-center justify-between mb-4">
+        <span className="text-gray-700">Cleaning fee</span>
+        <span className="font-medium">${listing.cleaningFee || 0}</span>
+      </div>
+      <div className="flex items-center justify-between mb-4">
         <span className="text-gray-700">Guest service fee</span>
-        <span className="font-medium">${Math.round(listing.basePrice * 0.14)}</span>
+        <span className="font-medium">${Math.round(listing.basePrice * 0.10 )}</span>
       </div>
       <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
         <span className="text-gray-900 font-medium">Guest price before taxes</span>
-        <span className="font-semibold text-lg">${listing.basePrice + Math.round(listing.basePrice * 0.14)}</span>
+        <span className="font-semibold text-lg">${listing.basePrice + Math.round(listing.basePrice * 0.10 ) + (listing.cleaningFee || 0)}</span>
       </div>
     </div>
 

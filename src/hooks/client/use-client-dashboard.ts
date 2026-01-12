@@ -10,18 +10,25 @@ import { PropertySummary } from '@/types/property';
 // Types
 export interface Trip {
   id: string;
+  address: {
+    city: {
+      name: string;
+      country: {
+        name: string;
+      };
+    };
+  };
   propertyTitle: string;
-  propertyCity: string;
-  propertyCountry: string;
   checkIn: string;
   checkOut: string;
   guests: number;
   totalPrice: number;
-  status: 'confirmed' | 'pending' | 'cancelled';
+  status: 'UPCOMING' | 'PAST' | 'CANCELLED';
   confirmationCode: string;
-  coverPhoto?: string;
+  propertyCoverPhoto?: string;
   paymentStatus?: 'PAID' | 'PARTIALLY_PAID' | 'PENDING' | 'FAILED';
   amountPaid?: number;
+  hostName?: string;
 }
 
 export type Wishlist = PropertySummary;
@@ -59,6 +66,7 @@ interface UseClientDashboardReturn {
   // Loading state
   loading: boolean;
   loadingWishlists: boolean;
+  loadingTrips: boolean; // Added loadingTrips
 
   // Utility functions
   formatDate: (dateString: string) => string;
@@ -80,6 +88,7 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
   const [pagination, setPagination] = useState();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTrips, setLoadingTrips] = useState(true); // Initialize loadingTrips
 
   // Check URL params for tab selection
   const searchParams = useSearchParams();
@@ -97,6 +106,7 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
   useEffect(() => {
     const fetchTrips = async () => {
       if (!userId) return;
+      setLoadingTrips(true); // Start loading
       try {
         const result = await BackendAPI.Booking.getGuestTrips(userId, tripFilter);
         if (result.success) {
@@ -104,6 +114,8 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
         }
       } catch (error) {
         console.error('Error fetching trips:', error);
+      } finally {
+        setLoadingTrips(false); // End loading
       }
     };
 
@@ -233,6 +245,7 @@ export function useClientDashboard(isSignedIn: boolean): UseClientDashboardRetur
     // Loading state
     loading,
     loadingWishlists,
+    loadingTrips, // Return loadingTrips
 
     // Utility functions
     formatDate,

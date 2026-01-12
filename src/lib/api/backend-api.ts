@@ -89,10 +89,27 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  avatar?: string;
+  profilePhoto?: string;
   phone?: string;
-  verified?: boolean;
+  kycStatus: string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
   role?: string;
+  nationality?: string;
+  preferredLanguage?: string;
+  createdAt?: string;
+  hostRatings?: {
+    id: string;
+    guestId: string;
+    comment: string;
+    ratingValue: number;
+    createdAt: string;
+    guest?: {
+      firstName: string;
+      lastName: string;
+      profilePhoto?: string;
+    };
+  }[];
 }
 
 /**
@@ -364,6 +381,10 @@ export const PropertyAPI = {
     });
   },
 
+  async getReviews(propertyId: string): Promise<ApiResponse<any>> {
+    return backendFetch(`/api/ratings/property/${propertyId}`);
+  },
+
   /**
    * Delete a property
    * Endpoint: DELETE /api/properties/{id}
@@ -457,7 +478,7 @@ export const UserAPI = {
   /**
    * Get user by ID
    */
-  async getById(id: string): Promise<ApiResponse<User>> {
+  async getById(id: string): Promise<ApiResponse<{ user: User }>> {
     return backendFetch(`/users/${id}`);
   },
 
@@ -480,6 +501,28 @@ export const UserAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  /**
+   * Submit a review for a host
+   */
+  async submitHostReview(data: {
+    guestId: string;
+    hostId: string;
+    rating: number;
+    comment: string;
+  }): Promise<ApiResponse> {
+    return backendFetch('/api/ratings/host-by-guest', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Get host dashboard stats
+   */
+  async getHostDashboardStats(userId: string): Promise<ApiResponse> {
+    return backendFetch(`/users/${userId}/host-dashboard`);
   },
 };
 
@@ -908,6 +951,14 @@ export const LookupsAPI = {
    */
   async getCities(countryId: string | number): Promise<ApiResponse<any>> {
     return backendFetch(`/api/Lookups/cities?countryId=${countryId}`);
+  },
+
+  /**
+   * Get property sorting
+   * Endpoint: GET /api/Lookups/property-sorting
+   */
+  async getPropertySorting(): Promise<ApiResponse<any[]>> {
+    return backendFetch('/api/Lookups/PropertySorting');
   },
 };
 

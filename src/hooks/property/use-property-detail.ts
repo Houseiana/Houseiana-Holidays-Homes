@@ -33,6 +33,8 @@ export interface PropertyDetail {
   isRareFind: boolean;
   guestFavorite: boolean;
   perks?: string[];
+  instantBook: boolean;
+  cancellationPolicy: string;
   // New pricing fields
   weeklyDiscount?: number;
   smallBookingDiscount?: number;
@@ -150,6 +152,8 @@ export function usePropertyDetail(propertyId: string , userId?: string): UseProp
           weeklyDiscount: p.weeklyDiscount || 0,
           smallBookingDiscount: p.smallBookingDiscount || 0,
           bookingsCount: p.bookingsCount || 0,
+          instantBook: p.instantBook || false,
+          cancellationPolicy: p.cancellationPolicy || '',
         };
 
         setProperty(mappedProperty);

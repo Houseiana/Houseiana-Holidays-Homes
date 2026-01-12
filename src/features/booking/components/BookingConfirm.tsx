@@ -118,7 +118,10 @@ function GuestFormSection({ guestForm, onFormChange }: GuestFormSectionProps) {
             <input
               type="tel"
               value={guestForm.phone}
-              onChange={(e) => onFormChange({ phone: e.target.value.replace(/\D/g, '') })}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                onFormChange({ phone: val });
+              }}
               className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="Phone number"
             />

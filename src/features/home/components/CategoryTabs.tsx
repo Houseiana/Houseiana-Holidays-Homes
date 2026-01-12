@@ -19,6 +19,46 @@ interface CategoryTabsProps {
 import { usePropertiesTypes } from '@/hooks/property/use-properties-types';
 import Link from 'next/link';
 
+const settings = {
+  dots: false,
+  infinite: false,
+  speed: 500,
+  slidesToShow: 9,
+  slidesToScroll: 1,
+  arrows: false,
+  variableWidth: false,
+  responsive: [
+    {
+      breakpoint: 1280,
+      settings: {
+        slidesToShow: 7,
+        slidesToScroll: 1,
+      }
+    },
+    {
+      breakpoint: 1024,
+      settings: {
+        slidesToShow: 5,
+        slidesToScroll: 1,
+      }
+    },
+    {
+      breakpoint: 768,
+      settings: {
+        slidesToShow: 3,
+        slidesToScroll: 1
+      }
+    },
+    {
+      breakpoint: 640,
+      settings: {
+        slidesToShow: 2,
+        slidesToScroll: 1
+      }
+    }
+  ]
+};
+
 export default function CategoryTabs({ activeCategory, onSelect }: CategoryTabsProps) {
   const router = useRouter();
   // Ref to control the slider programmatically via external buttons
@@ -36,32 +76,6 @@ export default function CategoryTabs({ activeCategory, onSelect }: CategoryTabsP
     }
   }, [propertyTypes]);
 
-  const settings = {
-    dots: false,
-    infinite: false,
-    speed: 500,
-    slidesToShow: 7,
-    slidesToScroll: 1,
-    arrows: false, // We use custom external buttons
-    variableWidth: false,
-    responsive: [
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: 4,
-          slidesToScroll: 1,
-        }
-      },
-      {
-        breakpoint: 600,
-        settings: {
-          slidesToShow: 3,
-          slidesToScroll: 1
-        }
-      }
-    ]
-  };
-
   const handlePrev = () => {
     sliderRef.current?.slickPrev();
   };
@@ -78,9 +92,9 @@ export default function CategoryTabs({ activeCategory, onSelect }: CategoryTabsP
         <div className="flex items-center gap-4">
           <button 
             onClick={handlePrev}
-            className="hover:bg-gray-100 rounded-full flex-shrink-0 border border-gray-200 flex items-center justify-center w-8 h-8 transition-colors z-10"
+            className="hover:bg-gray-100 rounded-full flex-shrink-0 border border-gray-200 flex items-center justify-center w-5 h-5 md:w-8 md:h-8 transition-colors z-10"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4 md:w-6 md:h-6" />
           </button>
 
           <div className="flex-1 min-w-0">
@@ -97,6 +111,7 @@ export default function CategoryTabs({ activeCategory, onSelect }: CategoryTabsP
                 return (
                   <div key={category.id} className="focus:outline-none">
                     <button
+                    
                       onClick={() => onSelect(category.id)}
                       className={`w-full flex flex-col items-center gap-2 px-2 py-2 transition-all ${
                         activeCategory === category.id
@@ -105,7 +120,7 @@ export default function CategoryTabs({ activeCategory, onSelect }: CategoryTabsP
                       }`}
                     >
                       <Icon className={`w-6 h-6 ${activeCategory === category.id ? 'text-teal-600' : ''}`} />
-                      <span className={`text-xs whitespace-nowrap ${activeCategory === category.id ? 'font-semibold text-teal-600 border-b-2 border-teal-600 pb-1' : 'font-medium'}`}
+                      <span className={`text-xs truncate w-full text-center px-1 ${activeCategory === category.id ? 'font-semibold text-teal-600 border-b-2 border-teal-600 pb-1' : 'font-medium'}`}
                       >
                         {category.name}
                       </span>
@@ -118,21 +133,21 @@ export default function CategoryTabs({ activeCategory, onSelect }: CategoryTabsP
 
           <button 
             onClick={handleNext}
-            className="hover:bg-gray-100 rounded-full flex-shrink-0 border border-gray-200 flex items-center justify-center w-8 h-8 transition-colors z-10"
+            className="hover:bg-gray-100 rounded-full flex-shrink-0 border border-gray-200 flex items-center justify-center w-5 h-5 md:w-8 md:h-8 transition-colors z-10"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 md:w-6 md:h-6" />
           </button>
 
           {/* Filter Button */}
           <Link
             href="/properties"
-            className="ml-4 flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:border-gray-900 transition-colors flex-shrink-0"
+            className="ml-2 flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl hover:border-gray-900 transition-colors flex-shrink-0"
           >
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
               <path d="M5 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
               <path fillRule="evenodd" d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5v-9zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-13z"/>
             </svg>
-            <span className="text-xs font-medium">Filters</span>
+            <span className="text-xs font-medium hidden md:block">Filters</span>
           </Link>
         </div>
       </div>

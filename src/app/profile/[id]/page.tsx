@@ -10,47 +10,39 @@ import {
   ProfileReviews,
   ProfileProperties,
 } from '@/features/auth/components';
-import { useProfile, useProfileReviews } from '@/hooks/use-profile';
+import { useProfile } from '@/hooks/use-profile';
 import { useAuthStore } from '@/store/auth-store';
 import { ProfileViewContext } from '@/types/profile';
+import { useUser } from '@clerk/nextjs';
 
 export default function UserProfilePage() {
   const params = useParams();
   const router = useRouter();
   const userId = params.id as string;
 
-  const { user: currentUser } = useAuthStore();
+  const { user : currentUser } = useUser()
   const { profile, loading, error, fetchProfile } = useProfile({ userId, autoFetch: true });
-  const {
-    reviews,
-    loading: reviewsLoading,
-    pagination: reviewsPagination,
-    loadMore: loadMoreReviews,
-  } = useProfileReviews({
-    userId,
-    role: 'host',
-    autoFetch: !!profile?.hostProfile,
-  });
+  console.log(profile)
 
   const [viewContext, setViewContext] = useState<ProfileViewContext>('public');
 
   // Determine view context
-  useEffect(() => {
-    if (!profile || !currentUser) {
-      setViewContext('public');
-      return;
-    }
+  // useEffect(() => {
+  //   if (!profile || !currentUser) {
+  //     setViewContext('public');
+  //     return;
+  //   }
 
-    if (currentUser.userId === profile.user.id) {
-      setViewContext('self');
-    } else if (profile.user.isHost && currentUser.currentRole === 'guest') {
-      setViewContext('guest_viewing_host');
-    } else if (profile.user.isGuest && currentUser.currentRole === 'host') {
-      setViewContext('host_viewing_guest');
-    } else {
-      setViewContext('public');
-    }
-  }, [profile, currentUser]);
+  //   if (currentUser.userId === profile.user.id) {
+  //     setViewContext('self');
+  //   } else if (profile.user.isHost && currentUser.currentRole === 'guest') {
+  //     setViewContext('guest_viewing_host');
+  //   } else if (profile.user.isGuest && currentUser.currentRole === 'host') {
+  //     setViewContext('host_viewing_guest');
+  //   } else {
+  //     setViewContext('public');
+  //   }
+  // }, [profile, currentUser]);
 
   const isOwnProfile = viewContext === 'self';
 
@@ -104,7 +96,7 @@ export default function UserProfilePage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header Navigation */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-4 py-3">
           <button
             onClick={() => router.back()}
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -127,9 +119,19 @@ export default function UserProfilePage() {
           />
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Verifications & Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left Column - Info & Stats */}
             <div className="space-y-6">
+              {/* About Section - Moved to top left */}
+              {profile.aboutMe && (
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">
+                    About {profile.user.firstName}
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed text-sm">{profile.aboutMe}</p>
+                </div>
+              )}
+
               <ProfileVerification
                 verifications={profile.verifications}
                 trustIndicators={profile.trustIndicators}
@@ -143,20 +145,10 @@ export default function UserProfilePage() {
               />
             </div>
 
-            {/* Right Column - Reviews & Properties */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* About Section */}
-              {profile.aboutMe && (
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">
-                    About {profile.user.firstName}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">{profile.aboutMe}</p>
-                </div>
-              )}
-
-              {/* Host Business Description */}
-              {profile.hostProfile?.businessDescription && (
+            {/* Right Column - Properties & Reviews */}
+            <div className="lg:col-span-2 space-y-8">
+               {/* Host Business Description */}
+               {profile.hostProfile?.businessDescription && (
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-3">
                     {profile.hostProfile.businessName || `${profile.user.firstName}'s Hosting`}
@@ -178,10 +170,12 @@ export default function UserProfilePage() {
               {/* Reviews */}
               <ProfileReviews
                 summary={profile.reviews.summary}
-                reviews={reviews.length > 0 ? reviews : profile.reviews.items}
-                hasMore={reviewsPagination?.hasMore || profile.reviews.hasMore}
-                onLoadMore={loadMoreReviews}
-                loading={reviewsLoading}
+                reviews={profile.reviews.items}
+                hostId={profile.user.id}
+                currentUser={currentUser}
+                // hasMore={reviewsPagination?.hasMore || profile.reviews.hasMore}
+                // onLoadMore={loadMoreReviews}
+                // loading={reviewsLoading}
               />
             </div>
           </div>

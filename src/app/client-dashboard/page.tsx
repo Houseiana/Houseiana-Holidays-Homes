@@ -10,10 +10,13 @@ import {
   CreditCard, Shield, Bell, HelpCircle, FileText, Award
 } from 'lucide-react';
 import { useClientDashboard, DashboardTab, TripFilter } from '@/hooks';
-import { TripCard, MessageItem, AccountCard } from '@/features/client-dashboard';
+import { TripCard, MessageItem, AccountCard, CancelBookingModal, ReviewPropertyModal } from '@/features/client-dashboard';
 import PropertyCard from '@/features/home/components/PropertyCard';
 import { PropertyGridSkeleton } from '@/components/ui/loaders/skeleton';
 import { LookupsAPI } from '@/lib/backend-api';
+import { BookingService } from '@/features/booking/api/booking.service';
+import { RatingsService } from '@/features/ratings/api/ratings.service';
+import toast from 'react-hot-toast';
 
 export default function ClientDashboard() {
   const router = useRouter();
@@ -34,6 +37,7 @@ export default function ClientDashboard() {
     handlePayBalance,
     fetchWishlists,
     loadingWishlists,
+    loadingTrips,
   } = useClientDashboard(isSignedIn || false);
 
   // Page titles
@@ -74,6 +78,69 @@ export default function ClientDashboard() {
     fetchTabs();
   }, []);
 
+  // Modal State
+  const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; tripId: string | null }>({ isOpen: false, tripId: null });
+  const [reviewModal, setReviewModal] = useState<{ isOpen: boolean; trip: any | null }>({ isOpen: false, trip: null });
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Handlers
+  const handleCancelTrip = (trip: any) => {
+    setCancelModal({ isOpen: true, tripId: trip.id });
+  };
+
+  const confirmCancel = async (reason: string) => {
+    if (!cancelModal.tripId || !user?.id) return;
+    
+    setIsProcessing(true);
+    try {
+      const response = await BookingService.cancel(cancelModal.tripId, user.id, reason);
+      if (response.success) {
+        toast.success('Trip cancelled successfully');
+        setCancelModal({ isOpen: false, tripId: null });
+        // Refresh trips - ideally rely on useClientDashboard refresh or force reload
+        router.refresh(); 
+      } else {
+        toast.error(response.error || 'Failed to cancel trip');
+      }
+    } catch (error) {
+      console.error('Error cancelling trip:', error);
+      toast.error('An error occurred');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReviewTrip = (trip: any) => {
+    setReviewModal({ isOpen: true, trip });
+  };
+
+  const submitReview = async (rating: number, comment: string) => {
+    if (!reviewModal.trip || !user?.id) return;
+
+    setIsProcessing(true);
+    try {
+      const payload = {
+        guestId: user.id,
+        propertyId: reviewModal.trip.propertyId, // Ensure trip has propertyId
+        rating,
+        comment
+      };
+      
+      const response = await RatingsService.reviewPropertyByGuest(payload);
+      if (response.success) {
+        toast.success('Review submitted successfully');
+        setReviewModal({ isOpen: false, trip: null });
+      } else {
+        toast.error(response.error || 'Failed to submit review');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast.error('An error occurred');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Account settings cards
   const accountCards = [
     { icon: <User className="w-8 h-8" />, title: 'Personal info', description: 'Provide personal details and how we can reach you', path: '/account/personal-info' },
@@ -90,7 +157,7 @@ export default function ClientDashboard() {
     switch (activeTab) {
       case 'trips':
         return (
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             {/* Trip Filters */}
             <div className="flex gap-3 mb-8 border-b border-gray-200">
               {tripFilterTabs.map((tab) => (
@@ -108,7 +175,9 @@ export default function ClientDashboard() {
               ))}
             </div>
             {/* Trip Cards */}
-            {trips.length > 0 ? (
+            {loadingTrips ? (
+               <PropertyGridSkeleton count={3} />
+            ) : trips.length > 0 ? (
               <div className="space-y-6">
                 {trips.map((trip) => (
                   <TripCard
@@ -117,7 +186,8 @@ export default function ClientDashboard() {
                     formatDate={formatDate}
                     calculateNights={calculateNights}
                     onPayBalance={handlePayBalance}
-                    onClick={() => router.push(`/bookings/${trip.id}`)}
+                    onCancel={handleCancelTrip}
+                    onReview={handleReviewTrip}
                   />
                 ))}
               </div>
@@ -341,6 +411,20 @@ export default function ClientDashboard() {
           </button>
         </div>
       </div>
+      
+      <CancelBookingModal
+        isOpen={cancelModal.isOpen}
+        onClose={() => setCancelModal({ isOpen: false, tripId: null })}
+        onConfirm={confirmCancel}
+        isProcessing={isProcessing}
+      />
+      
+      <ReviewPropertyModal
+        isOpen={reviewModal.isOpen}
+        onClose={() => setReviewModal({ isOpen: false, trip: null })}
+        onSubmit={submitReview}
+        isProcessing={isProcessing}
+      />
     </div>
   );
 }

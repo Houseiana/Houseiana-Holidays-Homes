@@ -15,3 +15,4 @@ export * from './description-section';
 export * from './amenities-section';
 export * from './location-section';
 export * from './booking-card';
+export * from './PropertyReviews';

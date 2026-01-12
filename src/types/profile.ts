@@ -120,7 +120,6 @@ export interface PublicProfile {
   reviews: {
     summary: ReviewSummary;
     items: ProfileReview[];
-    hasMore: boolean;
   };
 
   // Host-specific: Properties (if viewing as guest)

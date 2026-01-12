@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Star, ChevronDown, MessageCircle } from 'lucide-react';
 import { ReviewSummary, ProfileReview } from '@/types/profile';
+import { ReviewHostModal } from './ReviewHostModal';
 
 interface ProfileReviewsProps {
   summary: ReviewSummary;
@@ -11,15 +12,17 @@ interface ProfileReviewsProps {
   onLoadMore?: () => void;
   loading?: boolean;
 }
-
 export default function ProfileReviews({
   summary,
   reviews,
   hasMore = false,
   onLoadMore,
   loading = false,
-}: ProfileReviewsProps) {
+  hostId,
+  currentUser,
+}: ProfileReviewsProps & { hostId?: string; currentUser?: any }) {
   const [expandedReview, setExpandedReview] = useState<string | null>(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -45,7 +48,27 @@ export default function ProfileReviews({
 
   return (
     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-      <h3 className="text-lg font-bold text-gray-900 mb-6">Reviews</h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-bold text-gray-900">Reviews</h3>
+        {currentUser && hostId && currentUser.userId !== hostId && (
+          <button
+            onClick={() => setIsReviewModalOpen(true)}
+            className="text-sm font-medium text-gray-900 bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Review host
+          </button>
+        )}
+      </div>
+
+        <ReviewHostModal 
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          hostId={hostId || ""}
+          guestId={currentUser?.userId || ""}
+          onSuccess={() => {
+             window.location.reload();
+          }}
+        />
 
       {/* Summary Section */}
       {summary.totalReviews > 0 ? (

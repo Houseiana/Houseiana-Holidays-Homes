@@ -209,13 +209,13 @@ export function BookingCard({
       </div>
 
       <div className="border-t pt-4 space-y-3">
-        <div className="flex items-center gap-3">
+        {property.cancellationPolicy && <div className="flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-emerald-500" />
           <div>
             <p className="text-sm font-semibold text-gray-900">48-hour free cancellation</p>
             <p className="text-xs text-gray-600">Then moderate policy applies</p>
           </div>
-        </div>
+        </div>}
         <div className="flex items-center gap-3">
           <ShieldCheck className="w-5 h-5 text-indigo-500" />
           <div>
@@ -223,13 +223,13 @@ export function BookingCard({
             <p className="text-xs text-gray-600">Secure payments and verified hosts</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        {property.instantBook && <div className="flex items-center gap-3">
           <Clock className="w-5 h-5 text-amber-500" />
           <div>
             <p className="text-sm font-semibold text-gray-900">Instant confirmation</p>
             <p className="text-xs text-gray-600">You&apos;ll get details right away</p>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

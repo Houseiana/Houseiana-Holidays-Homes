@@ -19,6 +19,7 @@ export interface PropertyFormData {
   title: string;
   description: string;
   highlights: number[];
+  cleaningFee: number;
   basePrice: number;
   weeklyDiscount: number;
   monthlyDiscount: number;
@@ -33,9 +34,14 @@ export interface PropertyFormData {
   checkInTime: string;
   checkOutTime: string;
   stars?: number;
-  cancellationPolicy: {
-    policyType: 'FLEXIBLE' | 'MODERATE' | 'FIXED';
-    freeCancellationHours?: any;
-    freeCancellationDays?: any;
+  CancellationPolicy: {
+    PolicyType: 'FLEXIBLE' | 'MODERATE' | 'FIXED';
+    FreeCancellationHours?: any;
+    FreeCancellationDays?: any;
+  };
+  documentOfProperty: {
+    PrpopertyDocoument: File | null;
+    HostId: File | null;
+    PowerOfAttorney: File | null;
   };
 }
